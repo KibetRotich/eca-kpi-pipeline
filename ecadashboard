@@ -1,0 +1,7 @@
+```bash
+   cd "C:/Users/Geoffrey Rotich/Desktop/Claudeworks"
+   git init
+   git add .
+   git commit -m "Initial commit — ECA KPI pipeline"
+   git remote add origin https://github.com/YOUR_USERNAME/eca-kpi-pipeline.git
+   git push -u origin main
