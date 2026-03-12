@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+  command = ""   # no build step needed — pure HTML
+
+[[redirects]]
+  from = "/"
+  to   = "/ECA_Dashboard.html"
+  status = 200
+
+[[headers]]
+  for = "/ECA_Dashboard.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
