@@ -1,0 +1,13 @@
+# Service account credentials — NEVER commit these
+*.json
+!package.json
+
+# Large data files — keep out of git
+*.csv
+*.pdf
+
+# Build artifacts
+node_modules/
+__pycache__/
+*.pyc
+.env

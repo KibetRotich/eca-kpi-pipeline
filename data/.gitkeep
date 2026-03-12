@@ -1,0 +1,2 @@
+Drop your Salesforce CSV export here.
+The pipeline reads the most recently modified .csv file in this folder.

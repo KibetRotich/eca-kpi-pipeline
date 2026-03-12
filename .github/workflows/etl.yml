@@ -1,0 +1,55 @@
+name: KPI ETL Pipeline
+
+# Triggers:
+#   1. Whenever a new CSV is pushed to the data/ folder
+#   2. Every night at 02:00 UTC (catches any manual Sheets edits)
+#   3. Manual run from the GitHub Actions UI (Actions → Run workflow)
+on:
+  push:
+    paths:
+      - "data/*.csv"
+  schedule:
+    - cron: "0 2 * * *"   # 02:00 UTC daily  (05:00 EAT)
+  workflow_dispatch:       # manual trigger
+
+jobs:
+  etl:
+    name: Run ETL → Google Sheets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # 1. Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: pipeline/requirements.txt
+
+      # 3. Install Python dependencies
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      # 4. Run the ETL script
+      #    Secrets are stored in GitHub → Settings → Secrets and variables → Actions
+      - name: Run ETL
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: python pipeline/etl.py
+
+      # 5. Write a last-run timestamp so the repo shows when it last ran
+      - name: Record last run
+        run: |
+          echo "Last ETL run: $(date -u '+%Y-%m-%d %H:%M UTC')" > pipeline/last_run.txt
+
+      - name: Commit last-run file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: ETL run $(date -u '+%Y-%m-%d %H:%M UTC')"
+          file_pattern: pipeline/last_run.txt
