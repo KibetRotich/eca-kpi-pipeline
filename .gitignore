@@ -2,9 +2,11 @@
 *.json
 !package.json
 
-# Large data files — keep out of git
-*.csv
+# Large data files — keep out of git root
 *.pdf
+*.csv
+# But allow CSVs placed in data/ to trigger the pipeline
+!data/*.csv
 
 # Build artifacts
 node_modules/
