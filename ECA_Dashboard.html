@@ -6,6 +6,7 @@
 <title>ECA Projects Dashboard — Solidaridad</title>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -103,15 +104,21 @@ main{padding:.9rem 1.4rem 4rem}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:.8rem}
 
 /* CHART CARDS */
-.cc{background:#fff;border:1px solid #d0d0d0;padding:.6rem .75rem}
+.cc{background:#fff;border:1px solid #d0d0d0;padding:.6rem .75rem;position:relative}
+.cc:hover .cc-dl{opacity:1}
+.cc-dl{position:absolute;top:.45rem;right:.45rem;opacity:0;transition:opacity .15s;
+  background:#FFC800;border:none;cursor:pointer;padding:.18rem .38rem;
+  font-size:.55rem;font-weight:800;font-family:'Open Sans',sans-serif;
+  letter-spacing:.5px;color:#000;line-height:1;z-index:10}
+.cc-dl:hover{background:#e6b400}
 .cct{font-size:.6rem;font-weight:700;color:#333;margin-bottom:.42rem;
   line-height:1.3;display:flex;align-items:flex-start;justify-content:space-between;gap:.3rem}
 .cct-main{flex:1;min-width:0}
 .cct-badge{font-size:.48rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
   color:#aaa;border:1px solid #e0e0e0;padding:.1rem .3rem;
   flex-shrink:0;white-space:nowrap;align-self:flex-start;margin-top:1px}
-.ch120{height:120px}.ch140{height:140px}.ch155{height:155px}
-.ch170{height:170px}.ch190{height:190px}.ch220{height:220px}.ch260{height:260px}
+.ch120{height:140px}.ch140{height:160px}.ch155{height:185px}
+.ch170{height:205px}.ch190{height:215px}.ch220{height:245px}.ch260{height:285px}
 
 /* LOADING */
 #loader{position:fixed;inset:0;background:rgba(230,230,230,.93);display:flex;
@@ -166,7 +173,7 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
 .insights-kpi-row{display:flex;gap:.38rem;flex-wrap:wrap;margin:.28rem 0 .5rem}
 .ins-chip{font-size:.6rem;font-weight:700;padding:.22rem .7rem;
   border-radius:20px;letter-spacing:.2px;white-space:nowrap;border:none}
-.ins-green{background:#e8f5e9;color:#1b5e20}
+.ins-green{background:#fffce8;color:#7a5c00}
 .ins-amber{background:#fff3e0;color:#bf360c}
 .ins-red{background:#ffebee;color:#b71c1c}
 .ins-none{background:#f0f0f0;color:#555}
@@ -175,16 +182,16 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
 .insights-sep{border:none;border-top:1px solid #f0f0f0;margin:.5rem 0}
 .ins-label{font-size:.54rem;font-weight:800;text-transform:uppercase;
   letter-spacing:1.2px;padding:.18rem .55rem;border-radius:20px;display:inline-block;margin-bottom:.25rem}
-.ins-label-green{background:#e8f5e9;color:#1b5e20}
+.ins-label-green{background:#fffce8;color:#7a5c00}
 .ins-label-amber{background:#fff3e0;color:#bf360c}
 .ins-label-red{background:#ffebee;color:#b71c1c}
 .ins-label-gray{background:#f0f0f0;color:#666}
 .ins-rec-gap{background:#111;color:#fff;padding:.6rem .9rem;border-radius:3px;
   margin:.45rem 0 .3rem;font-size:.7rem;line-height:1.65;border-left:4px solid #FFC800}
 .ins-rec-gap b{color:#FFC800;display:block;margin-bottom:.2rem;font-size:.72rem}
-.ins-rec-proof{background:#1b5e20;color:#c8e6c9;padding:.5rem .9rem;border-radius:3px;
-  margin:.3rem 0;font-size:.67rem;line-height:1.55}
-.ins-rec-proof b{color:#fff;display:block;margin-bottom:.15rem}
+.ins-rec-proof{background:#111;color:#fff;padding:.5rem .9rem;border-radius:3px;
+  margin:.3rem 0;font-size:.67rem;line-height:1.55;border-left:4px solid #FFC800}
+.ins-rec-proof b{color:#FFC800;display:block;margin-bottom:.15rem}
 .ins-rec-frame{background:#f8f8f8;color:#555;padding:.45rem .9rem;border-radius:3px;
   margin-top:.35rem;font-size:.66rem;line-height:1.6;font-style:italic;
   border-left:3px solid #ddd}
@@ -343,8 +350,8 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
       <div class="s-hdr-tag" style="background:#FFC800;color:#000">Yield &middot; Ha Sustainable &middot; Decent Work &middot; Pollution</div>
     </div>
     <div class="leg-row">
-      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Annual Target</div>
-      <div class="leg"><div class="ld" style="background:#aaaaaa"></div>Net Achievement</div>
+      <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
+      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
     <div class="g6" id="gap-bubbles"></div>
     <div class="g4" id="gap-yr"></div>
@@ -363,8 +370,8 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
       <div class="s-hdr-tag" style="background:#2e7d32;color:#fff">Income &middot; Markets &middot; Services &middot; Jobs &middot; Cooperatives</div>
     </div>
     <div class="leg-row">
-      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Annual Target</div>
-      <div class="leg"><div class="ld" style="background:#aaaaaa"></div>Net Achievement</div>
+      <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
+      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
     <div class="g6" id="sbe-bubbles"></div>
     <div class="g4" id="sbe-yr"></div>
@@ -383,8 +390,8 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
       <div class="s-hdr-tag" style="background:#1565c0;color:#fff">Working Conditions &middot; Governance &middot; Civil Society</div>
     </div>
     <div class="leg-row">
-      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Annual Target</div>
-      <div class="leg"><div class="ld" style="background:#aaaaaa"></div>Net Achievement</div>
+      <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
+      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
     <div class="g6" id="epe-bubbles"></div>
     <div class="g4" id="epe-yr"></div>
@@ -403,8 +410,8 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
       <div class="s-hdr-tag" style="background:#888888;color:#fff">Corporates &middot; Sustainable Sourcing &middot; Campaigns &middot; Volume</div>
     </div>
     <div class="leg-row">
-      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Annual Target</div>
-      <div class="leg"><div class="ld" style="background:#aaaaaa"></div>Net Achievement</div>
+      <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
+      <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
     <div class="g6" id="mu-bubbles"></div>
     <div class="g4" id="mu-yr"></div>
@@ -453,14 +460,33 @@ const PILLAR_COLORS = { gap: Y, sbe: GN, epe: BL, mu: '#888888' };
 Chart.defaults.font.family = "'Open Sans',sans-serif";
 Chart.defaults.font.size   = 10;
 Chart.defaults.color       = '#555';
+Chart.register(ChartDataLabels);
+
+// ── SHARED DATALABELS CONFIG ──────────────────────────────────────────────
+const DL_V = {  // vertical bars — label above bar
+  display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+  anchor:'end', align:'end', offset:1,
+  font:{size:7, weight:'bold', family:"'Open Sans',sans-serif"},
+  formatter: v => fmt(v),
+  color: ctx => ctx.dataset.backgroundColor === '#111111' ? '#111' : '#B38F00'
+};
+const DL_H = {  // horizontal bars — label at end of bar
+  display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+  anchor:'end', align:'end', offset:2,
+  font:{size:7, weight:'bold', family:"'Open Sans',sans-serif"},
+  formatter: v => fmt(v),
+  color: ctx => ctx.dataset.backgroundColor === '#111111' ? '#111' : '#B38F00'
+};
 
 // ── CHART OPTIONS ─────────────────────────────────────────────────────────
 const OPTS_V = {
   responsive:true, maintainAspectRatio:false,
+  layout:{padding:{top:18}},
   plugins:{
-    legend:{display:false},
+    legend:{display:true, position:'top', labels:{boxWidth:10, font:{size:8}, padding:6}},
     tooltip:{mode:'index',intersect:false,
-      callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}
+      callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}},
+    datalabels: DL_V
   },
   scales:{
     y:{grid:{color:'#f2f2f2'},ticks:{callback:v=>fmt(v),maxTicksLimit:5,font:{size:9}}},
@@ -469,10 +495,12 @@ const OPTS_V = {
 };
 const OPTS_H = {
   responsive:true, maintainAspectRatio:false, indexAxis:'y',
+  layout:{padding:{right:40}},
   plugins:{
-    legend:{display:false},
+    legend:{display:true, position:'top', labels:{boxWidth:10, font:{size:8}, padding:6}},
     tooltip:{mode:'index',intersect:false,
-      callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}}
+      callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.raw)}},
+    datalabels: DL_H
   },
   scales:{
     x:{grid:{color:'#f2f2f2'},ticks:{callback:v=>fmt(v),maxTicksLimit:5,font:{size:9}}},
@@ -619,11 +647,11 @@ function tgtDatasets(tgt, ach, color) {
   const hasTarget = tgt.some(v => v > 0);
   if (hasTarget) {
     return [
-      { label:'Net Annual Target', data:tgt, backgroundColor:color, borderRadius:2 },
-      { label:'Net Achievement',   data:ach, backgroundColor:GR,   borderRadius:2 }
+      { label:'Net Annual Target', data:tgt, backgroundColor:'#111111', borderRadius:2 },
+      { label:'Net Achievement',   data:ach, backgroundColor:Y,         borderRadius:2 }
     ];
   }
-  return [{ label:'Net Achievement', data:ach, backgroundColor:color, borderRadius:2 }];
+  return [{ label:'Net Achievement', data:ach, backgroundColor:Y, borderRadius:2 }];
 }
 
 // ── CHART HELPERS ─────────────────────────────────────────────────────────
@@ -634,6 +662,32 @@ function mkChart(canvasId, cfg) {
   const el = document.getElementById(canvasId);
   if (!el) return;
   charts[canvasId] = new Chart(el, cfg);
+}
+
+function downloadChart(btn) {
+  const card    = btn.closest('.cc');
+  const canvas  = card.querySelector('canvas');
+  const title   = card.querySelector('.cct-main') ? card.querySelector('.cct-main').textContent.trim() : 'chart';
+  const badge   = card.querySelector('.cct-badge') ? card.querySelector('.cct-badge').textContent.trim() : '';
+  if (!canvas) return;
+  // Compose: white background + title + chart
+  const src = canvas;
+  const W = src.width, H = src.height;
+  const pad = 28, th = 32;
+  const out = document.createElement('canvas');
+  out.width  = W + pad * 2;
+  out.height = H + th + pad;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.fillStyle = '#222222';
+  ctx.font = 'bold 11px Open Sans,sans-serif';
+  ctx.fillText(title + (badge ? '  —  ' + badge : ''), pad, 18);
+  ctx.drawImage(src, pad, th);
+  const a = document.createElement('a');
+  a.href     = out.toDataURL('image/png');
+  a.download = (title + (badge ? '_' + badge : '')).replace(/[^a-z0-9_\- ]/gi,'_').slice(0,60) + '.png';
+  a.click();
 }
 
 function uid(s) { return s.replace(/\W+/g,'_').toLowerCase().slice(0,40); }
@@ -648,6 +702,7 @@ function card(containerId, kpiName, badgeText, heightClass, chartId, chartFn) {
       '<span class="cct-main">' + esc(shortName(kpiName)) + '</span>' +
       '<span class="cct-badge">' + badgeText + '</span>' +
     '</div>' +
+    '<button class="cc-dl" onclick="downloadChart(this)" title="Download chart">&#8595; PNG</button>' +
     '<div class="' + heightClass + '"><canvas id="' + chartId + '"></canvas></div>';
   c.appendChild(wrapper);
   setTimeout(() => chartFn(chartId), 10);
@@ -799,13 +854,14 @@ function renderPillar(pillar, data) {
       cc.innerHTML =
         '<div class="cct"><span class="cct-main">'+esc(shortName(kpi))+'</span>'+
         '<span class="cct-badge">By Year</span></div>'+
+        '<button class="cc-dl" onclick="downloadChart(this)" title="Download chart">\u2193 PNG</button>'+
         '<div class="ch155"><canvas id="'+cid+'"></canvas></div>';
       yrGrid.appendChild(cc);
       setTimeout(() => {
         const {yrs, ach, tgt} = aggByYear(data, kpi);
         mkChart(cid, {
           type:'bar',
-          data:{ labels:yrs, datasets:tgtDatasets(tgt, ach, color) },
+          data:{ labels:yrs, datasets:tgtDatasets(tgt, ach, Y) },
           options: OPTS_V
         });
       }, 20 + i * 30);
@@ -824,13 +880,14 @@ function renderPillar(pillar, data) {
       cc.innerHTML =
         '<div class="cct"><span class="cct-main">'+esc(shortName(kpi))+'</span>'+
         '<span class="cct-badge">By Country</span></div>'+
+        '<button class="cc-dl" onclick="downloadChart(this)" title="Download chart">\u2193 PNG</button>'+
         '<div class="ch170"><canvas id="'+cid+'"></canvas></div>';
       ctGrid.appendChild(cc);
       setTimeout(() => {
         const {cs, ach, tgt} = aggByCountry(data, kpi);
         mkChart(cid, {
           type:'bar',
-          data:{ labels:cs, datasets:tgtDatasets(tgt, ach, color) },
+          data:{ labels:cs, datasets:tgtDatasets(tgt, ach, Y) },
           options: OPTS_H
         });
       }, 30 + i * 30);
@@ -1123,24 +1180,24 @@ var KPI_ACTIONS = {
 // Pillar-level strategic framing — shown based on year-on-year trend direction
 var PILLAR_FRAMING = {
   gap: {
-    improving: 'Momentum is building toward \u201Cproducing in balance with nature.\u201D Sustain and scale field extension, and lock in soil health and regenerative agriculture gains before the MASP III 2025 close-out.',
-    flat:      'Progress has plateaued. Apply Outcome Harvesting to distinguish what is driving adoption from what is blocking it — and use the findings to recalibrate annual targets with country leads.',
-    declining: 'A declining trend is a serious signal. MASP III warns that \u201Cproduction is increasing but productivity is stagnating\u201D — this is the structural problem the programme was built to close. Escalate to senior management with a corrective action plan.'
+    improving: 'Momentum is building toward \u201Cproducing in balance with nature.\u201D Now is the time to convert field gains into lasting systems — lock soil health, regenerative land management, and farm-level data into protocols that survive beyond the programme cycle.',
+    flat:      'Progress has stalled. Hold a structured country-level review to separate what is genuinely blocking adoption (inputs, extension gaps, land tenure) from what is simply underreported. Recalibrate annual targets with country leads and redeploy extension resources to highest-leverage districts.',
+    declining: 'A declining trend is a serious signal. MASP III warns that \u201Cproduction is increasing but productivity is stagnating\u201D \u2014 this is the structural problem the programme was built to close. Convene a corrective action meeting with country directors and set a 90-day recovery milestone.'
   },
   sbe: {
-    improving: 'The business ecosystem is strengthening. Keep building investment-ready producer profiles and advancing fair value distribution (FVD) pathways so that farmers capture more value beyond the farm-gate.',
-    flat:      'Business ecosystem progress has stalled. Review whether nucleus farmer and farmer hub models are being implemented as co-designed, and whether matchmaking between producers and service providers is generating durable relationships.',
-    declining: 'A declining trend echoes MASP III\u2019s warning: \u201Cinequality in value redistribution has pushed many producers out of business.\u201D Apply an urgent FVD review and assess whether the current service delivery models are fit for purpose.'
+    improving: 'The business ecosystem is strengthening. Accelerate investment-ready producer profile development and push fair value distribution (FVD) negotiations with off-takers \u2014 farmers should be capturing margin gains, not just volume growth.',
+    flat:      'Business ecosystem progress has stalled. Audit whether nucleus farmer and farmer hub models are generating repeat transactions or one-off engagements. Durable producer\u2013service provider relationships, not just first contacts, are the MASP III benchmark.',
+    declining: 'A declining trend echoes MASP III\u2019s warning: \u201Cinequality in value redistribution has pushed many producers out of business.\u201D Conduct an urgent FVD audit across active projects and assess whether current service delivery models are reaching the most commercially marginal producers.'
   },
   epe: {
-    improving: 'Civic space and policy gains are real. Document advocacy wins and replicate through cross-country learning exchanges — \u201Cbeyond certification\u201D sustainability leadership is within reach.',
-    flat:      'Policy results have plateaued. Convene a multi-stakeholder platform (MSP) to diagnose enforcement gaps and re-energise advocacy coalitions; CSO capacity building may need to accelerate.',
-    declining: 'The enabling environment is weakening. The cost of sustainability compliance is falling on producers — creating the very market-entry barrier MASP III EPE programming was designed to eliminate. Re-engage government and private sector partners at senior level urgently.'
+    improving: 'Policy gains are real \u2014 protect them. Package advocacy wins into replicable briefs for cross-country learning exchanges. \u201CBeyond certification\u201D sustainability leadership requires sustained government and CSO engagement, not just one-off dialogue.',
+    flat:      'Policy results have plateaued. Convene a multi-stakeholder platform (MSP) to surface which enforcement gaps are holding back frameworks, and re-energise advocacy coalitions with concrete win targets for the next quarter.',
+    declining: 'The enabling environment is weakening, and compliance costs are falling on producers \u2014 the exact barrier MASP III EPE programming was designed to eliminate. Re-engage government and private sector partners at senior level with a clear ask and a deadline.'
   },
   mu: {
-    improving: 'Market uptake is gaining speed and scale. Advance sustainable public procurement linkages and push brands and retailers toward fair-price sourcing commitments to lock in producer benefit.',
-    flat:      'Market uptake has stalled. Review whether campaigns are reaching the right buyers, reclaim the sustainability agenda with sharper market intelligence, and ensure corporate partner commitments are translating into actual sourcing volume.',
-    declining: 'Market results are deteriorating — and producers are bearing the cost. Apply Outcome Harvesting to confirm whether engagement channels are effective, and consider a dedicated market facilitation sprint to reverse the trend before MASP III close-out.'
+    improving: 'Market uptake is gaining speed. Now convert engagement into binding sourcing commitments \u2014 push brands and retailers toward fair-price offtake agreements and sustainable public procurement contracts that guarantee producer-level benefit.',
+    flat:      'Market uptake has stalled. Audit whether campaigns are reaching decision-makers with purchasing authority, not just sustainability officers. Ensure corporate partner sign-ons are translating into verifiable sourcing volume \u2014 commitments without offtake are not results.',
+    declining: 'Market results are deteriorating and producers are absorbing the loss. Commission a rapid market facilitation review: identify which corporate relationships have stalled, which channels have lost reach, and set a 60-day re-engagement plan with named account owners.'
   }
 };
 
@@ -1206,7 +1263,7 @@ function generateInsights(pillar, data) {
     if (curPct !== null && prevPct !== null) {
       var delta      = curPct - prevPct;
       trendDir       = delta > 2 ? 'improving' : delta < -2 ? 'declining' : 'flat';
-      var trendColor = delta > 2 ? '#2e7d32' : delta < -2 ? '#c62828' : '#888';
+      var trendColor = delta > 2 ? '#B38F00' : delta < -2 ? '#c62828' : '#888';
       var trendArrow = delta > 2 ? '\u25b2' : delta < -2 ? '\u25bc' : '\u2192';
       trendStr = '<span style="font-size:.68rem;font-weight:800;color:' + trendColor + '">'
         + trendArrow + ' ' + (delta > 0 ? '+' : '') + delta + '\u202fpp year-on-year</span>'
@@ -1270,7 +1327,7 @@ function generateInsights(pillar, data) {
 
   // ── RENDER ───────────────────────────────────────────────────────────────
   function chip(txt, cls) { return '<span class="ins-chip ' + cls + '">' + txt + '</span>'; }
-  var sc          = overallPct !== null ? (overallPct >= 80 ? '#2e7d32' : overallPct >= 50 ? '#e65100' : '#c62828') : '#888';
+  var sc          = overallPct !== null ? (overallPct >= 80 ? '#B38F00' : overallPct >= 50 ? '#e65100' : '#c62828') : '#888';
   var statusLabel = overallPct !== null ? (overallPct >= 80 ? 'On Track' : overallPct >= 50 ? 'At Risk' : 'Critical') : '';
   var out = '';
 
@@ -1290,7 +1347,7 @@ function generateInsights(pillar, data) {
     out += '<div style="flex-shrink:0;text-align:center">'
       + '<canvas id="ins-kpid-' + pillar + '" width="100" height="100"></canvas>'
       + '<div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.3rem">';
-    if (ontrack.length)  out += '<span style="font-size:.5rem;font-weight:700;color:#2e7d32">\u25a0 ' + ontrack.length + ' On Track</span>';
+    if (ontrack.length)  out += '<span style="font-size:.5rem;font-weight:700;color:#B38F00">\u25a0 ' + ontrack.length + ' On Track</span>';
     if (atrisk.length)   out += '<span style="font-size:.5rem;font-weight:700;color:#e65100">\u25a0 ' + atrisk.length + ' At Risk</span>';
     if (critical.length) out += '<span style="font-size:.5rem;font-weight:700;color:#c62828">\u25a0 ' + critical.length + ' Critical</span>';
     out += '</div></div>';
@@ -1301,7 +1358,7 @@ function generateInsights(pillar, data) {
   if (ctryPerf.length > 1) {
     out += '<div style="font-size:.54rem;text-transform:uppercase;letter-spacing:1px;color:#bbb;margin-bottom:.35rem">Country Split</div>';
     ctryPerf.forEach(function(r) {
-      var cc = r.pct >= 80 ? '#2e7d32' : r.pct >= 50 ? '#e65100' : '#c62828';
+      var cc = r.pct >= 80 ? '#B38F00' : r.pct >= 50 ? '#e65100' : '#c62828';
       var bw = Math.min(r.pct, 100);
       out += '<div style="margin-bottom:.3rem">'
         + '<div style="display:flex;justify-content:space-between;font-size:.6rem;font-weight:700;color:#333;margin-bottom:2px">'
@@ -1353,10 +1410,10 @@ function generateInsights(pillar, data) {
   }
 
   var PROOF_ACTIONS = {
-    gap: 'Document the extension model, input access pathway, and farmer engagement approach behind this result in <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b>. Commission a structured field learning visit and translate findings into a replicable Good Practices protocol for underperforming projects.',
-    sbe: 'Investigate what service delivery model — nucleus farmer hub, agro-dealer network, or digital extension — is driving results in <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b>. Package it as an investment-ready case study to attract replication funding across lagging projects.',
-    epe: 'Conduct an Outcome Harvesting session with the CSO or government partner responsible for gains in <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b>. Extract the advocacy strategy, coalition-building approach, and decision-maker relationships that worked, and adapt them for other project contexts.',
-    mu:  'Analyse the corporate or procurement relationship driving results in <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b> \u2014 identify the value proposition, traceability mechanism, or pricing arrangement. Build a replication pitch deck for other projects using this as the anchor case.'
+    gap: 'Mobilise a structured field learning visit to <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b>. Extract the specific extension model, input access pathway, and demo plot approach driving results \u2014 then convert findings into a written Good Practices protocol and deploy it in the three lowest-performing projects within 60 days.',
+    sbe: 'Dispatch a peer learning team to <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b> to document which service delivery mechanism (nucleus farmer hub, agro-dealer, digital extension) is generating repeat producer transactions. Package the model as an investment-ready case study with cost-per-beneficiary data and share with corporate and donor partners as a replication pitch.',
+    epe: 'Commission a rapid review of the advocacy and coalition strategy in <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b>: identify which decision-maker relationships, policy entry points, and CSO partnerships produced results. Produce a transferable advocacy playbook and hold a cross-country learning session within the next quarter.',
+    mu:  'Debrief the account team managing <b>' + (bestProject ? bestProject.p : 'the leading project') + '</b> to extract the exact value proposition, traceability mechanism, and pricing arrangement that converted corporate engagement into sourcing volume. Build a one-page replication pitch and present it to the three lowest-performing project teams with named corporate targets.'
   };
   if (bestProject && worstProject && bestProject.pct >= 80 && worstProject.pct < 80) {
     out += '<div class="ins-rec-proof">'
@@ -1412,7 +1469,7 @@ function generateInsights(pillar, data) {
     var kd = [];
     var kc = [];
     var kb = [];
-    if (ontrack.length)  { kd.push(ontrack.length);  kc.push('#2e7d32'); kb.push('#c8e6c9'); }
+    if (ontrack.length)  { kd.push(ontrack.length);  kc.push('#B38F00'); kb.push('#fffce8'); }
     if (atrisk.length)   { kd.push(atrisk.length);   kc.push('#e65100'); kb.push('#ffe0b2'); }
     if (critical.length) { kd.push(critical.length); kc.push('#c62828'); kb.push('#ffcdd2'); }
     _insightCharts['kpid-' + pillar] = new Chart(c2.getContext('2d'), {
