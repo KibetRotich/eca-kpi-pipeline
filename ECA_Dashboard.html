@@ -168,15 +168,20 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
 @media(max-width:700px){.g6{grid-template-columns:repeat(2,1fr)}}
 
 /* TABS */
-.tab-bar{display:none}
-.tab-btn{padding:.55rem 1.4rem;border:none;border-top:3px solid transparent;
-  background:#ebebeb;font-family:'Open Sans',sans-serif;font-size:.65rem;font-weight:800;
-  text-transform:uppercase;letter-spacing:1.2px;cursor:pointer;color:#777;
-  margin-bottom:-3px;transition:background .15s,color .15s}
+.tab-bar{display:flex;flex-wrap:wrap;background:#f5f5f5;border-bottom:3px solid #e0e0e0;padding:0 1rem}
+.tab-btn{padding:.6rem 1.4rem;border:none;border-top:3px solid transparent;
+  background:transparent;font-family:'Open Sans',sans-serif;font-size:.62rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:1.2px;cursor:pointer;color:#888;
+  transition:background .15s,color .15s;white-space:nowrap}
 .tab-btn:hover{background:#fff5cc;color:#333}
 .tab-btn.active{background:#fff;color:#000;border-top:3px solid #FFC800;
   border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0}
 .tab-panel{display:block}
+body.tabs-ready .tab-panel{display:none}
+body.tabs-ready .tab-panel.active{display:block}
+.out-grp-hdr{font-size:.54rem;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;
+  color:#e65100;padding:.5rem 0 .35rem;margin-bottom:.15rem;border-bottom:2px solid #e65100;
+  margin-top:.6rem}
 
 /* INSIGHTS BOX */
 .insights-box{background:#fff;border:none;border-radius:4px;
@@ -396,22 +401,24 @@ footer .fp{color:#FFC800;font-weight:800;font-size:.6rem;
       <div class="s-hdr-tag" style="background:#e65100;color:#fff">Lead Farmers &middot; Cooperatives &middot; Gender Champions &middot; Demo Plots &middot; Nurseries &middot; CSOs &middot; Policy</div>
     </div>
     <div id="out-country-cards" class="out-cards"></div>
-    <div class="g2">
+
+    <div class="out-grp-hdr">People Outputs — Lead Farmers &amp; Gender Champions</div>
+    <div class="g4">
       <div class="cc" id="out-c-lead"></div>
       <div class="cc" id="out-c-lead-gender"></div>
-    </div>
-    <div class="g2">
-      <div class="cc" id="out-c-coop-members"></div>
-      <div class="cc" id="out-c-coop-gender"></div>
-    </div>
-    <div class="g2">
       <div class="cc" id="out-c-gchamp"></div>
       <div class="cc" id="out-c-gchamp-gender"></div>
     </div>
-    <div class="g2">
+
+    <div class="out-grp-hdr">Assets &amp; Governance — Cooperatives, Infrastructure &amp; CSOs</div>
+    <div class="g4">
+      <div class="cc" id="out-c-coop-members"></div>
+      <div class="cc" id="out-c-coop-gender"></div>
       <div class="cc" id="out-c-infra"></div>
       <div class="cc" id="out-c-cso-board"></div>
     </div>
+
+    <div class="out-grp-hdr">Policy &amp; Institutional Reach</div>
     <div class="g2">
       <div class="cc" id="out-c-policy"></div>
       <div class="cc" id="out-c-coops"></div>
@@ -1130,8 +1137,13 @@ document.addEventListener('click', e => {
   await loadFromCSV();
   rebuildFilterDropdowns();
   applyFilters();
-  setTimeout(renderOutputsTab, 400); // render outputs after KPI charts settle
+  setTimeout(renderOutputsTab, 400);
   document.getElementById('loader').classList.add('gone');
+  // Enable tab mode after all charts have rendered with correct dimensions
+  setTimeout(function() {
+    document.body.classList.add('tabs-ready');
+    showTab('gap');
+  }, 900);
 })();
 
 // ── TABS ─────────────────────────────────────────────────────────────────
