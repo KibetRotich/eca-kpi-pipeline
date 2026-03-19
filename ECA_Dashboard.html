@@ -101,6 +101,9 @@ main{padding:.9rem 1.4rem 4rem}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.8rem}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:.8rem}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:.8rem}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;margin-bottom:.8rem}
+@media(max-width:1400px){.g5{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.g5{grid-template-columns:1fr 1fr}}
 
 /* CHART CARDS */
 .cc{background:#fff;border:1px solid #d0d0d0;padding:.6rem .75rem;position:relative}
@@ -402,26 +405,22 @@ body.tabs-ready .tab-panel.active{display:block}
     </div>
     <div id="out-country-cards" class="out-cards"></div>
 
-    <div class="out-grp-hdr">People Outputs — Lead Farmers &amp; Gender Champions</div>
-    <div class="g4">
+    <div class="out-grp-hdr">People Outputs — Lead Farmers, Gender Champions &amp; Policy</div>
+    <div class="g5">
       <div class="cc" id="out-c-lead"></div>
       <div class="cc" id="out-c-lead-gender"></div>
       <div class="cc" id="out-c-gchamp"></div>
       <div class="cc" id="out-c-gchamp-gender"></div>
+      <div class="cc" id="out-c-policy"></div>
     </div>
 
     <div class="out-grp-hdr">Assets &amp; Governance — Cooperatives, Infrastructure &amp; CSOs</div>
-    <div class="g4">
+    <div class="g5">
       <div class="cc" id="out-c-coop-members"></div>
       <div class="cc" id="out-c-coop-gender"></div>
+      <div class="cc" id="out-c-coops"></div>
       <div class="cc" id="out-c-infra"></div>
       <div class="cc" id="out-c-cso-board"></div>
-    </div>
-
-    <div class="out-grp-hdr">Policy &amp; Institutional Reach</div>
-    <div class="g2">
-      <div class="cc" id="out-c-policy"></div>
-      <div class="cc" id="out-c-coops"></div>
     </div>
   </div>
 
