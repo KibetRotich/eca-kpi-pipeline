@@ -842,7 +842,6 @@ const PILLAR_KPI_GROUPS = {
     '# of farmers that access new or improved services from service providers supported by Solidaridad',
     '# of local Service Providers supported to provide services and inputs',
     "# of persons who are newly employed as a result of Solidaridad's support",
-    '# targeted producers with new or improved access to markets',
     '# of members of strengthened (producer) organisations',
     '# of service providers with increase of turnover',
   ],
@@ -855,6 +854,7 @@ const PILLAR_KPI_GROUPS = {
     '# of recommendations submitted to key public and private sector decision makers',
   ],
   mu: [
+    '# targeted producers with new or improved access to markets',
     '# of corporates Solidaridad engaged with',
     '# of campaigns promoting uptake of sustainable products',
     '# of individuals activated to potentially purchase sustainable products',
@@ -914,7 +914,7 @@ function renderPillar(pillar, data) {
   const ctGrid = document.getElementById(pillar + '-ct');
   if (ctGrid) {
     ctGrid.innerHTML = '';
-    const ctKpis = kpis.length > 4 ? kpis.slice(4, 8) : kpis.slice(0, 4);
+    const ctKpis = kpis.slice(0, 4);
     ctKpis.forEach((kpi, i) => {
       const cid = 'ch_'+pillar+'_ct_'+uid(kpi);
       const cc = document.createElement('div');
