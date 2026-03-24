@@ -74,8 +74,10 @@ main{padding:.9rem 1.4rem 4rem}
   color:#555;display:none;align-items:center;gap:.5rem}
 
 /* KPI BUBBLES */
-.bubble-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));
+.bubble-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));
   gap:.6rem;margin-bottom:.9rem}
+.bubble-row{display:flex;gap:.6rem;margin-bottom:.8rem}
+.bubble-row .bubble{flex:1;min-width:0}
 .bubble{background:#fff;border:1px solid #d0d0d0;padding:.65rem .5rem;
   text-align:center;position:relative;overflow:hidden}
 .bubble::before{content:'';position:absolute;top:0;left:0;right:0;
@@ -338,7 +340,7 @@ body.tabs-ready .tab-panel.active{display:block}
       <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
       <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
-    <div class="g6" id="gap-bubbles"></div>
+    <div class="bubble-row" id="gap-bubbles"></div>
     <div class="g4" id="gap-yr"></div>
     <div class="g4" id="gap-ct"></div>
     <div class="insights-box">
@@ -358,7 +360,7 @@ body.tabs-ready .tab-panel.active{display:block}
       <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
       <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
-    <div class="g6" id="sbe-bubbles"></div>
+    <div class="bubble-row" id="sbe-bubbles"></div>
     <div class="g4" id="sbe-yr"></div>
     <div class="g4" id="sbe-ct"></div>
     <div class="insights-box">
@@ -378,7 +380,7 @@ body.tabs-ready .tab-panel.active{display:block}
       <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
       <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
-    <div class="g6" id="epe-bubbles"></div>
+    <div class="bubble-row" id="epe-bubbles"></div>
     <div class="g4" id="epe-yr"></div>
     <div class="g4" id="epe-ct"></div>
     <div class="insights-box">
@@ -398,7 +400,7 @@ body.tabs-ready .tab-panel.active{display:block}
       <div class="leg"><div class="ld" style="background:#111111"></div>Net Annual Target</div>
       <div class="leg"><div class="ld" style="background:#FFC800"></div>Net Achievement</div>
     </div>
-    <div class="g6" id="mu-bubbles"></div>
+    <div class="bubble-row" id="mu-bubbles"></div>
     <div class="g4" id="mu-yr"></div>
     <div class="g4" id="mu-ct"></div>
     <div class="insights-box">
