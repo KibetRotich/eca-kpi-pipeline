@@ -298,6 +298,15 @@ body.tabs-ready .tab-panel.active{display:block}
     </div>
   </div>
 
+  <div style="display:flex;align-items:center;gap:6px;margin-left:8px;">
+    <label style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">View</label>
+    <select id="f-view" onchange="applyFilters()" style="font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;">
+      <option value="net">Net Achievement</option>
+      <option value="new">New Only (unduplicated)</option>
+      <option value="both">New + Continued (stacked)</option>
+    </select>
+  </div>
+
   <div class="fbar-sep"></div>
   <button class="rbtn" onclick="applyFilters()">&#8635; Refresh</button>
   <button class="rbtn ghost" onclick="resetFilters()">Reset</button>
@@ -664,38 +673,79 @@ function getFiltered() {
   });
 }
 
+// ── VIEW HELPER ───────────────────────────────────────────────────────────
+function getView() { return (document.getElementById('f-view')||{value:'net'}).value; }
+
 // ── AGGREGATION ───────────────────────────────────────────────────────────
 function aggByYear(data, kpi) {
+  const view = getView();
   const yrs = [...new Set(data.filter(r => r.kpi_name === kpi).map(r => r.year))].sort();
-  const ach = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.net_achievement),0));
-  const tgt = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.net_annual_target),0));
-  return { yrs, ach, tgt };
+  const tgt  = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.net_annual_target),0));
+  if (view === 'new') {
+    const ach = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.results_new),0));
+    return { yrs, ach, tgt, newV:ach, contV:null };
+  } else if (view === 'both') {
+    const newV  = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.results_new),0));
+    const contV = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.results_continued),0));
+    const ach   = yrs.map((y,i) => newV[i] + contV[i]);
+    return { yrs, ach, tgt, newV, contV };
+  } else {
+    const ach = yrs.map(y => data.filter(r => r.kpi_name===kpi && r.year===y).reduce((a,r)=>a+pN(r.net_achievement),0));
+    return { yrs, ach, tgt, newV:null, contV:null };
+  }
 }
 
 function aggByCountry(data, kpi) {
+  const view = getView();
   const cs = [...new Set(data.filter(r => r.kpi_name === kpi).map(r => r.country))].filter(Boolean).sort();
-  const ach = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.net_achievement),0));
-  const tgt = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.net_annual_target),0));
-  return { cs, ach, tgt };
+  const tgt  = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.net_annual_target),0));
+  if (view === 'new') {
+    const ach = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.results_new),0));
+    return { cs, ach, tgt, newV:ach, contV:null };
+  } else if (view === 'both') {
+    const newV  = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.results_new),0));
+    const contV = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.results_continued),0));
+    const ach   = cs.map((c,i) => newV[i] + contV[i]);
+    return { cs, ach, tgt, newV, contV };
+  } else {
+    const ach = cs.map(c => data.filter(r => r.kpi_name===kpi && r.country===c).reduce((a,r)=>a+pN(r.net_achievement),0));
+    return { cs, ach, tgt, newV:null, contV:null };
+  }
 }
 
 function kpiTotal(data, kpi) {
+  const view = getView();
   const rows = data.filter(r => r.kpi_name === kpi);
-  return {
-    ach: rows.reduce((a,r) => a+pN(r.net_achievement), 0),
-    tgt: rows.reduce((a,r) => a+pN(r.net_annual_target), 0)
-  };
+  const tgt  = rows.reduce((a,r) => a+pN(r.net_annual_target), 0);
+  if (view === 'new') {
+    return { ach: rows.reduce((a,r) => a+pN(r.results_new), 0), tgt };
+  } else if (view === 'both') {
+    const n = rows.reduce((a,r) => a+pN(r.results_new), 0);
+    const c = rows.reduce((a,r) => a+pN(r.results_continued), 0);
+    return { ach: n + c, tgt };
+  } else {
+    return { ach: rows.reduce((a,r) => a+pN(r.net_achievement), 0), tgt };
+  }
 }
 
-function tgtDatasets(tgt, ach, color) {
+function tgtDatasets(tgt, ach, color, newV, contV) {
+  const view = getView();
   const hasTarget = tgt.some(v => v > 0);
+  if (view === 'both' && newV && contV) {
+    const ds = [];
+    if (hasTarget) ds.push({ label:'Annual Target', data:tgt, backgroundColor:'#111111', borderRadius:2 });
+    ds.push({ label:'Continued',      data:contV, backgroundColor:'#d4a800', borderRadius:2, stack:'ach' });
+    ds.push({ label:'New (unduplicated)', data:newV, backgroundColor:Y,      borderRadius:2, stack:'ach' });
+    return ds;
+  }
+  const label = view === 'new' ? 'New Only' : 'Net Achievement';
   if (hasTarget) {
     return [
-      { label:'Net Annual Target', data:tgt, backgroundColor:'#111111', borderRadius:2 },
-      { label:'Net Achievement',   data:ach, backgroundColor:Y,         borderRadius:2 }
+      { label:'Annual Target', data:tgt, backgroundColor:'#111111', borderRadius:2 },
+      { label,                 data:ach, backgroundColor:Y,         borderRadius:2 }
     ];
   }
-  return [{ label:'Net Achievement', data:ach, backgroundColor:Y, borderRadius:2 }];
+  return [{ label, data:ach, backgroundColor:Y, borderRadius:2 }];
 }
 
 // ── CHART HELPERS ─────────────────────────────────────────────────────────
@@ -902,11 +952,15 @@ function renderPillar(pillar, data) {
         '<div class="ch155"><canvas id="'+cid+'"></canvas></div>';
       yrGrid.appendChild(cc);
       setTimeout(() => {
-        const {yrs, ach, tgt} = aggByYear(data, kpi);
+        const {yrs, ach, tgt, newV, contV} = aggByYear(data, kpi);
+        const stacked = getView() === 'both';
+        const opts = stacked
+          ? {...OPTS_V, scales:{...OPTS_V.scales, x:{...OPTS_V.scales.x,stacked:true}, y:{...OPTS_V.scales.y,stacked:true}}}
+          : OPTS_V;
         mkChart(cid, {
           type:'bar',
-          data:{ labels:yrs, datasets:tgtDatasets(tgt, ach, Y) },
-          options: OPTS_V
+          data:{ labels:yrs, datasets:tgtDatasets(tgt, ach, Y, newV, contV) },
+          options: opts
         });
       }, 20 + i * 30);
     });
@@ -928,11 +982,15 @@ function renderPillar(pillar, data) {
         '<div class="ch170"><canvas id="'+cid+'"></canvas></div>';
       ctGrid.appendChild(cc);
       setTimeout(() => {
-        const {cs, ach, tgt} = aggByCountry(data, kpi);
+        const {cs, ach, tgt, newV, contV} = aggByCountry(data, kpi);
+        const stacked = getView() === 'both';
+        const opts = stacked
+          ? {...OPTS_H, scales:{...OPTS_H.scales, x:{stacked:true}, y:{stacked:true}}}
+          : OPTS_H;
         mkChart(cid, {
           type:'bar',
-          data:{ labels:cs, datasets:tgtDatasets(tgt, ach, Y) },
-          options: OPTS_H
+          data:{ labels:cs, datasets:tgtDatasets(tgt, ach, Y, newV, contV) },
+          options: opts
         });
       }, 30 + i * 30);
     });
