@@ -3,11 +3,16 @@
   command = ""   # no build step needed — pure HTML
 
 [[redirects]]
-  from = "/"
-  to   = "/ECA_Dashboard.html"
-  status = 200
+  from = "/ECA_Dashboard.html"
+  to   = "/"
+  status = 301
+
+[[redirects]]
+  from = "/eca_dashboard"
+  to   = "/"
+  status = 301
 
 [[headers]]
-  for = "/ECA_Dashboard.html"
+  for = "/index.html"
   [headers.values]
     Cache-Control = "public, max-age=300, stale-while-revalidate=3600"
