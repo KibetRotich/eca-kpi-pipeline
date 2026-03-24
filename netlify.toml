@@ -10,4 +10,4 @@
 [[headers]]
   for = "/ECA_Dashboard.html"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "public, max-age=300, stale-while-revalidate=3600"
