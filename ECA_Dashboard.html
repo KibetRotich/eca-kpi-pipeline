@@ -74,8 +74,8 @@ main{padding:.9rem 1.4rem 4rem}
   color:#555;display:none;align-items:center;gap:.5rem}
 
 /* KPI BUBBLES */
-.bubble-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));
-  gap:.6rem;margin-bottom:.9rem}
+.bubble-strip{display:flex;flex-wrap:nowrap;gap:.5rem;margin-bottom:.9rem;overflow-x:auto}
+.bubble-strip .bubble{flex:1;min-width:0}
 .bubble{background:#fff;border:1px solid #d0d0d0;padding:.65rem .5rem;
   text-align:center;position:relative;overflow:hidden}
 .bubble::before{content:'';position:absolute;top:0;left:0;right:0;
@@ -340,7 +340,6 @@ body.tabs-ready .tab-panel.active{display:block}
     </div>
     <div class="g6" id="gap-bubbles"></div>
     <div class="g4" id="gap-yr"></div>
-    <div class="g4" id="gap-ct"></div>
     <div class="insights-box">
       <div class="insights-title" style="border-left:4px solid #FFC800"><span style="color:#FFC800;font-size:.8rem;line-height:1">◈</span> Decision Guidance &mdash; Good Agricultural Practices</div>
       <div id="insights-gap-body" class="insights-text" style="padding:.85rem 1rem 1rem"></div>
@@ -360,7 +359,6 @@ body.tabs-ready .tab-panel.active{display:block}
     </div>
     <div class="g6" id="sbe-bubbles"></div>
     <div class="g4" id="sbe-yr"></div>
-    <div class="g4" id="sbe-ct"></div>
     <div class="insights-box">
       <div class="insights-title" style="border-left:4px solid #2e7d32"><span style="color:#66bb6a;font-size:.8rem;line-height:1">◈</span> Decision Guidance &mdash; Sustainable Business Ecosystem</div>
       <div id="insights-sbe-body" class="insights-text" style="padding:.85rem 1rem 1rem"></div>
@@ -380,7 +378,6 @@ body.tabs-ready .tab-panel.active{display:block}
     </div>
     <div class="g6" id="epe-bubbles"></div>
     <div class="g4" id="epe-yr"></div>
-    <div class="g4" id="epe-ct"></div>
     <div class="insights-box">
       <div class="insights-title" style="border-left:4px solid #1565c0"><span style="color:#64b5f6;font-size:.8rem;line-height:1">◈</span> Decision Guidance &mdash; Enabling Policy Environment</div>
       <div id="insights-epe-body" class="insights-text" style="padding:.85rem 1rem 1rem"></div>
@@ -400,7 +397,6 @@ body.tabs-ready .tab-panel.active{display:block}
     </div>
     <div class="g6" id="mu-bubbles"></div>
     <div class="g4" id="mu-yr"></div>
-    <div class="g4" id="mu-ct"></div>
     <div class="insights-box">
       <div class="insights-title" style="border-left:4px solid #9e9e9e"><span style="color:#bdbdbd;font-size:.8rem;line-height:1">◈</span> Decision Guidance &mdash; Market Uptake</div>
       <div id="insights-mu-body" class="insights-text" style="padding:.85rem 1rem 1rem"></div>
@@ -966,35 +962,6 @@ function renderPillar(pillar, data) {
     });
   }
 
-  // BY COUNTRY charts (4-col grid) — use remaining KPIs
-  const ctGrid = document.getElementById(pillar + '-ct');
-  if (ctGrid) {
-    ctGrid.innerHTML = '';
-    const ctKpis = kpis.slice(0, 4);
-    ctKpis.forEach((kpi, i) => {
-      const cid = 'ch_'+pillar+'_ct_'+uid(kpi);
-      const cc = document.createElement('div');
-      cc.className = 'cc';
-      cc.innerHTML =
-        '<div class="cct"><span class="cct-main">'+esc(shortName(kpi))+'</span>'+
-        '<span class="cct-badge">By Country</span></div>'+
-        '<button class="cc-dl" onclick="downloadChart(this)" title="Download chart">\u2193 PNG</button>'+
-        '<div class="ch170"><canvas id="'+cid+'"></canvas></div>';
-      ctGrid.appendChild(cc);
-      setTimeout(() => {
-        const {cs, ach, tgt, newV, contV} = aggByCountry(data, kpi);
-        const stacked = getView() === 'both';
-        const opts = stacked
-          ? {...OPTS_H, scales:{...OPTS_H.scales, x:{stacked:true}, y:{stacked:true}}}
-          : OPTS_H;
-        mkChart(cid, {
-          type:'bar',
-          data:{ labels:cs, datasets:tgtDatasets(tgt, ach, Y, newV, contV) },
-          options: opts
-        });
-      }, 30 + i * 30);
-    });
-  }
 }
 
 // ── DISAGGREGATION ────────────────────────────────────────────────────────
