@@ -1026,11 +1026,6 @@ function renderBubbles(data) {
   addBubble(recs, 'Projects', 'in selection', '#888');
   addBubble(totalAch, 'Total Achievement', overallPct+'% of target', Y);
   addBubble(totalTgt, 'Total Target', 'cumulative', '#aaa');
-  BUBBLE_KPIS.forEach(s => {
-    const {ach, tgt} = kpiTotal(data, s.k);
-    const pct = tgt>0 ? Math.round(ach/tgt*100)+'% of tgt' : fmt(ach);
-    addBubble(ach, s.l, pct, PILLAR_COLORS[s.p]);
-  });
 }
 
 // ── PILLAR SECTIONS ───────────────────────────────────────────────────────
