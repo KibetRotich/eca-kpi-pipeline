@@ -995,6 +995,7 @@ function applyFilters() {
 
 // ── KPI BUBBLES ───────────────────────────────────────────────────────────
 const BUBBLE_KPIS = [
+  { k:'# of farmers trained',                                              l:'Farmers Trained',    p:'gap' },
   { k:'# of farmers with farm income increase',                            l:'Income Increase',    p:'gap' },
   { k:'# of farmers with improved yield (kg/ha))',                         l:'Improved Yield',     p:'gap' },
   { k:'# of ha under sustainable management in a given year',              l:'Ha Sust. Mgt',       p:'gap' },
@@ -1035,6 +1036,7 @@ function renderBubbles(data) {
 // ── PILLAR SECTIONS ───────────────────────────────────────────────────────
 const PILLAR_KPI_GROUPS = {
   gap: [
+    '# of farmers trained',
     '# of farmers with improved yield (kg/ha))',
     '# of farmers with farm income increase',
     '# of ha under sustainable management in a given year',
@@ -1346,6 +1348,8 @@ function showTab(tab) {
 
 // Per-KPI specific action language — {country} is replaced at runtime
 var KPI_ACTIONS = {
+  '# of farmers trained':
+    'Training is the entry point for all Good Practices adoption. Re-mobilise farmer field schools and demo plot (model farm) programming in {country} — review extension worker deployment and close any supply-side gaps in agronomic support.',
   '# of farmers with improved yield (kg/ha))':
     'Yield stagnation in {country} signals input access or soil health bottlenecks — "very little improvement in yields per unit area and barely any change in production techniques" is exactly the structural problem MASP III was built to close. Intensify precision nutrition, intercropping trials, and demo plot activities.',
   '# of farmers with farm income increase':
