@@ -325,6 +325,7 @@ body.tabs-ready .tab-panel.active{display:block}
     <button class="tab-btn" id="tbtn-epe" onclick="showTab('epe')">Enabling Policy Environment</button>
     <button class="tab-btn" id="tbtn-mu" onclick="showTab('mu')">Market Uptake</button>
     <button class="tab-btn" id="tbtn-outputs" onclick="showTab('outputs')">Country Outputs</button>
+    <button class="tab-btn" id="tbtn-masp" onclick="showTab('masp')">MASP III Progress</button>
   </div>
 
   <!-- GAP SECTION -->
@@ -429,6 +430,42 @@ body.tabs-ready .tab-panel.active{display:block}
       <div class="cc" id="out-c-infra"></div>
       <div class="cc" id="out-c-cso-board"></div>
     </div>
+  </div>
+
+  <!-- MASP III PROGRESS SECTION -->
+  <div id="tab-masp" class="tab-panel">
+    <div class="s-hdr">
+      <div class="s-hdr-bar" style="background:#7b1fa2"></div>
+      <div class="s-hdr-text">MASP III Cumulative Progress — 2021 to 2025</div>
+      <div class="s-hdr-tag" style="background:#7b1fa2;color:#fff">New+Continued 2021 &middot; New Only 2022&ndash;2025</div>
+    </div>
+    <div class="notice" style="display:flex;margin-bottom:.7rem">
+      <span>&#9432;</span>&nbsp;
+      <span><b>Methodology:</b> 2021 counts both New and Continued results (programme start). 2022&ndash;2025 count New results only, to avoid double-counting carryover participants.</span>
+    </div>
+
+    <!-- Summary bubbles across all pillars -->
+    <div id="masp-summary" class="bubble-strip" style="margin-bottom:1.2rem"></div>
+
+    <!-- GAP -->
+    <div class="out-grp-hdr" style="border-left:4px solid #FFC800;padding-left:.5rem">Good Agricultural Practices</div>
+    <div class="g6" id="masp-gap-bubbles"></div>
+    <div class="g4" id="masp-gap-charts"></div>
+
+    <!-- SBE -->
+    <div class="out-grp-hdr" style="border-left:4px solid #000;padding-left:.5rem;margin-top:1rem">Sustainable Business Ecosystem</div>
+    <div class="g6" id="masp-sbe-bubbles"></div>
+    <div class="g4" id="masp-sbe-charts"></div>
+
+    <!-- EPE -->
+    <div class="out-grp-hdr" style="border-left:4px solid #555;padding-left:.5rem;margin-top:1rem">Enabling Policy Environment</div>
+    <div class="g6" id="masp-epe-bubbles"></div>
+    <div class="g4" id="masp-epe-charts"></div>
+
+    <!-- MU -->
+    <div class="out-grp-hdr" style="border-left:4px solid #888;padding-left:.5rem;margin-top:1rem">Market Uptake</div>
+    <div class="g6" id="masp-mu-bubbles"></div>
+    <div class="g4" id="masp-mu-charts"></div>
   </div>
 
 </main>
@@ -809,9 +846,125 @@ function shortName(s) {
            .replace(/\s+/g,' ').trim();
 }
 
+// ── MASP III PROGRESS TAB ─────────────────────────────────────────────────
+// Methodology: 2021 = results_new + results_continued; 2022-2025 = results_new only
+const MASP_YEARS = ['2021','2022','2023','2024','2025'];
+const MASP_CONT_COLOR = 'rgba(140,80,180,0.55)'; // purple for 2021 continued slice
+
+function maspRowValue(r) {
+  return pN(r.results_new) + (String(r.year) === '2021' ? pN(r.results_continued) : 0);
+}
+
+function maspKpiTotal(data, kpi) {
+  return data.filter(r => r.kpi_name === kpi).reduce((a,r) => a + maspRowValue(r), 0);
+}
+
+function renderMaspTab() {
+  const data = getFiltered();
+
+  // ── Summary bubbles (one per pillar) ──────────────────────────────────
+  const summaryEl = document.getElementById('masp-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = '';
+    const addBub = (val, lbl, pct, color) => {
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.style.setProperty('--bc', color);
+      b.innerHTML = '<div class="bubble-val">'+fmt(val)+'</div><div class="bubble-lbl">'+lbl+'</div><div class="bubble-pct">'+pct+'</div>';
+      summaryEl.appendChild(b);
+    };
+    let grand = 0;
+    const pillarNames = { gap:'Good Agri. Practices', sbe:'Sust. Business Eco.', epe:'Enabling Policy', mu:'Market Uptake' };
+    Object.keys(PILLAR_KPI_GROUPS).forEach(p => {
+      const total = PILLAR_KPI_GROUPS[p].reduce((a,k) => a + maspKpiTotal(data,k), 0);
+      const tgt   = PILLAR_KPI_GROUPS[p].reduce((a,k) => a + data.filter(r=>r.kpi_name===k).reduce((s,r)=>s+pN(r.net_annual_target),0), 0);
+      const pct   = tgt>0 ? Math.round(total/tgt*100)+'% of tgt' : 'cumulative';
+      addBub(total, pillarNames[p], pct, PILLAR_COLORS[p]);
+      grand += total;
+    });
+    // prepend grand total
+    const gtb = document.createElement('div');
+    gtb.className = 'bubble';
+    gtb.style.setProperty('--bc','#7b1fa2');
+    gtb.innerHTML = '<div class="bubble-val">'+fmt(grand)+'</div><div class="bubble-lbl">MASP III Total</div><div class="bubble-pct">all result areas</div>';
+    summaryEl.insertBefore(gtb, summaryEl.firstChild);
+  }
+
+  // ── Per-pillar sections ───────────────────────────────────────────────
+  const OPTS_MASP = {
+    ...OPTS_V,
+    scales: {
+      ...OPTS_V.scales,
+      x: { ...OPTS_V.scales.x, stacked: true },
+      y: { ...OPTS_V.scales.y, stacked: true }
+    },
+    plugins: {
+      ...OPTS_V.plugins,
+      legend: { display: true, labels: { boxWidth: 12, font: { size: 9 } } }
+    }
+  };
+
+  Object.keys(PILLAR_KPI_GROUPS).forEach(function(pillar) {
+    const color  = PILLAR_COLORS[pillar];
+    const kpis   = PILLAR_KPI_GROUPS[pillar];
+    const bubEl  = document.getElementById('masp-'+pillar+'-bubbles');
+    const chrEl  = document.getElementById('masp-'+pillar+'-charts');
+    if (!bubEl || !chrEl) return;
+    bubEl.innerHTML = '';
+    chrEl.innerHTML = '';
+
+    kpis.forEach(function(kpi) {
+      // Bubble
+      const total = maspKpiTotal(data, kpi);
+      const tgt   = data.filter(r=>r.kpi_name===kpi).reduce((a,r)=>a+pN(r.net_annual_target),0);
+      const pct   = tgt>0 ? Math.round(total/tgt*100)+'%' : '—';
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.style.setProperty('--bc', color);
+      b.innerHTML = '<div class="bubble-val">'+fmt(total)+'</div>'+
+        '<div class="bubble-lbl">'+esc(shortName(kpi))+'</div>'+
+        '<div class="bubble-pct">'+pct+(tgt>0?' vs '+fmt(tgt):'')+'</div>';
+      bubEl.appendChild(b);
+
+      // Chart
+      const cid = 'masp_'+uid(kpi);
+      const cc  = document.createElement('div');
+      cc.className = 'cc';
+      cc.innerHTML =
+        '<div class="cct"><span class="cct-main">'+esc(shortName(kpi))+'</span>'+
+        '<span class="cct-badge">MASP Progress</span></div>'+
+        '<button class="cc-dl" onclick="downloadChart(this)" title="Download chart">\u2193 PNG</button>'+
+        '<div class="ch155"><canvas id="'+cid+'"></canvas></div>';
+      chrEl.appendChild(cc);
+
+      setTimeout(function() {
+        const newVals  = MASP_YEARS.map(function(y) {
+          return data.filter(r=>r.kpi_name===kpi && String(r.year)===y).reduce(function(a,r){return a+pN(r.results_new);},0);
+        });
+        const contVals = MASP_YEARS.map(function(y, i) {
+          return i === 0
+            ? data.filter(r=>r.kpi_name===kpi && String(r.year)==='2021').reduce(function(a,r){return a+pN(r.results_continued);},0)
+            : 0;
+        });
+        mkChart(cid, {
+          type: 'bar',
+          data: {
+            labels: MASP_YEARS,
+            datasets: [
+              { label: 'New Results',        data: newVals,  backgroundColor: color,          borderWidth: 0, stack: 's' },
+              { label: 'Continued (2021)',    data: contVals, backgroundColor: MASP_CONT_COLOR, borderWidth: 0, stack: 's' }
+            ]
+          },
+          options: OPTS_MASP
+        });
+      }, 0);
+    });
+  });
+}
+
 // ── LAZY TAB RENDER STATE ─────────────────────────────────────────────────
 let _activeTab = 'gap';
-const _dirtyTabs = new Set(['gap','sbe','epe','mu']);
+const _dirtyTabs = new Set(['gap','sbe','epe','mu','masp']);
 const _insightCharts = {};
 
 function _renderTab(tab, data) {
@@ -826,6 +979,10 @@ function applyFilters() {
   closeAllMS();
   const d = getFiltered();
   document.getElementById('rec-count').textContent = d.length.toLocaleString() + ' records';
+  // Mark MASP dirty so it re-renders on next visit
+  _dirtyTabs.add('masp');
+  // If currently viewing MASP, re-render immediately
+  if (_activeTab === 'masp') renderMaspTab();
   // Stagger pillar renders to avoid spawning 50+ canvases simultaneously
   ['gap','sbe','epe','mu'].forEach(function(t, i) {
     setTimeout(function() {
@@ -1175,14 +1332,13 @@ document.addEventListener('click', e => {
 
 // ── TABS ─────────────────────────────────────────────────────────────────
 function showTab(tab) {
-  // no-op — all sections visible on single-page layout
   _activeTab = tab;
-  ['gap','sbe','epe','mu','outputs'].forEach(function(t) {
+  ['gap','sbe','epe','mu','outputs','masp'].forEach(function(t) {
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
     document.getElementById('tbtn-'+t).classList.toggle('active', t===tab);
   });
-  // Render on demand if dirty (first visit or filters changed)
   if (tab === 'outputs') { renderOutputsTab(); return; }
+  if (tab === 'masp')    { renderMaspTab();    return; }
   if (_dirtyTabs.has(tab)) _renderTab(tab);
 }
 
