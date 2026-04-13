@@ -79,20 +79,24 @@ export default async function SubmissionDetailPage({ params }: Props) {
   return (
     <div>
       {/* Breadcrumb */}
-      <div style={{ marginBottom: '1rem', fontSize: '.875rem', color: 'var(--grey-5)' }}>
-        <a href="/submissions">← Review Queue</a>
+      <div style={{ marginBottom: '.8rem', fontSize: '.62rem', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px' }}>
+        <a href="/submissions" style={{ color: '#888' }}>← Review Queue</a>
         <span style={{ margin: '0 .5rem' }}>·</span>
-        <span>{sub.form_id}</span>
+        <span style={{ color: '#111' }}>{sub.form_id}</span>
+        <span style={{ margin: '0 .5rem' }}>·</span>
+        <span className={`badge badge-${sub.status}`}>{sub.status}</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '.9rem', alignItems: 'start' }}>
 
         {/* Left: data preview */}
         <div>
           {/* Metadata card */}
-          <div style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '1.25rem', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>Submission metadata</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.875rem' }}>
+          <div className="cc" style={{ padding: 0, overflow: 'hidden', marginBottom: '.8rem' }}>
+            <div style={{ background: '#111', color: '#fff', padding: '.55rem .9rem', fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              Submission metadata
+            </div>
+            <table>
               <tbody>
                 {[
                   ['Form type',   sub.form_id],
@@ -104,12 +108,12 @@ export default async function SubmissionDetailPage({ params }: Props) {
                   ['Survey year', raw._survey_year ?? '—'],
                   ['UUID',        sub.submission_uuid],
                 ].map(([k, v]) => (
-                  <tr key={k} style={{ borderBottom: '1px solid var(--grey-1)' }}>
-                    <td style={{ padding: '.45rem .5rem', color: 'var(--grey-5)', fontWeight: 500, width: '40%' }}>{k}</td>
-                    <td style={{ padding: '.45rem .5rem' }}>
+                  <tr key={String(k)}>
+                    <td style={{ color: '#888', fontWeight: 700, fontSize: '.62rem', textTransform: 'uppercase', letterSpacing: '.3px', width: '36%' }}>{k}</td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {k === 'Status'
                         ? <span className={`badge badge-${sub.status}`}>{sub.status}</span>
-                        : renderValue(v)
+                        : <span style={{ fontSize: '.72rem' }}>{renderValue(v)}</span>
                       }
                     </td>
                   </tr>
@@ -119,19 +123,21 @@ export default async function SubmissionDetailPage({ params }: Props) {
           </div>
 
           {/* Form data card */}
-          <div style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '1.25rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>Form responses</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.875rem' }}>
+          <div className="cc" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ background: '#111', color: '#fff', padding: '.55rem .9rem', fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              Form responses
+            </div>
+            <table>
               <tbody>
                 {formKeys.map(k => (
-                  <tr key={k} style={{ borderBottom: '1px solid var(--grey-1)' }}>
-                    <td style={{ padding: '.4rem .5rem', color: 'var(--grey-5)', fontWeight: 500, width: '45%', verticalAlign: 'top' }}>
+                  <tr key={k}>
+                    <td style={{ color: '#888', fontWeight: 700, fontSize: '.6rem', textTransform: 'uppercase', letterSpacing: '.3px', width: '42%', verticalAlign: 'top' }}>
                       {label(k)}
-                      <div style={{ fontSize: '.7rem', color: 'var(--grey-3)', fontWeight: 400 }}>{k}</div>
+                      <div style={{ fontSize: '.55rem', color: '#bbb', fontWeight: 400, fontFamily: 'monospace', marginTop: 1 }}>{k}</div>
                     </td>
-                    <td style={{ padding: '.4rem .5rem', verticalAlign: 'top' }}>
+                    <td style={{ verticalAlign: 'top', fontSize: '.72rem' }}>
                       {raw[k] === null || raw[k] === undefined
-                        ? <span style={{ color: 'var(--grey-3)' }}>—</span>
+                        ? <span style={{ color: '#ccc' }}>—</span>
                         : renderValue(raw[k])
                       }
                     </td>

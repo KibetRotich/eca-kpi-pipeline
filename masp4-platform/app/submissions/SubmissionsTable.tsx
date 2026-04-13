@@ -3,102 +3,79 @@
 import { useRouter } from 'next/navigation'
 
 interface Submission {
-  id: string
-  submission_uuid: string
-  form_id: string
-  country: string
-  submitted_at: string
-  imported_at: string
-  status: string
-  review_notes: string | null
-  raw_data?: Record<string, unknown>
+  id: string; submission_uuid: string; form_id: string; country: string
+  submitted_at: string; imported_at: string; status: string; review_notes: string | null
   projects?: { project_code: string; project_name: string; commodity: string } | null
 }
 
 interface Props {
-  submissions:    Submission[]
-  total:          number
-  page:           number
-  perPage:        number
-  currentStatus:  string
-  currentCountry: string
-  currentFormId:  string
-  statusCounts:   Record<string, number>
-  countries:      string[]
-  formIds:        string[]
-  error?:         string
+  submissions: Submission[]; total: number; page: number; perPage: number
+  currentStatus: string; currentCountry: string; currentFormId: string
+  statusCounts: Record<string, number>; countries: string[]; formIds: string[]; error?: string
 }
 
 function fmt(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending', approved: 'Approved', rejected: 'Rejected', needs_review: 'Needs Review',
 }
 
 export default function SubmissionsTable({
-  submissions, total, page, perPage,
-  currentStatus, currentCountry, currentFormId,
-  statusCounts, countries, formIds, error,
+  submissions, total, page, perPage, currentStatus, currentCountry,
+  currentFormId, statusCounts, countries, formIds, error,
 }: Props) {
   const router = useRouter()
   const totalPages = Math.ceil(total / perPage)
 
   function nav(params: Record<string, string>) {
-    const sp = new URLSearchParams({
-      status:  currentStatus,
-      country: currentCountry,
-      form_id: currentFormId,
-      page:    String(page),
-      ...params,
-    })
+    const sp = new URLSearchParams({ status: currentStatus, country: currentCountry, form_id: currentFormId, page: String(page), ...params })
     router.push('/submissions?' + sp.toString())
-  }
-
-  const STATUS_LABELS: Record<string, string> = {
-    pending:      'Pending',
-    approved:     'Approved',
-    rejected:     'Rejected',
-    needs_review: 'Needs Review',
   }
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Review Queue</h1>
+      {/* Page header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.9rem' }}>
+        <div>
+          <div style={{ fontSize: '.9rem', fontWeight: 800, color: '#111' }}>Review Queue</div>
+          <div style={{ fontSize: '.58rem', color: '#888', textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 2 }}>
+            ODK / Taro submissions awaiting review
+          </div>
+        </div>
         <a href="/upload">
           <button className="btn-primary">+ Import CSV</button>
         </a>
       </div>
 
       {/* Status tabs */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '1rem', borderBottom: '2px solid var(--grey-2)' }}>
+      <div style={{ display: 'flex', background: '#f5f5f5', borderBottom: '3px solid #e0e0e0', marginBottom: '.8rem' }}>
         {Object.entries(STATUS_LABELS).map(([s, label]) => (
           <button
             key={s}
             onClick={() => nav({ status: s, page: '1' })}
             style={{
-              background: 'none',
+              padding: '.5rem 1.2rem',
               border: 'none',
-              borderBottom: currentStatus === s ? '2px solid var(--green)' : '2px solid transparent',
-              borderRadius: 0,
-              padding: '.6rem 1.1rem',
-              fontWeight: currentStatus === s ? 700 : 400,
-              color: currentStatus === s ? 'var(--green)' : 'var(--grey-5)',
-              cursor: 'pointer',
-              marginBottom: '-2px',
-              fontSize: '.875rem',
+              borderTop: `3px solid ${currentStatus === s ? '#FFC800' : 'transparent'}`,
+              borderLeft: currentStatus === s ? '1px solid #e0e0e0' : '1px solid transparent',
+              borderRight: currentStatus === s ? '1px solid #e0e0e0' : '1px solid transparent',
+              background: currentStatus === s ? '#fff' : 'transparent',
+              fontFamily: 'Open Sans, sans-serif',
+              fontSize: '.62rem', fontWeight: 800,
+              textTransform: 'uppercase', letterSpacing: '1.2px',
+              color: currentStatus === s ? '#000' : '#888',
+              cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
             {label}
             <span style={{
               marginLeft: '.4rem',
-              background: currentStatus === s ? 'var(--green-l)' : 'var(--grey-1)',
-              color: currentStatus === s ? 'var(--green)' : 'var(--grey-5)',
-              borderRadius: '999px',
-              padding: '.05rem .45rem',
-              fontSize: '.75rem',
-              fontWeight: 600,
+              background: currentStatus === s ? '#FFC800' : '#e0e0e0',
+              color: currentStatus === s ? '#000' : '#666',
+              padding: '.05rem .4rem',
+              fontSize: '.6rem', fontWeight: 800,
             }}>
               {statusCounts[s] ?? 0}
             </span>
@@ -107,70 +84,66 @@ export default function SubmissionsTable({
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <select value={currentCountry} onChange={e => nav({ country: e.target.value, page: '1' })}>
-          <option value="">All countries</option>
-          {countries.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={currentFormId} onChange={e => nav({ form_id: e.target.value, page: '1' })}>
-          <option value="">All form types</option>
-          {formIds.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
-        <span style={{ marginLeft: 'auto', fontSize: '.875rem', color: 'var(--grey-5)', alignSelf: 'center' }}>
-          {total} submission{total !== 1 ? 's' : ''}
+      <div style={{ background: '#fff', border: '1px solid #d0d0d0', padding: '.4rem .75rem', marginBottom: '.8rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#666' }}>Filter:</span>
+        {[
+          { label: 'Country', value: currentCountry, opts: countries, key: 'country', ph: 'All countries' },
+          { label: 'Form',    value: currentFormId,  opts: formIds,   key: 'form_id', ph: 'All forms'     },
+        ].map(({ label, value, opts, key, ph }) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '.35rem' }}>
+            <span style={{ fontSize: '.58rem', fontWeight: 700, color: '#888', textTransform: 'uppercase' }}>{label}</span>
+            <div style={{ position: 'relative' }}>
+              <select value={value} onChange={e => nav({ [key]: e.target.value, page: '1' })} style={{ paddingRight: '1.4rem', minWidth: 120 }}>
+                <option value="">{ph}</option>
+                {opts.map(o => <option key={o}>{o}</option>)}
+              </select>
+              <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#888', pointerEvents: 'none' }}>▾</span>
+            </div>
+          </div>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: '.62rem', color: '#888', fontWeight: 600 }}>
+          {total.toLocaleString()} record{total !== 1 ? 's' : ''}
         </span>
       </div>
 
       {error && (
-        <div style={{ background: 'var(--red-l)', color: 'var(--red)', padding: '.75rem 1rem', borderRadius: 'var(--radius)', marginBottom: '1rem' }}>
+        <div style={{ background: '#ffebee', color: '#c62828', padding: '.65rem .9rem', border: '1px solid #ef9a9a', marginBottom: '.8rem', fontSize: '.7rem' }}>
           {error}
         </div>
       )}
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.875rem' }}>
+      <div className="cc" style={{ padding: 0, overflow: 'hidden' }}>
+        <table>
           <thead>
-            <tr style={{ background: 'var(--grey-0)', borderBottom: '2px solid var(--grey-2)' }}>
+            <tr>
               {['Form type','Project','Country','Submitted','Status',''].map(h => (
-                <th key={h} style={{ padding: '.65rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--grey-5)', whiteSpace: 'nowrap' }}>
-                  {h}
-                </th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {submissions.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--grey-3)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', color: '#bbb', padding: '3rem', fontSize: '.7rem' }}>
                   No {currentStatus} submissions{currentCountry ? ` for ${currentCountry}` : ''}.
                 </td>
               </tr>
             )}
-            {submissions.map((s, i) => (
-              <tr
-                key={s.id}
-                style={{
-                  borderBottom: '1px solid var(--grey-2)',
-                  background: i % 2 === 0 ? '#fff' : 'var(--grey-0)',
-                  cursor: 'pointer',
-                }}
-                onClick={() => router.push(`/submissions/${s.id}`)}
-              >
-                <td style={{ padding: '.65rem 1rem', fontWeight: 500 }}>{s.form_id}</td>
-                <td style={{ padding: '.65rem 1rem' }}>
+            {submissions.map(s => (
+              <tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => router.push(`/submissions/${s.id}`)}>
+                <td style={{ fontWeight: 700 }}>{s.form_id}</td>
+                <td>
                   {s.projects
-                    ? <><strong>{s.projects.project_code}</strong><br/><span style={{ color: 'var(--grey-5)', fontSize: '.8rem' }}>{s.projects.commodity}</span></>
-                    : <span style={{ color: 'var(--grey-3)' }}>—</span>
+                    ? <><span style={{ fontWeight: 700 }}>{s.projects.project_code}</span><br/><span style={{ color: '#888', fontSize: '.62rem' }}>{s.projects.commodity}</span></>
+                    : <span style={{ color: '#ccc' }}>—</span>
                   }
                 </td>
-                <td style={{ padding: '.65rem 1rem' }}>{s.country || '—'}</td>
-                <td style={{ padding: '.65rem 1rem', color: 'var(--grey-5)' }}>{s.submitted_at ? fmt(s.submitted_at) : '—'}</td>
-                <td style={{ padding: '.65rem 1rem' }}>
-                  <span className={`badge badge-${s.status}`}>{s.status}</span>
-                </td>
-                <td style={{ padding: '.65rem 1rem', textAlign: 'right' }}>
-                  <span style={{ color: 'var(--blue)', fontSize: '.8rem' }}>Review →</span>
+                <td>{s.country || '—'}</td>
+                <td style={{ color: '#888', fontVariantNumeric: 'tabular-nums' }}>{s.submitted_at ? fmt(s.submitted_at) : '—'}</td>
+                <td><span className={`badge badge-${s.status}`}>{s.status}</span></td>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="btn-secondary" style={{ fontSize: '.55rem', padding: '.2rem .6rem' }}>Review →</button>
                 </td>
               </tr>
             ))}
@@ -180,11 +153,9 @@ export default function SubmissionsTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '.5rem', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '.5rem', marginTop: '.9rem', alignItems: 'center' }}>
           <button className="btn-secondary" disabled={page <= 1} onClick={() => nav({ page: String(page - 1) })}>← Prev</button>
-          <span style={{ padding: '.45rem .75rem', fontSize: '.875rem', color: 'var(--grey-5)' }}>
-            Page {page} of {totalPages}
-          </span>
+          <span style={{ fontSize: '.62rem', color: '#888', fontWeight: 600 }}>Page {page} of {totalPages}</span>
           <button className="btn-secondary" disabled={page >= totalPages} onClick={() => nav({ page: String(page + 1) })}>Next →</button>
         </div>
       )}

@@ -22,87 +22,93 @@ interface KpiProps {
 function Bar({ value, max, color, label }: { value: number; max: number; color: string; label: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
-    <div style={{ marginBottom: '.35rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.75rem', color: 'var(--grey-5)', marginBottom: '.15rem' }}>
+    <div style={{ marginBottom: '.3rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.54rem', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px', marginBottom: 2 }}>
         <span>{label}</span>
-        <span style={{ fontWeight: 600 }}>{value.toLocaleString()} <span style={{ fontWeight: 400, color: 'var(--grey-3)' }}>({pct}%)</span></span>
+        <span style={{ color: '#222', fontVariantNumeric: 'tabular-nums' }}>
+          {value.toLocaleString()} <span style={{ color: '#bbb', fontWeight: 400 }}>({pct}%)</span>
+        </span>
       </div>
-      <div style={{ height: 6, background: 'var(--grey-1)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width .4s ease' }} />
+      <div style={{ height: 5, background: '#f0f0f0', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width .4s ease' }} />
       </div>
     </div>
   )
 }
 
 export default function KpiCard({ kpi, color }: KpiProps) {
-  const hasDisagg = kpi.female !== undefined || kpi.male !== undefined
-  const hasTiers  = kpi.tier2  !== undefined
+  const textOnYellow = color === '#FFC800' ? '#000' : '#fff'
+  const hasDisagg    = kpi.female !== undefined
+  const hasTiers     = kpi.tier2  !== undefined
 
   return (
-    <div style={{
-      background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-      padding: '1.1rem 1.25rem', borderLeft: `4px solid ${color}`,
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.75rem' }}>
+    <div className="cc" style={{ borderTop: `3px solid ${color}` }}>
+
+      {/* Code badge + title */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.6rem' }}>
         <div>
           <span style={{
-            display: 'inline-block', background: color + '18', color,
-            borderRadius: 4, padding: '.1rem .45rem', fontSize: '.75rem', fontWeight: 700,
-            marginBottom: '.3rem',
+            display: 'inline-block',
+            background: color, color: textOnYellow,
+            fontSize: '.5rem', fontWeight: 800,
+            textTransform: 'uppercase', letterSpacing: '.8px',
+            padding: '.1rem .4rem', marginBottom: '.3rem',
           }}>
             {kpi.code}
           </span>
-          <div style={{ fontSize: '.875rem', fontWeight: 600, lineHeight: 1.3 }}>{kpi.label}</div>
+          <div style={{ fontSize: '.6rem', fontWeight: 700, color: '#333', lineHeight: 1.3, maxWidth: 160 }}>
+            {kpi.label}
+          </div>
         </div>
-        <div style={{ fontSize: '2rem', fontWeight: 800, color, lineHeight: 1, marginLeft: '.5rem', flexShrink: 0 }}>
+        <div style={{
+          fontSize: '1.6rem', fontWeight: 800, color: '#111',
+          lineHeight: 1, marginLeft: '.5rem', flexShrink: 0,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
           {kpi.count.toLocaleString()}
         </div>
       </div>
 
-      {/* Disaggregation bars — production/services KPIs */}
+      {/* Disaggregation bars */}
       {hasDisagg && kpi.count > 0 && (
-        <div style={{ marginTop: '.5rem' }}>
-          <Bar value={kpi.female!} max={kpi.count} color="#9333ea" label="Female" />
-          <Bar value={kpi.male!}   max={kpi.count} color="#0284c7" label="Male"   />
+        <div style={{ borderTop: '1px solid #f2f2f2', paddingTop: '.45rem', marginTop: '.2rem' }}>
+          <Bar value={kpi.female!} max={kpi.count} color="#1a3557" label="Female"     />
+          <Bar value={kpi.male!}   max={kpi.count} color="#888"    label="Male"       />
           {kpi.youth !== undefined && (
-            <Bar value={kpi.youth} max={kpi.count} color="#0891b2" label="Youth (≤35)" />
+            <Bar value={kpi.youth} max={kpi.count} color="#e65100" label="Youth ≤35"  />
           )}
         </div>
       )}
 
-      {/* Tier breakdown — governance/market KPIs */}
+      {/* Tier breakdown */}
       {hasTiers && kpi.count > 0 && (
-        <div style={{ marginTop: '.5rem' }}>
-          <Bar value={kpi.tier2!} max={kpi.count} color={color} label="Tier 2 (adopted)" />
-          <Bar value={kpi.tier3!} max={kpi.count} color={color + 'bb'} label="Tier 3 (implemented)" />
+        <div style={{ borderTop: '1px solid #f2f2f2', paddingTop: '.45rem', marginTop: '.2rem' }}>
+          <Bar value={kpi.tier2!} max={kpi.count} color={color}  label="Tier 2 — adopted"       />
+          <Bar value={kpi.tier3!} max={kpi.count} color="#555"   label="Tier 3 — implemented"   />
         </div>
       )}
 
-      {/* Extra metrics */}
+      {/* Extra stats */}
       {kpi.avgIndex && (
-        <div style={{ marginTop: '.65rem', fontSize: '.8rem', color: 'var(--grey-5)', borderTop: '1px solid var(--grey-1)', paddingTop: '.5rem' }}>
-          Avg. index score: <strong style={{ color }}>{kpi.avgIndex}</strong>
-          <span style={{ color: 'var(--grey-3)' }}> / {kpi.code === 'S6.1' ? '35' : '30'}</span>
+        <div style={{ borderTop: '1px solid #f2f2f2', paddingTop: '.4rem', marginTop: '.4rem', fontSize: '.58rem', color: '#888' }}>
+          Avg index: <strong style={{ color: '#111' }}>{kpi.avgIndex}</strong>
+          <span style={{ color: '#bbb' }}> / {kpi.code === 'S6.1' ? '35' : '30'}</span>
         </div>
       )}
-
       {kpi.farmersRewarded !== undefined && (
-        <div style={{ marginTop: '.65rem', fontSize: '.8rem', color: 'var(--grey-5)', borderTop: '1px solid var(--grey-1)', paddingTop: '.5rem' }}>
-          Farmers rewarded: <strong style={{ color }}>{kpi.farmersRewarded.toLocaleString()}</strong>
+        <div style={{ borderTop: '1px solid #f2f2f2', paddingTop: '.4rem', marginTop: '.4rem', fontSize: '.58rem', color: '#888' }}>
+          Farmers rewarded: <strong style={{ color: '#111' }}>{kpi.farmersRewarded.toLocaleString()}</strong>
         </div>
       )}
-
       {kpi.farmerOwners !== undefined && (
-        <div style={{ marginTop: '.65rem', fontSize: '.8rem', color: 'var(--grey-5)', borderTop: '1px solid var(--grey-1)', paddingTop: '.5rem', display: 'flex', gap: '1rem' }}>
-          <span>Farmers: <strong>{kpi.farmerOwners}</strong></span>
-          <span>Service providers: <strong>{kpi.spOwners}</strong></span>
+        <div style={{ borderTop: '1px solid #f2f2f2', paddingTop: '.4rem', marginTop: '.4rem', fontSize: '.58rem', color: '#888', display: 'flex', gap: '1rem' }}>
+          <span>Farmers: <strong style={{ color: '#111' }}>{kpi.farmerOwners}</strong></span>
+          <span>SPs: <strong style={{ color: '#111' }}>{kpi.spOwners}</strong></span>
         </div>
       )}
 
-      {/* Zero state */}
       {kpi.count === 0 && (
-        <div style={{ fontSize: '.8rem', color: 'var(--grey-3)', marginTop: '.25rem' }}>
+        <div style={{ fontSize: '.58rem', color: '#bbb', fontStyle: 'italic', marginTop: '.2rem' }}>
           No approved data yet
         </div>
       )}
