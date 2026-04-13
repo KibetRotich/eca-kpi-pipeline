@@ -444,8 +444,6 @@ body.tabs-ready .tab-panel.active{display:block}
       <span><b>Methodology:</b> 2021 counts both New and Continued results (programme start). 2022&ndash;2025 count New results only, to avoid double-counting carryover participants.</span>
     </div>
 
-    <!-- Summary bubbles across all pillars -->
-    <div id="masp-summary" class="bubble-strip" style="margin-bottom:1.2rem"></div>
 
     <!-- GAP -->
     <div class="out-grp-hdr" style="border-left:4px solid #FFC800;padding-left:.5rem">Good Agricultural Practices</div>
@@ -862,34 +860,6 @@ function maspKpiTotal(data, kpi) {
 function renderMaspTab() {
   const data = getFiltered();
 
-  // ── Summary bubbles (one per pillar) ──────────────────────────────────
-  const summaryEl = document.getElementById('masp-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = '';
-    const addBub = (val, lbl, pct, color) => {
-      const b = document.createElement('div');
-      b.className = 'bubble';
-      b.style.setProperty('--bc', color);
-      b.innerHTML = '<div class="bubble-val">'+fmt(val)+'</div><div class="bubble-lbl">'+lbl+'</div><div class="bubble-pct">'+pct+'</div>';
-      summaryEl.appendChild(b);
-    };
-    let grand = 0;
-    const pillarNames = { gap:'Good Agri. Practices', sbe:'Sust. Business Eco.', epe:'Enabling Policy', mu:'Market Uptake' };
-    Object.keys(PILLAR_KPI_GROUPS).forEach(p => {
-      const total = PILLAR_KPI_GROUPS[p].reduce((a,k) => a + maspKpiTotal(data,k), 0);
-      const tgt   = PILLAR_KPI_GROUPS[p].reduce((a,k) => a + data.filter(r=>r.kpi_name===k).reduce((s,r)=>s+pN(r.net_annual_target),0), 0);
-      const pct   = tgt>0 ? Math.round(total/tgt*100)+'% of tgt' : 'cumulative';
-      addBub(total, pillarNames[p], pct, PILLAR_COLORS[p]);
-      grand += total;
-    });
-    // prepend grand total
-    const gtb = document.createElement('div');
-    gtb.className = 'bubble';
-    gtb.style.setProperty('--bc','#7b1fa2');
-    gtb.innerHTML = '<div class="bubble-val">'+fmt(grand)+'</div><div class="bubble-lbl">MASP III Total</div><div class="bubble-pct">all result areas</div>';
-    summaryEl.insertBefore(gtb, summaryEl.firstChild);
-  }
-
   // ── Per-pillar sections ───────────────────────────────────────────────
   const OPTS_MASP = {
     ...OPTS_V,
@@ -922,8 +892,7 @@ function renderMaspTab() {
       b.className = 'bubble';
       b.style.setProperty('--bc', color);
       b.innerHTML = '<div class="bubble-val">'+fmt(total)+'</div>'+
-        '<div class="bubble-lbl">'+esc(shortName(kpi))+'</div>'+
-        '<div class="bubble-pct">'+pct+(tgt>0?' vs '+fmt(tgt):'')+'</div>';
+        '<div class="bubble-lbl">'+esc(shortName(kpi))+'</div>';
       bubEl.appendChild(b);
 
       // Chart
@@ -1020,7 +989,7 @@ function renderBubbles(data) {
     const b = document.createElement('div');
     b.className = 'bubble';
     b.style.setProperty('--bc', color);
-    b.innerHTML = '<div class="bubble-val">'+fmt(val)+'</div><div class="bubble-lbl">'+lbl+'</div><div class="bubble-pct">'+pct+'</div>';
+    b.innerHTML = '<div class="bubble-val">'+fmt(val)+'</div><div class="bubble-lbl">'+lbl+'</div>';
     strip.appendChild(b);
   };
   addBubble(recs, 'Projects', 'in selection', '#888');
@@ -1079,8 +1048,7 @@ function renderPillar(pillar, data) {
       b.className = 'bubble';
       b.style.setProperty('--bc', color);
       b.innerHTML = '<div class="bubble-val">'+fmt(ach)+'</div>'+
-        '<div class="bubble-lbl">'+esc(shortName(k))+'</div>'+
-        '<div class="bubble-pct">'+pct+(tgt>0?' vs '+fmt(tgt):'')+'</div>';
+        '<div class="bubble-lbl">'+esc(shortName(k))+'</div>';
       bubbleGrid.appendChild(b);
     });
   }
