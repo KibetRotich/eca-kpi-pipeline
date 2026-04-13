@@ -23,6 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span style={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '.02em' }}>
             MASP IV · Data Platform
           </span>
+          <a href="/dashboard" style={{ color: 'rgba(255,255,255,.85)', fontSize: '.875rem' }}>
+            Dashboard
+          </a>
           <a href="/submissions" style={{ color: 'rgba(255,255,255,.85)', fontSize: '.875rem' }}>
             Review Queue
           </a>
