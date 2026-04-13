@@ -23,7 +23,7 @@ const PATHWAY_COLORS: Record<string, string> = {
   Market:     '#2e7d32',
 }
 
-const YEARS = ['2025','2026','2027','2028','2029','2030']
+const YEARS = ['2026','2027','2028','2029','2030']
 
 export default function DashboardClient({
   kpis, byCountry, trendByYear,

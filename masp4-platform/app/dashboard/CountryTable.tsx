@@ -7,7 +7,7 @@ interface CountryRow {
 }
 
 const FLAGS: Record<string, string> = {
-  Kenya: '🇰🇪', Uganda: '🇺🇬', Tanzania: '🇹🇿', Ethiopia: '🇪🇹', Congo: '🇨🇩',
+  Kenya: '🇰🇪', Uganda: '🇺🇬', Tanzania: '🇹🇿', Ethiopia: '🇪🇹',
 }
 
 const COLS = [

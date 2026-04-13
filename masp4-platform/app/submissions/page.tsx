@@ -22,7 +22,7 @@ const FORM_IDS = [
   'S61','S62','S21Farmer','S21SP','S25','S63','S64','S65',
 ]
 
-const COUNTRIES = ['Kenya','Uganda','Tanzania','Ethiopia','Congo']
+const COUNTRIES = ['Kenya','Uganda','Tanzania','Ethiopia']
 const STATUSES  = ['pending','approved','rejected','needs_review']
 
 export default async function SubmissionsPage({ searchParams }: Props) {

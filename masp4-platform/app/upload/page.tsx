@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 
 const FORM_IDS = ['FarmerProfile','ServiceProviderProfile','CSOProfile','CompanyProfile','S61','S62','S21Farmer','S21SP','S25','S63','S64','S65']
 const currentYear = new Date().getFullYear()
-const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i)
+const YEARS = [2026, 2027, 2028, 2029, 2030]
 
 export default function UploadPage() {
   const fileRef   = useRef<HTMLInputElement>(null)

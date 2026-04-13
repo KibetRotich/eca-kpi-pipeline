@@ -3,7 +3,7 @@
 -- ============================================================================
 -- Platform   : PostgreSQL via Supabase
 -- Programme  : Solidaridad MASP IV
--- Countries  : Kenya, Uganda, Tanzania, Ethiopia, Congo
+-- Countries  : Kenya, Uganda, Tanzania, Ethiopia
 -- KPIs       : S6.1, S6.2, S2.1, S2.5, S6.3, S6.4, S6.5  (S1.2 excluded)
 -- Data entry : ODK/Taro → import/approval layer → this schema
 -- Generated  : 2026-04-08
@@ -14,8 +14,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ── ENUM TYPES ────────────────────────────────────────────────────────────────
-CREATE TYPE country_enum   AS ENUM ('Kenya','Uganda','Tanzania','Ethiopia','Congo');
-CREATE TYPE commodity_enum AS ENUM ('Coffee','Cocoa','Cotton','Tea','Soy','Sugar','Palm','F&V','Other');
+CREATE TYPE country_enum   AS ENUM ('Kenya','Uganda','Tanzania','Ethiopia');
+CREATE TYPE commodity_enum AS ENUM ('Coffee','Tea','F&V','Gold','Dairy','Leather','Cotton','Fashion','Palm Oil','Cocoa');
 CREATE TYPE gender_enum    AS ENUM ('Male','Female','Other');
 CREATE TYPE submission_status AS ENUM ('pending','approved','rejected','needs_review');
 CREATE TYPE tier_enum      AS ENUM ('Tier 1','Tier 2','Tier 3');
@@ -722,20 +722,24 @@ CREATE POLICY odk_approve ON odk_submissions FOR UPDATE USING (
 
 INSERT INTO projects (project_code, project_name, country, commodity, start_year, end_year) VALUES
 -- Kenya
-('KE-COF-001', 'Kenya Coffee MASP IV',         'Kenya',    'Coffee',  2025, 2030),
-('KE-TEA-001', 'Kenya Tea MASP IV',            'Kenya',    'Tea',     2025, 2030),
-('KE-COT-001', 'Kenya Cotton MASP IV',         'Kenya',    'Cotton',  2025, 2030),
+('KE-COF-001', 'Kenya Coffee MASP IV',       'Kenya',     'Coffee',   2026, 2030),
+('KE-TEA-001', 'Kenya Tea MASP IV',          'Kenya',     'Tea',      2026, 2030),
+('KE-COT-001', 'Kenya Cotton MASP IV',       'Kenya',     'Cotton',   2026, 2030),
+('KE-DAI-001', 'Kenya Dairy MASP IV',        'Kenya',     'Dairy',    2026, 2030),
+('KE-FV-001',  'Kenya F&V MASP IV',          'Kenya',     'F&V',      2026, 2030),
 -- Uganda
-('UG-COF-001', 'Uganda Coffee MASP IV',        'Uganda',   'Coffee',  2025, 2030),
-('UG-COT-001', 'Uganda Cotton MASP IV',        'Uganda',   'Cotton',  2025, 2030),
+('UG-COF-001', 'Uganda Coffee MASP IV',      'Uganda',    'Coffee',   2026, 2030),
+('UG-COT-001', 'Uganda Cotton MASP IV',      'Uganda',    'Cotton',   2026, 2030),
+('UG-GOL-001', 'Uganda Gold MASP IV',        'Uganda',    'Gold',     2026, 2030),
 -- Tanzania
-('TZ-COF-001', 'Tanzania Coffee MASP IV',      'Tanzania', 'Coffee',  2025, 2030),
-('TZ-COC-001', 'Tanzania Cocoa MASP IV',       'Tanzania', 'Cocoa',   2025, 2030),
-('TZ-TEA-001', 'Tanzania Tea MASP IV',         'Tanzania', 'Tea',     2025, 2030),
+('TZ-COF-001', 'Tanzania Coffee MASP IV',    'Tanzania',  'Coffee',   2026, 2030),
+('TZ-COC-001', 'Tanzania Cocoa MASP IV',     'Tanzania',  'Cocoa',    2026, 2030),
+('TZ-TEA-001', 'Tanzania Tea MASP IV',       'Tanzania',  'Tea',      2026, 2030),
+('TZ-LEA-001', 'Tanzania Leather MASP IV',   'Tanzania',  'Leather',  2026, 2030),
 -- Ethiopia
-('ET-COF-001', 'Ethiopia Coffee MASP IV',      'Ethiopia', 'Coffee',  2025, 2030),
--- Congo
-('CG-COC-001', 'Congo Cocoa MASP IV',          'Congo',    'Cocoa',   2025, 2030);
+('ET-COF-001', 'Ethiopia Coffee MASP IV',    'Ethiopia',  'Coffee',   2026, 2030),
+('ET-LEA-001', 'Ethiopia Leather MASP IV',   'Ethiopia',  'Leather',  2026, 2030),
+('ET-FAS-001', 'Ethiopia Fashion MASP IV',   'Ethiopia',  'Fashion',  2026, 2030);
 
 
 -- ── SCHEMA NOTES ─────────────────────────────────────────────────────────────

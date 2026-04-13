@@ -12,8 +12,8 @@ interface Props {
   searchParams: Promise<{ year?: string; country?: string; commodity?: string }>
 }
 
-const COUNTRIES   = ['Kenya','Uganda','Tanzania','Ethiopia','Congo']
-const COMMODITIES = ['Coffee','Cocoa','Cotton','Tea','Soy','Sugar','Palm','F&V','Other']
+const COUNTRIES   = ['Kenya','Uganda','Tanzania','Ethiopia']
+const COMMODITIES = ['Coffee','Tea','F&V','Gold','Dairy','Leather','Cotton','Fashion','Palm Oil','Cocoa']
 
 export default async function DashboardPage({ searchParams }: Props) {
   const sp        = await searchParams
