@@ -2,7 +2,7 @@
  * ODK / Taro export parser
  *
  * ODK exports CSV with column headers matching the Data Point ID column
- * from the MASP IV question bank (e.g. f_profile_age, f_S61_membership_score).
+ * from the MASP IV question bank (e.g. f_profile_age, f_S61_membership).
  *
  * This module:
  *  1. Detects which form a CSV belongs to (via required sentinel columns)
@@ -34,13 +34,15 @@ export interface ParsedSubmission {
 }
 
 // ── Form detection: each form has at least one column unique to it ────────────
+// S6.1 sentinels match the Kobo Data Point IDs: f_S61_membership, f_S61_income_savings
+// (not f_S61_membership_score / f_S61_savings_score which were a prior naming draft)
 
 const FORM_SENTINELS: Record<FormId, string[]> = {
   FarmerProfile:         ['f_profile_id_national', 'f_profile_gender'],
   ServiceProviderProfile:['sp_name', 'sp_type'],
   CSOProfile:            ['cso_name', 'cso_type'],
   CompanyProfile:        ['c_name', 'c_type'],
-  S61:                   ['f_S61_membership_score', 'f_S61_savings_score'],
+  S61:                   ['f_S61_membership', 'f_S61_income_savings'],
   S62:                   ['f_S62_yield', 'f_S62_markets'],
   S21Farmer:             ['f_S21_services', 'f_S21_score'],
   S21SP:                 ['sp_S21_number_farmers', 'sp_S21_services_new'],
@@ -60,11 +62,11 @@ export function detectFormId(headers: string[]): FormId | null {
   return null
 }
 
-// ── Required metadata columns (must be present in every ODK export) ──────────
+// ── Required metadata columns ─────────────────────────────────────────────────
 // Data officers add these in ODK/Taro form design:
-//   _uuid          — ODK auto-generated row UUID
-//   _project_code  — dropdown mapped to projects.project_code
-//   _country       — dropdown
+//   _uuid           — ODK auto-generated row UUID  (also accepted without underscore: "uuid")
+//   _project_code   — dropdown mapped to projects.project_code
+//   _country        — dropdown
 //   _submission_time — ODK auto-generated
 
 const META_UUID    = '_uuid'
@@ -84,24 +86,26 @@ export function parseOdkRows(
   const formId  = overrideFormId ?? detectFormId(headers)
   if (!formId) throw new Error('Cannot detect form type from column headers. Check the CSV.')
 
-  return rows.map((row, i) => {
-    const uuid = row[META_UUID] || crypto.randomUUID()
+  return rows.map((row) => {
+    // Accept both _uuid (ODK Central export) and uuid (Kobo calculate field export)
+    const uuid = row[META_UUID] || row['uuid'] || crypto.randomUUID()
 
     // Coerce numeric and boolean strings
     const coerced: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(row)) {
       if (v === '' || v === null || v === undefined) {
         coerced[k] = null
-      } else if (v === 'TRUE' || v === 'true' || v === 'Yes' || v === 'yes') {
+      } else if (v === 'TRUE' || v === 'true' || v === 'Yes' || v === 'yes' || v === '1') {
         coerced[k] = true
-      } else if (v === 'FALSE' || v === 'false' || v === 'No' || v === 'no') {
+      } else if (v === 'FALSE' || v === 'false' || v === 'No' || v === 'no' || v === '0') {
         coerced[k] = false
-      } else if (/^\d+$/.test(v)) {
+      } else if (/^\d+$/.test(v) && v.length > 1) {
+        // Only parse as integer if more than 1 digit — single 0/1 handled above as boolean
         coerced[k] = parseInt(v, 10)
       } else if (/^\d+\.\d+$/.test(v)) {
         coerced[k] = parseFloat(v)
-      } else if (v.includes(' ')) {
-        // Multi-select values in ODK are space-separated
+      } else if (v.includes(' ') && !v.includes('  ')) {
+        // Multi-select values in ODK are space-separated (single spaces between codes)
         coerced[k] = v.split(' ').map(s => s.trim()).filter(Boolean)
       } else {
         coerced[k] = v

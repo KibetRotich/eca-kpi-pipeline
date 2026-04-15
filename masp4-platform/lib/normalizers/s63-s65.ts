@@ -1,3 +1,11 @@
+/**
+ * Normalizers: S6.3 Governance, S6.4 Market Rewards, S6.5 Responsible Procurement
+ *
+ * S6.5 fix: fields previously read as d.policy, d.time_bound_commitments etc.
+ *   now correctly read with f_S65_ prefix matching the Question Bank Data Point IDs.
+ * S6.4 fix: f_S64_reward_type is Single-choice (not multi-select), removed toArray().
+ */
+
 import { supabaseAdmin } from '../supabase'
 
 function toArray(v: unknown): string[] {
@@ -60,7 +68,7 @@ export async function normalizeS64(
       volume_purchased:         d.f_S64_volumne          ?? null,
       sustainability_framework: d.f_S64_framework        ?? null,
       directly_rewards_farmers: d.f_S64_reward           ?? null,
-      reward_type:              toArray(d.f_S64_reward_type),
+      reward_type:              d.f_S64_reward_type      ?? null,  // single-choice, not array
       reward_amount_eur:        d.f_S64_reward_amount    ?? null,
       farmers_rewarded:         d.f_S64_reward_farmers   ?? null,
     })
@@ -88,18 +96,18 @@ export async function normalizeS65(
       odk_submission_id:      submissionId,
       project_id:             projectId,
       survey_year:            surveyYear,
-      change_story:           d.f_S65_story               ?? null,
-      progress_tier:          d.f_S65_progress            ?? null,
+      change_story:           d.f_S65_story                    ?? null,
+      progress_tier:          d.f_S65_progress                 ?? null,
       commodities_covered:    toArray(d.f_S65_commodity),
-      relevance_narrative:    d.f_S65_relevance           ?? null,
-      relevance_label:        d.f_S65_relevance_label     ?? null,
-      contribution_narrative: d.f_S65_contribution        ?? null,
-      contribution_label:     d.f_S65_contribution_label  ?? null,
-      has_policy:             d.policy                    ?? null,
-      has_smart_commitments:  d.time_bound_commitments    ?? null,
-      has_action_plan:        d.action_plan               ?? null,
-      countries_covered:      d.country_covered           ?? null,
-      third_party_verified:   d.third_party_verification  ?? null,
+      relevance_narrative:    d.f_S65_relevance                ?? null,
+      relevance_label:        d.f_S65_relevance_label          ?? null,
+      contribution_narrative: d.f_S65_contribution             ?? null,
+      contribution_label:     d.f_S65_contribution_label       ?? null,
+      has_policy:             d.f_S65_policy                   ?? null,
+      has_smart_commitments:  d.f_S65_time_bound_commitments   ?? null,
+      has_action_plan:        d.f_S65_action_plan              ?? null,
+      countries_covered:      d.f_S65_country_covered          ?? null,
+      third_party_verified:   d.f_S65_third_party_verification ?? null,
     })
     .select('id')
     .single()

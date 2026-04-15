@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#000', lineHeight: 1 }}>
                 MASP IV · Data Platform
               </div>
-              <div style={{ fontSize: '.56rem', fontWeight: 600, color: 'rgba(0,0,0,.45)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 2 }}>
+              <div style={{ fontSize: '.56rem', fontWeight: 800, color: '#000', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 2 }}>
                 East &amp; Central Africa &middot; 2025–2030
               </div>
             </div>
@@ -67,9 +67,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           height: 38,
         }}>
           {[
-            { href: '/dashboard',    label: 'Dashboard'    },
-            { href: '/submissions',  label: 'Review Queue' },
-            { href: '/upload',       label: 'Import CSV'   },
+            { href: '/instructions', label: 'Instructions'           },
+            { href: '/upload',       label: 'Import CSV'             },
+            { href: '/targets',      label: 'Targets & Achievements' },
+            { href: '/dashboard',    label: 'Dashboard'              },
           ].map(({ href, label }) => (
             <a key={href} href={href} className="nav-link">{label}</a>
           ))}
