@@ -15,15 +15,18 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('code')
-    if (!code) { router.replace('/'); return }
+    if (!code) { router.replace('/dashboard'); return }
 
     supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-      if (!error && data.session?.access_token) {
+      if (error) {
+        console.error('[auth/callback] exchange failed:', error.message)
+      } else if (data.session?.access_token) {
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=3600; SameSite=Lax`
       }
       router.replace('/dashboard')
     })
-  }, [router])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // run exactly once — router is stable, no re-run needed
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', fontSize: '.8rem', color: '#888' }}>
