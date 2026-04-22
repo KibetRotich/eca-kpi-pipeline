@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRole } from '@/lib/role-context'
 
 const FORM_IDS = ['FarmerProfile','ServiceProviderProfile','CSOProfile','CompanyProfile','S61','S62','S21Farmer','S21SP','S25','S63','S64','S65']
 const currentYear = new Date().getFullYear()
@@ -10,6 +11,7 @@ const BLACK  = '#111'
 const YELLOW = '#FFC800'
 
 export default function UploadPage() {
+  const { canEdit } = useRole()
   const fileRef   = useRef<HTMLInputElement>(null)
   const [year,    setYear]    = useState(String(currentYear))
   const [formId,  setFormId]  = useState('')
@@ -83,13 +85,17 @@ export default function UploadPage() {
                 <div style={{ marginTop: '.5rem', padding: '.4rem .6rem', background: '#fff3e0', border: '1px solid #ffcc80', fontSize: '.62rem', color: '#6d4c00' }}>
                   <strong>Note:</strong> Separate forms for CSO (S6.3) and Company (S6.4/S6.5) respondents are under development (V1.2).
                 </div>
+                <div style={{ marginTop: '.4rem', padding: '.4rem .6rem', background: '#f5f5f5', border: '1px solid #d0d0d0', fontSize: '.62rem', color: '#444' }}>
+                  <strong>REC01–REC05</strong> (REC Level Indicators) are <strong>not uploaded here</strong>.
+                  Enter annual counts directly in the <a href="/targets" style={{ color: BLACK, fontWeight: 700 }}>Targets &amp; Achievements</a> tab.
+                </div>
               </div>
             </div>
           </div>
 
           {/* Deployment checklist */}
           <div className="cc" style={{ padding: 0, overflow: 'hidden', marginBottom: '.8rem' }}>
-            <div style={{ background: '#1a3557', color: '#fff', padding: '.5rem .9rem', fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div style={{ background: '#111', color: '#fff', padding: '.5rem .9rem', fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
               Step 2 — Before Deploying to Enumerators
             </div>
             <div style={{ padding: '.7rem .9rem' }}>
@@ -155,7 +161,12 @@ export default function UploadPage() {
               Step 4 — Upload CSV File
             </div>
             <div style={{ padding: '.9rem' }}>
-              <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '.8rem' }}>
+              {!canEdit && (
+                <div style={{ background: '#fff3e0', border: '1px solid #ffcc80', borderLeft: '4px solid #e65100', padding: '.6rem .8rem', marginBottom: '.8rem', fontSize: '.65rem', color: '#6d4c00', fontWeight: 600 }}>
+                  View only — CSV uploads require M&amp;E Officer or Admin access.
+                </div>
+              )}
+              <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '.8rem', opacity: canEdit ? 1 : 0.45, pointerEvents: canEdit ? 'auto' : 'none' }}>
 
                 {/* File drop zone */}
                 <div>
@@ -192,7 +203,7 @@ export default function UploadPage() {
                   </label>
                   <div style={{ position: 'relative' }}>
                     <select value={year} onChange={e => setYear(e.target.value)} style={{ width: '100%', paddingRight: '1.4rem' }}>
-                      {YEARS.map(y => <option key={y} value={y}>{y}{y === 2026 ? ' (Baseline)' : ''}</option>)}
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                     <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#888', pointerEvents: 'none' }}>▾</span>
                   </div>

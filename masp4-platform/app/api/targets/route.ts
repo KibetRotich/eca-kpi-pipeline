@@ -6,9 +6,10 @@
  */
 
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireEditor } from '@/lib/require-editor'
 import { NextRequest, NextResponse } from 'next/server'
 
-const KPI_CODES = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5','OUT.1'] as const
+const KPI_CODES = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5','OUT.1','REC01','REC02','REC03','REC04','REC05'] as const
 
 export async function GET(req: NextRequest) {
   const year = req.nextUrl.searchParams.get('year') ?? '2026'
@@ -51,6 +52,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authErr = await requireEditor(req)
+  if (authErr) return authErr
+
   let body: any
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -78,6 +82,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const authErr = await requireEditor(req)
+  if (authErr) return authErr
+
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await supabaseAdmin.from('project_kpi_targets').delete().eq('id', id)

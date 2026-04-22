@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { RoleProvider } from '@/lib/role-context'
+import AuthButton from '@/components/AuthButton'
 
 export const metadata: Metadata = {
   title: 'MASP IV Data Platform — Solidaridad ECA',
@@ -14,10 +16,7 @@ const SolLogo = () => (
     alignItems: 'center',
     boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.06)',
   }}>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 172 42" width="130" height="32" aria-label="Solidaridad">
-      <text x="0" y="26" fontFamily="Open Sans,sans-serif" fontWeight="800" fontSize="23" fill="#000000" letterSpacing="-0.4">Solidaridad</text>
-      <path d="M2,36 C45,27 125,29 170,34" stroke="#FFC800" strokeWidth="4" fill="none" strokeLinecap="round"/>
-    </svg>
+    <img src="/solidaridad-logo.png" alt="Solidaridad" style={{ height: 32, width: 'auto', display: 'block' }} />
   </div>
 )
 
@@ -45,11 +44,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 MASP IV · Data Platform
               </div>
               <div style={{ fontSize: '.56rem', fontWeight: 800, color: '#000', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 2 }}>
-                East &amp; Central Africa &middot; 2025–2030
+                East &amp; Central Africa &middot; 2026–2030
               </div>
             </div>
           </div>
-          <SolLogo />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <AuthButton />
+            <SolLogo />
+          </div>
         </header>
 
         {/* ── Nav bar ─────────────────────────────────────────────────────── */}
@@ -78,7 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* ── Content ─────────────────────────────────────────────────────── */}
         <main style={{ padding: '.9rem 1.4rem 4rem' }}>
-          {children}
+          <RoleProvider>{children}</RoleProvider>
         </main>
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}
@@ -93,7 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             &copy; Solidaridad East &amp; Central Africa
           </span>
           <span style={{ color: '#FFC800', fontWeight: 800, fontSize: '.6rem', letterSpacing: '2px', textTransform: 'uppercase' }}>
-            MASP IV · 2025–2030
+            MASP IV · 2026–2030
           </span>
         </footer>
 

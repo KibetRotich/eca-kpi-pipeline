@@ -1,6 +1,6 @@
 /**
  * /dashboard — MASP IV KPI Dashboard
- * Aggregates approved data from all 7 KPI views.
+ * Aggregates approved data from all KPI views + rec records.
  */
 
 import { supabaseAdmin } from '@/lib/supabase'
@@ -14,6 +14,7 @@ interface Props {
 
 const COUNTRIES   = ['Ethiopia','Kenya','Tanzania','Uganda']
 const COMMODITIES = ['Cocoa','Coffee','Cotton','Dairy','Fashion','F&V','Gold','Leather','Palm Oil','Tea']
+const REC_CODES   = ['REC01','REC02','REC03','REC04','REC05'] as const
 
 export default async function DashboardPage({ searchParams }: Props) {
   const sp        = await searchParams
@@ -23,7 +24,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   // ── Query each KPI view, joined to projects for country/commodity ─────────
 
-  async function queryKpi(view: string, extraCols: string = '') {
+  async function queryKpi(view: string) {
     let q = supabaseAdmin
       .from(view)
       .select(`*, projects!inner(project_code, country, commodity)`)
@@ -34,7 +35,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     return data ?? []
   }
 
-  const [s61, s62, s21, s25, s63, s64, s65, summaryRaw, outputRaw] = await Promise.all([
+  const [s61, s62, s21, s25, s63, s64, s65, summaryRaw, outputRaw, recRaw] = await Promise.all([
     queryKpi('v_s61_kpi'),
     queryKpi('v_s62_kpi'),
     queryKpi('v_s21_kpi'),
@@ -42,7 +43,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     queryKpi('v_s63_kpi'),
     queryKpi('v_s64_kpi'),
     queryKpi('v_s65_kpi'),
-    // Summary view already has country/commodity — filter separately
+    // Summary view
     (async () => {
       let q = supabaseAdmin.from('v_kpi_summary').select('*')
       if (year)      q = q.eq('survey_year', year)
@@ -51,11 +52,22 @@ export default async function DashboardPage({ searchParams }: Props) {
       const { data } = await q
       return data ?? []
     })(),
-    // Output records — farmers trained (direct count, all delivery channels)
+    // Output records — farmers trained (direct headcount)
     (async () => {
       let q = supabaseAdmin
         .from('project_output_records')
         .select('farmers_trained, female_count, male_count, youth_count, projects!inner(country, commodity)')
+      if (year)      q = (q as any).eq('survey_year', year)
+      if (country)   q = (q as any).eq('projects.country',   country)
+      if (commodity) q = (q as any).eq('projects.commodity', commodity)
+      const { data } = await q
+      return data ?? []
+    })(),
+    // REC records — responsible economy KPI counts (with country for byCountry breakdown)
+    (async () => {
+      let q = supabaseAdmin
+        .from('project_rec_records')
+        .select('rec_code, count, projects!inner(country, commodity)')
       if (year)      q = (q as any).eq('survey_year', year)
       if (country)   q = (q as any).eq('projects.country',   country)
       if (commodity) q = (q as any).eq('projects.commodity', commodity)
@@ -69,8 +81,10 @@ export default async function DashboardPage({ searchParams }: Props) {
   function sum(rows: any[], col: string) {
     return rows.reduce((acc: number, r: any) => acc + (Number(r[col]) || 0), 0)
   }
+  function recSum(code: string) {
+    return recRaw.filter((r: any) => r.rec_code === code).reduce((a: number, r: any) => a + (Number(r.count) || 0), 0)
+  }
 
-  // For sample-based KPIs: use achievement (extrapolated) when targets exist, else sample_count
   function kpiCount(rows: any[]) {
     const ach = sum(rows, 'achievement')
     return ach > 0 ? ach : sum(rows, 'sample_count')
@@ -138,7 +152,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     s64: {
       code: 'S6.4', label: 'Companies rewarding farmers directly',
       pathway: 'Market',
-      count:          sum(s64, 'companies_count'),
+      count:           sum(s64, 'companies_count'),
       farmersRewarded: sum(s64, 'total_farmers_rewarded'),
     },
     s65: {
@@ -148,6 +162,12 @@ export default async function DashboardPage({ searchParams }: Props) {
       tier2: sum(s65, 'tier2_count'),
       tier3: sum(s65, 'tier3_count'),
     },
+    // REC Level Indicators (direct count, manually entered)
+    rec01: { code: 'REC01', label: 'Processors with reduced pollution',              pathway: 'Production', count: recSum('REC01') },
+    rec02: { code: 'REC02', label: 'Workers under improved working conditions',      pathway: 'Production', count: recSum('REC02') },
+    rec03: { code: 'REC03', label: 'Green jobs created',                             pathway: 'Services',   count: recSum('REC03') },
+    rec04: { code: 'REC04', label: 'CSOs with enhanced capacity in policy processes', pathway: 'Governance', count: recSum('REC04') },
+    rec05: { code: 'REC05', label: 'Farmers receiving premium prices',               pathway: 'Market',     count: recSum('REC05') },
   }
 
   // ── Output KPI totals (farmers trained — direct headcount) ───────────────
@@ -156,22 +176,31 @@ export default async function DashboardPage({ searchParams }: Props) {
   const outputMale   = sum(outputRaw, 'male_count')
   const outputYouth  = sum(outputRaw, 'youth_count')
 
-  // ── Country breakdown (from summary view) ─────────────────────────────────
+  // ── Country breakdown ─────────────────────────────────────────────────────
   const byCountry = COUNTRIES.map(c => {
-    const rows = summaryRaw.filter((r: any) => r.country === c)
+    const rows    = summaryRaw.filter((r: any) => r.country === c)
+    const recRows = recRaw.filter((r: any) => (r.projects as any)?.country === c)
+    function rc(code: string) {
+      return recRows.filter((r: any) => r.rec_code === code).reduce((a: number, r: any) => a + (Number(r.count) || 0), 0)
+    }
     return {
-      country:   c,
-      s61_count: sum(rows, 's61_count'),
-      s62_count: sum(rows, 's62_count'),
-      s21_count: sum(rows, 's21_count'),
-      s25_count: sum(rows, 's25_count'),
-      s63_count: sum(rows, 's63_count'),
+      country:       c,
+      s61_count:     sum(rows, 's61_count'),
+      s62_count:     sum(rows, 's62_count'),
+      s21_count:     sum(rows, 's21_count'),
+      s25_count:     sum(rows, 's25_count'),
+      s63_count:     sum(rows, 's63_count'),
       s64_companies: sum(rows, 's64_companies'),
       s65_companies: sum(rows, 's65_companies'),
+      rec01_count:   rc('REC01'),
+      rec02_count:   rc('REC02'),
+      rec03_count:   rc('REC03'),
+      rec04_count:   rc('REC04'),
+      rec05_count:   rc('REC05'),
     }
   })
 
-  // ── Year trend data (for bottom TrendChart — S6.1/S6.2/S2.1 only) ──────────
+  // ── Year trend data (TrendChart — S6.1/S6.2/S2.1) ───────────────────────
   const { data: trendRaw } = await supabaseAdmin
     .from('v_kpi_summary')
     .select('survey_year, s61_count, s62_count, s21_count')
@@ -189,11 +218,9 @@ export default async function DashboardPage({ searchParams }: Props) {
     }, new Map())
   ).map(([, v]) => v)
 
-  // ── Per-KPI 5-year trends for KPI bar charts ──────────────────────────────
-  // Targets: sum project_kpi_targets across all years (respects country/commodity filter)
-  // Achievements: from v_kpi_summary across all years
+  // ── Per-KPI 5-year trend bars ─────────────────────────────────────────────
   const CHART_YEARS = [2026, 2027, 2028, 2029, 2030]
-  const KPI_CODES   = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5']
+  const KPI_CODES   = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5','REC01','REC02','REC03','REC04','REC05']
 
   let targetsQuery = supabaseAdmin
     .from('project_kpi_targets')
@@ -207,7 +234,15 @@ export default async function DashboardPage({ searchParams }: Props) {
   if (country)   achAllQuery = (achAllQuery as any).eq('country',   country)
   if (commodity) achAllQuery = (achAllQuery as any).eq('commodity', commodity)
 
-  const [{ data: targetsRaw }, { data: achAllRaw }] = await Promise.all([targetsQuery, achAllQuery])
+  let recTrendQuery = supabaseAdmin
+    .from('project_rec_records')
+    .select('survey_year, rec_code, count, projects!inner(country, commodity)')
+  if (country)   recTrendQuery = (recTrendQuery as any).eq('projects.country',   country)
+  if (commodity) recTrendQuery = (recTrendQuery as any).eq('projects.commodity', commodity)
+
+  const [{ data: targetsRaw }, { data: achAllRaw }, { data: recTrendRaw }] = await Promise.all([
+    targetsQuery, achAllQuery, recTrendQuery,
+  ])
 
   // Sum targets per kpi_code × year
   const tgtSums: Record<string, Record<number, number>> = {}
@@ -216,7 +251,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     tgtSums[r.kpi_code][r.survey_year] = (tgtSums[r.kpi_code][r.survey_year] || 0) + r.target_total
   }
 
-  // Sum achievements per KPI × year
+  // Achievement sums per KPI × year
   const achSums: Record<string, Record<number, number>> = Object.fromEntries(KPI_CODES.map(k => [k, {}]))
   for (const r of achAllRaw ?? []) {
     const y = r.survey_year
@@ -228,6 +263,11 @@ export default async function DashboardPage({ searchParams }: Props) {
     achSums['S6.4'][y] = (achSums['S6.4'][y] || 0) + (Number(r.s64_companies) || 0)
     achSums['S6.5'][y] = (achSums['S6.5'][y] || 0) + (Number(r.s65_companies) || 0)
   }
+  for (const r of recTrendRaw ?? []) {
+    const y    = r.survey_year
+    const code = r.rec_code
+    achSums[code][y] = (achSums[code][y] || 0) + (Number(r.count) || 0)
+  }
 
   // Build trend arrays aligned to CHART_YEARS
   const kpiTrends: Record<string, { year: number; target: number; achievement: number }[]> =
@@ -235,8 +275,8 @@ export default async function DashboardPage({ searchParams }: Props) {
       code,
       CHART_YEARS.map(y => ({
         year:        y,
-        target:      tgtSums[code]?.[y]  || 0,
-        achievement: achSums[code]?.[y]  || 0,
+        target:      tgtSums[code]?.[y] || 0,
+        achievement: achSums[code]?.[y] || 0,
       })),
     ]))
 

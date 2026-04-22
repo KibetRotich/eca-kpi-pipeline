@@ -13,9 +13,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parse } from 'csv-parse/sync'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireEditor } from '@/lib/require-editor'
 import { parseOdkRows, type FormId } from '@/lib/odk-parser'
 
 export async function POST(req: NextRequest) {
+  const authErr = await requireEditor(req)
+  if (authErr) return authErr
+
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null

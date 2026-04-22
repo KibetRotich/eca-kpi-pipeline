@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRole } from '@/lib/role-context'
 
 const BASELINE_YEAR = 2026
 const YEARS = [2026, 2027, 2028, 2029, 2030]
@@ -18,8 +19,16 @@ const KPI_DEFS = [
   { code: 'S6.5', label: 'Companies with responsible procurement',      pathway: 'Market',      sampled: false },
 ] as const
 
+const REC_DEFS = [
+  { code: 'REC01', label: 'Processors with reduced pollution'              },
+  { code: 'REC02', label: 'Workers under improved working conditions'      },
+  { code: 'REC03', label: 'Green jobs created'                             },
+  { code: 'REC04', label: 'CSOs with enhanced capacity in policy processes' },
+  { code: 'REC05', label: 'Farmers receiving premium prices'               },
+] as const
+
 const PATHWAY_COLORS: Record<string, string> = {
-  Production: '#FFC800', Services: '#1a3557', Governance: '#e65100', Market: '#2e7d32',
+  Production: '#FFC800', Services: '#111', Governance: '#111', Market: '#111',
 }
 
 interface Project {
@@ -54,6 +63,7 @@ const EMPTY_OUT: OutputEditState = { farmers_trained: '', female_count: '', male
 function fmt(n: number | null | undefined) { return n != null ? n.toLocaleString() : '—' }
 
 export default function TargetsPage() {
+  const { canEdit } = useRole()
   const [year,         setYear]         = useState(String(BASELINE_YEAR))
   const [projects,     setProjects]     = useState<Project[]>([])
   const [targetMap,    setTargetMap]    = useState<Record<string, TargetRow>>({})   // "proj_code:kpi" → row
@@ -74,12 +84,22 @@ export default function TargetsPage() {
   const [outEditVals,  setOutEditVals]  = useState<OutputEditState>(EMPTY_OUT)
   const [outSaveMsg,   setOutSaveMsg]   = useState<{ key: string; ok: boolean; msg: string } | null>(null)
 
+  // REC KPI state (manually entered annual counts)
+  const [recMap,    setRecMap]    = useState<Record<string, number>>({})   // "proj_code:REC01" → count
+  const [recIdMap,  setRecIdMap]  = useState<Record<string, string>>({})   // same key → row id
+  const [recEditing, setRecEditing] = useState<string | null>(null)        // "proj_code:REC01"
+  const [recSaving,  setRecSaving]  = useState<string | null>(null)
+  const [recEditVal, setRecEditVal] = useState('')
+  const [recNotesVal,setRecNotesVal]= useState('')
+  const [recSaveMsg, setRecSaveMsg] = useState<{ key: string; ok: boolean; msg: string } | null>(null)
+
   const load = useCallback(async (yr: string) => {
     setLoading(true)
-    const [pRes, tRes, oRes] = await Promise.all([
+    const [pRes, tRes, oRes, rRes] = await Promise.all([
       fetch('/api/projects').then(r => r.json()),
       fetch(`/api/targets?year=${yr}`).then(r => r.json()),
       fetch(`/api/outputs?year=${yr}`).then(r => r.json()),
+      fetch(`/api/rec?year=${yr}`).then(r => r.json()),
     ])
     setProjects(Array.isArray(pRes) ? pRes : [])
     if (tRes && !tRes.error) {
@@ -88,6 +108,10 @@ export default function TargetsPage() {
     }
     if (oRes && !oRes.error) {
       setOutputMap(oRes.outputMap ?? {})
+    }
+    if (rRes && !rRes.error) {
+      setRecMap(rRes.recMap ?? {})
+      setRecIdMap(rRes.recIdMap ?? {})
     }
     setLoading(false)
   }, [])
@@ -184,6 +208,34 @@ export default function TargetsPage() {
     await load(year)
   }
 
+  async function saveRec(projectId: string, code: string, recCode: string) {
+    const key = cellKey(code, recCode)
+    setRecSaving(key)
+    try {
+      const res = await fetch('/api/rec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id:  projectId,
+          survey_year: Number(year),
+          rec_code:    recCode,
+          count:       Number(recEditVal) || 0,
+          notes:       recNotesVal || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) setRecSaveMsg({ key, ok: false, msg: json.error ?? 'Save failed' })
+      else { setRecSaveMsg({ key, ok: true, msg: 'Saved' }); setRecEditing(null); await load(year) }
+    } catch { setRecSaveMsg({ key, ok: false, msg: 'Network error' }) }
+    finally { setRecSaving(null) }
+  }
+
+  async function removeRec(id: string) {
+    if (!confirm('Delete this REC count?')) return
+    await fetch(`/api/rec?id=${id}`, { method: 'DELETE' })
+    await load(year)
+  }
+
   const countries   = ALL_COUNTRIES
   const commodities = ALL_COMMODITIES
   const visible     = projects.filter(p =>
@@ -191,7 +243,7 @@ export default function TargetsPage() {
     (!filterCommodity || p.commodity    === filterCommodity) &&
     (!filterProject   || p.project_code === filterProject)
   )
-  const isBaseline = year === String(BASELINE_YEAR)
+
 
   return (
     <div>
@@ -213,7 +265,7 @@ export default function TargetsPage() {
         <span style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#666' }}>Year</span>
         <div style={{ position: 'relative' }}>
           <select value={year} onChange={e => setYear(e.target.value)} style={{ paddingRight: '1.4rem', minWidth: 130 }}>
-            {YEARS.map(y => <option key={y} value={y}>{y}{y === BASELINE_YEAR ? ' (Baseline)' : ''}</option>)}
+            {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#888', pointerEvents: 'none' }}>▾</span>
         </div>
@@ -260,17 +312,6 @@ export default function TargetsPage() {
           <button className="btn-secondary" onClick={() => { setFilterCountry(''); setFilterCommodity(''); setFilterProject('') }} style={{ marginLeft: 'auto' }}>Clear</button>
         )}
 
-        {isBaseline && (
-          <span style={{
-            marginLeft: 'auto',
-            background: '#e0e0e0', color: '#555',
-            fontSize: '.52rem', fontWeight: 800,
-            textTransform: 'uppercase', letterSpacing: '.8px',
-            padding: '.15rem .55rem',
-          }}>
-            Baseline year — achievements are reference values
-          </span>
-        )}
       </div>
 
       {loading ? (
@@ -302,7 +343,7 @@ export default function TargetsPage() {
                   <th style={{ textAlign: 'right' }}>Female</th>
                   <th style={{ textAlign: 'right' }}>Male</th>
                   <th style={{ textAlign: 'right' }}>Achievement</th>
-                  <th style={{ width: 80 }}></th>
+                  {canEdit && <th style={{ width: 80 }}></th>}
                 </tr>
               </thead>
               <tbody>
@@ -335,7 +376,7 @@ export default function TargetsPage() {
                       {/* Indicator label */}
                       <td style={{ color: '#444', fontWeight: 600 }}>{kpi.label}</td>
 
-                      {isEdit ? (
+                      {isEdit && canEdit ? (
                         <>
                           <td>
                             <input type="number" min={1} placeholder="Required"
@@ -406,21 +447,23 @@ export default function TargetsPage() {
                             )}
                           </td>
 
-                          {/* Actions */}
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <button className="btn-secondary"
-                              style={{ padding: '.2rem .5rem', fontSize: '.6rem', marginRight: tgt ? 4 : 0 }}
-                              onClick={() => startEdit(project.project_code, kpi.code)}>
-                              {tgt ? 'Edit' : '+ Add'}
-                            </button>
-                            {tgt && (
-                              <button
-                                style={{ padding: '.2rem .4rem', fontSize: '.6rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer' }}
-                                onClick={() => remove(tgt.id)}>
-                                ✕
+                          {/* Actions — M&E Officer / Admin only */}
+                          {canEdit && (
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <button className="btn-secondary"
+                                style={{ padding: '.2rem .5rem', fontSize: '.6rem', marginRight: tgt ? 4 : 0 }}
+                                onClick={() => startEdit(project.project_code, kpi.code)}>
+                                {tgt ? 'Edit' : '+ Add'}
                               </button>
-                            )}
-                          </td>
+                              {tgt && (
+                                <button
+                                  style={{ padding: '.2rem .4rem', fontSize: '.6rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer' }}
+                                  onClick={() => remove(tgt.id)}>
+                                  ✕
+                                </button>
+                              )}
+                            </td>
+                          )}
                         </>
                       )}
                     </tr>
@@ -452,7 +495,7 @@ export default function TargetsPage() {
                     {/* Annual target */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginLeft: 'auto' }}>
                       <span style={{ fontSize: '.54rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', color: '#888' }}>Annual target</span>
-                      {isTgtEdit ? (
+                      {isTgtEdit && canEdit ? (
                         <>
                           <input type="number" min={1} placeholder="Required"
                             value={editVals.target_total}
@@ -481,14 +524,18 @@ export default function TargetsPage() {
                           {outTgt?.target_female != null && (
                             <span style={{ fontSize: '.58rem', color: '#1a3557' }}>F: {outTgt.target_female.toLocaleString()}</span>
                           )}
-                          <button className="btn-secondary"
-                            style={{ padding: '.15rem .45rem', fontSize: '.56rem' }}
-                            onClick={() => startEdit(project.project_code, 'OUT.1')}>
-                            {outTgt ? 'Edit' : '+ Add target'}
-                          </button>
-                          {outTgt && (
-                            <button style={{ padding: '.15rem .35rem', fontSize: '.56rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer' }}
-                              onClick={() => remove(outTgt.id)}>✕</button>
+                          {canEdit && (
+                            <>
+                              <button className="btn-secondary"
+                                style={{ padding: '.15rem .45rem', fontSize: '.56rem' }}
+                                onClick={() => startEdit(project.project_code, 'OUT.1')}>
+                                {outTgt ? 'Edit' : '+ Add target'}
+                              </button>
+                              {outTgt && (
+                                <button style={{ padding: '.15rem .35rem', fontSize: '.56rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer' }}
+                                  onClick={() => remove(outTgt.id)}>✕</button>
+                              )}
+                            </>
                           )}
                         </>
                       )}
@@ -575,21 +622,25 @@ export default function TargetsPage() {
                                   {qData.channel_notes && (
                                     <div style={{ fontSize: '.48rem', color: '#aaa', marginTop: 2, fontStyle: 'italic' }}>{qData.channel_notes}</div>
                                   )}
-                                  <div style={{ display: 'flex', gap: 4, marginTop: '.35rem' }}>
-                                    <button className="btn-secondary"
-                                      style={{ padding: '.15rem .4rem', fontSize: '.52rem' }}
-                                      onClick={() => startOutEdit(project.project_code, q)}>Edit</button>
-                                    <button
-                                      style={{ padding: '.15rem .35rem', fontSize: '.52rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer' }}
-                                      onClick={() => removeOut(qData.id)}>✕</button>
-                                  </div>
+                                  {canEdit && (
+                                    <div style={{ display: 'flex', gap: 4, marginTop: '.35rem' }}>
+                                      <button className="btn-secondary"
+                                        style={{ padding: '.15rem .4rem', fontSize: '.52rem' }}
+                                        onClick={() => startOutEdit(project.project_code, q)}>Edit</button>
+                                      <button
+                                        style={{ padding: '.15rem .35rem', fontSize: '.52rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer' }}
+                                        onClick={() => removeOut(qData.id)}>✕</button>
+                                    </div>
+                                  )}
                                 </>
-                              ) : (
+                              ) : canEdit ? (
                                 <button className="btn-secondary"
                                   style={{ padding: '.2rem .5rem', fontSize: '.56rem', marginTop: '.25rem' }}
                                   onClick={() => startOutEdit(project.project_code, q)}>
                                   + Enter
                                 </button>
+                              ) : (
+                                <div style={{ fontSize: '.52rem', color: '#ccc', fontStyle: 'italic', marginTop: '.3rem' }}>—</div>
                               )}
                             </div>
                           )}
@@ -600,6 +651,131 @@ export default function TargetsPage() {
                 </div>
               )
             })()}
+
+            {/* ── REC Level Indicators ── */}
+            <div style={{ borderTop: '2px solid #111' }}>
+              <div style={{ background: '#111', color: '#FFC800', padding: '.4rem .9rem', fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                REC Level Indicators — Direct Count · Annual
+              </div>
+              <table style={{ fontSize: '.65rem' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', width: 60 }}>Code</th>
+                    <th style={{ textAlign: 'left' }}>Indicator</th>
+                    <th style={{ textAlign: 'right', width: 110 }}>Annual target</th>
+                    <th style={{ textAlign: 'right', width: 130 }}>Annual count</th>
+                    {canEdit && <th style={{ width: 200 }}></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {REC_DEFS.map((rec, ri) => {
+                    const tgtKey    = cellKey(project.project_code, rec.code)
+                    const tgt       = targetMap[tgtKey]
+                    const count     = recMap[tgtKey] ?? 0
+                    const recId     = recIdMap[tgtKey]
+                    const isTgtEdit = editing    === tgtKey
+                    const isRecEdit = recEditing === tgtKey
+                    const isTgtSave = saving     === tgtKey
+                    const isRecSave = recSaving  === tgtKey
+                    const tgtMsg    = saveMsg?.key  === tgtKey ? saveMsg  : null
+                    const recMsg    = recSaveMsg?.key === tgtKey ? recSaveMsg : null
+                    const rowBg     = ri % 2 === 0 ? '#fff' : '#fafafa'
+
+                    return (
+                      <tr key={rec.code} style={{ background: rowBg }}>
+                        <td>
+                          <span style={{ display: 'inline-block', background: '#111', color: '#FFC800', fontSize: '.46rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.5px', padding: '.1rem .35rem' }}>
+                            {rec.code}
+                          </span>
+                        </td>
+                        <td style={{ color: '#444', fontWeight: 600 }}>{rec.label}</td>
+
+                        {/* Annual target */}
+                        <td style={{ textAlign: 'right' }}>
+                          {isTgtEdit && canEdit ? (
+                            <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <input type="number" min={1} placeholder="Target"
+                                value={editVals.target_total}
+                                onChange={e => setEditVals(v => ({ ...v, target_total: e.target.value }))}
+                                style={{ width: 75, textAlign: 'right', fontSize: '.6rem' }} />
+                              <button className="btn-primary" style={{ padding: '.2rem .5rem', fontSize: '.56rem' }}
+                                disabled={isTgtSave || !editVals.target_total}
+                                onClick={() => save(project.id, project.project_code, rec.code)}>
+                                {isTgtSave ? '…' : 'Save'}
+                              </button>
+                              <button className="btn-secondary" style={{ padding: '.2rem .4rem', fontSize: '.56rem' }}
+                                onClick={() => { setEditing(null); setSaveMsg(null) }}>✕</button>
+                              {tgtMsg && <span style={{ fontSize: '.52rem', color: tgtMsg.ok ? '#2e7d32' : '#c62828' }}>{tgtMsg.msg}</span>}
+                            </div>
+                          ) : (
+                            <span style={{ fontWeight: tgt ? 700 : 400, color: tgt ? '#111' : '#ccc', fontVariantNumeric: 'tabular-nums' }}>
+                              {tgt ? tgt.target_total.toLocaleString() : '—'}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Annual count (manually entered) */}
+                        <td style={{ textAlign: 'right' }}>
+                          {isRecEdit && canEdit ? (
+                            <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <input type="number" min={0} placeholder="Count"
+                                value={recEditVal}
+                                onChange={e => setRecEditVal(e.target.value)}
+                                style={{ width: 75, textAlign: 'right', fontSize: '.6rem' }} />
+                              <button className="btn-primary" style={{ padding: '.2rem .5rem', fontSize: '.56rem' }}
+                                disabled={isRecSave}
+                                onClick={() => saveRec(project.id, project.project_code, rec.code)}>
+                                {isRecSave ? '…' : 'Save'}
+                              </button>
+                              <button className="btn-secondary" style={{ padding: '.2rem .4rem', fontSize: '.56rem' }}
+                                onClick={() => { setRecEditing(null); setRecSaveMsg(null) }}>✕</button>
+                              {recMsg && <span style={{ fontSize: '.52rem', color: recMsg.ok ? '#2e7d32' : '#c62828' }}>{recMsg.msg}</span>}
+                            </div>
+                          ) : (
+                            <>
+                              <span style={{ fontWeight: count > 0 ? 800 : 400, color: count > 0 ? '#111' : '#ccc', fontVariantNumeric: 'tabular-nums' }}>
+                                {count > 0 ? count.toLocaleString() : '—'}
+                              </span>
+                              {count > 0 && tgt && (
+                                <span style={{ marginLeft: '.3rem', background: '#FFC800', color: '#000', fontSize: '.44rem', fontWeight: 800, textTransform: 'uppercase', padding: '.05rem .25rem' }}>
+                                  {Math.round(count / tgt.target_total * 100)}%
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        {canEdit && !isTgtEdit && !isRecEdit && (
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <button className="btn-secondary"
+                              style={{ padding: '.2rem .45rem', fontSize: '.54rem', marginRight: 2 }}
+                              onClick={() => startEdit(project.project_code, rec.code)}>
+                              {tgt ? 'Edit target' : '+ Target'}
+                            </button>
+                            {tgt && (
+                              <button style={{ padding: '.2rem .35rem', fontSize: '.54rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer', marginRight: 4 }}
+                                onClick={() => remove(tgt.id)}>✕</button>
+                            )}
+                            <button className="btn-secondary"
+                              style={{ padding: '.2rem .45rem', fontSize: '.54rem' }}
+                              onClick={() => { setRecEditVal(count > 0 ? String(count) : ''); setRecNotesVal(''); setRecEditing(tgtKey); setRecSaveMsg(null) }}>
+                              {recId ? 'Edit count' : '+ Count'}
+                            </button>
+                            {recId && (
+                              <button style={{ padding: '.2rem .35rem', fontSize: '.54rem', background: 'none', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'pointer', marginLeft: 2 }}
+                                onClick={() => removeRec(recId)}>✕</button>
+                            )}
+                          </td>
+                        )}
+                        {canEdit && (isTgtEdit || isRecEdit) && <td />}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         ))
       )}

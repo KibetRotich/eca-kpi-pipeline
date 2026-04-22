@@ -15,7 +15,7 @@ export default function TrendChart({ trendByYear }: { trendByYear: TrendRow[] })
     datasets: [
       { label: 'S6.1 Resilience',  data: trendByYear.map(r => r.s61), backgroundColor: '#FFC800', borderRadius: 0 },
       { label: 'S6.2 Viability',   data: trendByYear.map(r => r.s62), backgroundColor: '#111111', borderRadius: 0 },
-      { label: 'S2.1 Services',    data: trendByYear.map(r => r.s21), backgroundColor: '#1a3557', borderRadius: 0 },
+      { label: 'S2.1 Services',    data: trendByYear.map(r => r.s21), backgroundColor: '#888888', borderRadius: 0 },
     ],
   }
 
@@ -48,7 +48,7 @@ export default function TrendChart({ trendByYear }: { trendByYear: TrendRow[] })
       }}>
         Farmers reached — trend by year
       </div>
-      <div style={{ padding: '1rem', height: 240 }}>
+      <div style={{ padding: '.6rem', height: 160 }}>
         {trendByYear.length === 0
           ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#bbb', fontSize: '.68rem', textAlign: 'center', lineHeight: 1.6 }}>

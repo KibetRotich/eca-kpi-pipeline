@@ -104,13 +104,14 @@ export default function InstructionsPage() {
       <Section title="Overview" color={YELLOW}>
         <Card>
           <p style={{ lineHeight: 1.8, color: '#333' }}>
-            This platform collects, processes, and visualises results for the <strong>seven MASP IV KPIs</strong> across
+            This platform collects, processes, and visualises results for the <strong>twelve MASP IV KPIs</strong> across
             Solidaridad's East &amp; Central Africa programme (Kenya, Uganda, Tanzania, Ethiopia) from 2026 to 2030.
-            Data enters through <strong>KoboToolbox surveys</strong> completed by project teams in the field.
+            These comprise <strong>Network mandated KPIs</strong> (S6.1–S6.5, S2.1, S2.5) and <strong>five REC Level
+            Indicators</strong> (REC01–REC05). Outcome data enters through <strong>KoboToolbox surveys</strong>;
+            REC indicators are entered directly in the Targets &amp; Achievements tab as annual counts.
             The system distinguishes between two measurement approaches — <em>sample-based extrapolation</em> for
-            farmer-level production KPIs, and <em>direct counting</em> for institutional and company KPIs.
-            <strong> 2026 is the Baseline Year</strong> — survey data collected this year establishes reference values;
-            achievement comparisons begin from 2027.
+            farmer-level production KPIs, and <em>direct counting</em> for institutional, company, and REC KPIs.
+            <strong> 2026 is the first year of MASP IV</strong>, continuing directly from the MASP III cycle (2021–2025).
           </p>
         </Card>
       </Section>
@@ -130,7 +131,7 @@ export default function InstructionsPage() {
             </thead>
             <tbody>
               <KpiRow code="S6.1" label="Farmers with enhanced resilience"        pathway="Production"  color={YELLOW} method="sample"
-                description="Farmers whose Resilience Index (0–35) improved from baseline. Index sums 7 sub-scores: soil health (C:N ratio), collective membership, local decision-making, income stability, shock recovery, savings buffer, income diversification." />
+                description="Farmers whose Resilience Index (0–35) improved from their 2026 reference score. Index sums 7 sub-scores: soil health (C:N ratio), collective membership, local decision-making, income stability, shock recovery, savings buffer, income diversification." />
               <KpiRow code="S6.2" label="Farmers with improved farm viability"    pathway="Production"  color={YELLOW} method="sample"
                 description="Farmers whose Farm Viability Index (0–30) exceeds 33% threshold (score > 10). Index sums 6 sub-scores: yield growth, income diversification, income perception, service quality, market access, GAP adoption (of 9 practices)." />
               <KpiRow code="S2.1" label="Farmers accessing new/improved services" pathway="Services"   color={NAVY}   method="sample"
@@ -143,6 +144,17 @@ export default function InstructionsPage() {
                 description="Direct count of partner companies that have adopted and implemented direct farmer reward mechanisms (e.g. premium payments, bonus schemes). Reported by company respondents." />
               <KpiRow code="S6.5" label="Companies with responsible procurement"  pathway="Market"     color={GREEN}  method="count"
                 description="Direct count of partner companies with responsible procurement policies in place. Scored on 5 criteria: policy document, SMART commitments, action plan, country coverage, third-party verification." />
+              <tr><td colSpan={5} style={{ background: '#111', color: '#FFC800', padding: '.3rem .7rem', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>REC Level Indicators — entered directly in Targets &amp; Achievements (no KoboToolbox form)</td></tr>
+              <KpiRow code="REC01" label="Processors with reduced pollution"              pathway="Production" color={YELLOW} method="count"
+                description="Direct count of processors (mills, factories, aggregators) that have adopted verified pollution-reduction measures within the reporting year." />
+              <KpiRow code="REC02" label="Workers under improved working conditions"      pathway="Production" color={YELLOW} method="count"
+                description="Direct count of workers along the value chain (farm workers, factory workers, casual labourers) whose employment conditions have been demonstrably improved through Solidaridad-supported interventions." />
+              <KpiRow code="REC03" label="Green jobs created"                             pathway="Services"   color={NAVY}   method="count"
+                description="Direct count of new jobs created that contribute to environmental sustainability — including agroforestry, organic certification, environmental monitoring, and climate-smart service delivery roles." />
+              <KpiRow code="REC04" label="CSOs with enhanced capacity in policy processes" pathway="Governance" color={BLACK}  method="count"
+                description="Direct count of civil society organisations that have received capacity-building support and actively engaged in commodity policy or regulatory processes during the reporting year." />
+              <KpiRow code="REC05" label="Farmers receiving premium prices"               pathway="Market"     color={BLACK}  method="count"
+                description="Direct count of smallholder farmers who received a verified price premium above the standard market price as a result of Solidaridad-supported linkages to certification or direct buyer relationships." />
             </tbody>
           </table>
         </Card>
@@ -154,16 +166,16 @@ export default function InstructionsPage() {
               Achievement is <em>extrapolated</em> from the sample to the full target population using a
               post-stratification estimator. Cards in the dashboard show an <span style={{ background: YELLOW, color: '#000',
               fontSize: '0.5rem', fontWeight: 800, textTransform: 'uppercase', padding: '0 .25rem' }}>est.</span> badge.
-              During 2026 (Baseline), raw sample counts are shown — no extrapolation is applied.
+              In 2026, raw sample counts are shown — no extrapolation is applied until sufficient survey data has been collected.
             </div>
           </Card>
           <Card style={{ borderTop: `3px solid ${BLACK}` }}>
             <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: '#888', marginBottom: '.4rem' }}>Count-based KPIs</div>
             <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.7 }}>
-              <strong>S2.5, S6.3, S6.4, S6.5</strong> are direct counts — every qualifying individual,
-              regulation, or company is reported by the responsible respondent (farmer/SP for S2.5,
-              CSO for S6.3, company for S6.4/S6.5). Cards show a
-              <span style={{ background: '#e8e8e8', color: '#444', fontSize: '0.5rem', fontWeight: 800,
+              <strong>S2.5, S6.3, S6.4, S6.5</strong> are direct counts from KoboToolbox submissions.
+              <strong> REC01–REC05</strong> are also direct counts, entered manually each year in the
+              Targets &amp; Achievements tab — no survey form or CSV upload is required for these.
+              Cards show a <span style={{ background: '#e8e8e8', color: '#444', fontSize: '0.5rem', fontWeight: 800,
               textTransform: 'uppercase', padding: '0 .25rem', marginLeft: '.25rem' }}>count</span> badge.
               No sampling or extrapolation is involved.
             </div>
@@ -247,7 +259,7 @@ export default function InstructionsPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '.6rem', marginTop: '.4rem' }}>
             {[
-              { kpi: 'S6.1', label: 'Threshold', desc: 'Resilience Index ≥ 18/35 (provisional). From 2027: improvement from 2026 baseline score.' },
+              { kpi: 'S6.1', label: 'Threshold', desc: 'Resilience Index ≥ 18/35 (provisional). From 2027: improvement from the 2026 reference score.' },
               { kpi: 'S6.2', label: 'Threshold', desc: 'Farm Viability Index > 10/30 (>33% of maximum — per monitoring protocol).' },
               { kpi: 'S2.1', label: 'Qualifies if', desc: 'Farmer received ≥1 new service OR at least one service quality improved. Confirmed by SP triangulation.' },
             ].map(({ kpi, label, desc }) => (
@@ -260,11 +272,6 @@ export default function InstructionsPage() {
             ))}
           </div>
 
-          <div style={{ marginTop: '.8rem', padding: '.6rem .8rem', background: '#fff3e0', border: '1px solid #ffcc80', fontSize: '0.65rem', color: '#6d4c00', lineHeight: 1.7 }}>
-            <strong>Baseline year note (2026):</strong> No extrapolation is applied in 2026. Raw sample counts are displayed
-            as reference values. The post-stratification estimator activates from 2027 onwards, comparing against
-            the 2026 baseline scores.
-          </div>
         </Card>
       </Section>
 
@@ -411,59 +418,6 @@ export default function InstructionsPage() {
       </Section>
 
       {/* Adding a new project */}
-      <Section title="Adding a New Project (Targets &amp; Achievements)" color={GREEN}>
-        <Card>
-          <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.7, marginBottom: '.8rem' }}>
-            New projects must be registered in the database before targets can be entered or survey data uploaded.
-            Only an <strong>M&amp;E Officer</strong> or <strong>Admin</strong> can add projects. Follow these steps:
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem' }}>
-            <div>
-              <Step n={1} title="Run the SQL insert in Supabase">
-                Open the Supabase SQL Editor and run an INSERT into the <code>projects</code> table. Required fields:
-                <code> project_code</code> (unique, e.g. <code>KE-NEW-001</code>), <code>project_name</code>,
-                <code> country</code>, <code>commodity</code>, <code>start_year</code>, <code>end_year</code>.
-                Use the seed file <code>pipeline/masp4_seed_projects_2026.sql</code> as a template.
-              </Step>
-              <Step n={2} title="Verify commodity and country values">
-                <code>country</code> must match exactly: <em>Kenya, Uganda, Tanzania,</em> or <em>Ethiopia</em>.
-                <code> commodity</code> must be one of the registered enum values: Coffee, Tea, F&amp;V, Gold, Dairy,
-                Leather, Cotton, Fashion, Palm Oil, Cocoa. If your commodity is not listed, add it first with
-                <code> ALTER TYPE commodity_enum ADD VALUE IF NOT EXISTS '...'</code>.
-              </Step>
-              <Step n={3} title="Confirm the project appears in the platform">
-                Reload the <strong>Targets &amp; Achievements</strong> tab. The new project should appear as a card.
-                If it does not appear, check that <code>country</code> and <code>commodity</code> are spelled
-                exactly as the platform expects (case-sensitive).
-              </Step>
-            </div>
-            <div>
-              <Step n={4} title="Enter annual outcome KPI targets">
-                On the project card in <strong>Targets &amp; Achievements</strong>, click <em>+ Add</em> next to
-                each of the 7 outcome KPIs (S6.1–S6.5). Enter the logframe annual target total and, where available,
-                gender-disaggregated targets (female / male). Targets are year-specific — enter them for each
-                survey year separately.
-              </Step>
-              <Step n={5} title="Enter the output KPI annual target">
-                On the same project card, scroll to the yellow <strong>OUTPUT</strong> section and click
-                <em> + Add target</em>. Enter the annual target for Farmers Trained / Reached. This should reflect
-                the total headcount across all delivery channels (training events, TV/radio, demo farms, digital)
-                as planned for the year.
-              </Step>
-              <Step n={6} title="Enter quarterly output actuals each quarter">
-                At the end of each quarter, enter the actual headcount in the Q1–Q4 tiles of the OUTPUT section.
-                Include female and youth disaggregation where available. The annual achievement column sums
-                the four quarters automatically and shows a % against the annual target.
-              </Step>
-            </div>
-          </div>
-          <div style={{ marginTop: '.7rem', padding: '.6rem .8rem', background: '#e8f5e9', border: '1px solid #a5d6a7', fontSize: '0.64rem', color: '#1b5e20', lineHeight: 1.7 }}>
-            <strong>Project codes must be consistent</strong> across the database, the KoboToolbox form (<code>_project_code</code>),
-            and any CSV exports. A mismatch will cause uploads to fail with a "project not found" error.
-          </div>
-        </Card>
-      </Section>
-
       {/* Footer note */}
       <div style={{ borderTop: '1px solid #d0d0d0', paddingTop: '.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '.5rem' }}>
         <div style={{ fontSize: '0.6rem', color: '#aaa', textTransform: 'uppercase', letterSpacing: '.8px' }}>

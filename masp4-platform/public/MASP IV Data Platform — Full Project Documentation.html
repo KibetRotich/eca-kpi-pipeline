@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<!-- saved from url=(0106)file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MASP IV Data Platform — Full Project Documentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Open Sans',sans-serif;font-size:11pt;color:#222;line-height:1.6;background:#fff;}
+
+  /* Print */
+  @media print{
+    .no-print{display:none;}
+    h2{page-break-before:always;}
+    h2.no-break{page-break-before:avoid;}
+    .avoid-break{page-break-inside:avoid;}
+    body{font-size:10pt;}
+  }
+
+  /* Layout */
+  .page{max-width:900px;margin:0 auto;padding:30px 40px 60px;}
+
+  /* Cover */
+  .cover{background:#111;color:#fff;padding:60px 50px 50px;margin:-30px -40px 40px;position:relative;}
+  .cover-stripe{height:6px;background:#FFC800;margin-bottom:28px;}
+  .cover-title{font-size:28pt;font-weight:800;line-height:1.15;color:#fff;margin-bottom:8px;}
+  .cover-sub{font-size:13pt;font-weight:600;color:#FFC800;margin-bottom:24px;}
+  .cover-meta{font-size:9pt;color:#aaa;letter-spacing:1px;text-transform:uppercase;}
+  .cover-date{margin-top:40px;font-size:9pt;color:#888;border-top:1px solid #333;padding-top:16px;}
+
+  /* TOC */
+  .toc{background:#f8f8f8;border-left:4px solid #FFC800;padding:20px 24px;margin-bottom:36px;}
+  .toc-title{font-size:10pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:12px;}
+  .toc ol{padding-left:18px;}
+  .toc li{margin-bottom:4px;font-size:10pt;color:#333;}
+  .toc a{color:#1a3557;text-decoration:none;}
+
+  /* Headings */
+  h2{font-size:14pt;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:1.5px;
+     border-bottom:3px solid #FFC800;padding-bottom:6px;margin:36px 0 16px;}
+  h3{font-size:11pt;font-weight:800;color:#1a3557;margin:20px 0 8px;}
+  h4{font-size:10pt;font-weight:700;color:#333;margin:14px 0 6px;}
+
+  /* Body text */
+  p{margin-bottom:10px;color:#333;}
+  ul,ol{padding-left:20px;margin-bottom:10px;}
+  li{margin-bottom:4px;color:#333;}
+  code{background:#f0f0f0;padding:1px 5px;font-family:monospace;font-size:9.5pt;color:#c62828;}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:9.5pt;}
+  th{background:#111;color:#fff;padding:7px 10px;text-align:left;font-weight:800;font-size:8.5pt;
+     text-transform:uppercase;letter-spacing:.5px;}
+  td{padding:6px 10px;border-bottom:1px solid #eee;vertical-align:top;}
+  tr:nth-child(even) td{background:#fafafa;}
+  tr:last-child td{border-bottom:none;}
+
+  /* Badges */
+  .badge{display:inline-block;padding:2px 7px;font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
+  .badge-yellow{background:#FFC800;color:#000;}
+  .badge-navy{background:#1a3557;color:#fff;}
+  .badge-green{background:#2e7d32;color:#fff;}
+  .badge-orange{background:#e65100;color:#fff;}
+  .badge-grey{background:#e0e0e0;color:#444;}
+  .badge-black{background:#111;color:#fff;}
+
+  /* Cards */
+  .card{border:1px solid #d0d0d0;padding:14px 16px;margin-bottom:12px;}
+  .card-yellow{border-left:4px solid #FFC800;}
+  .card-navy{border-left:4px solid #1a3557;}
+  .card-green{border-left:4px solid #2e7d32;}
+  .card-orange{border-left:4px solid #e65100;}
+  .card-red{border-left:4px solid #c62828;}
+  .card-black{border-left:4px solid #111;}
+
+  /* Sprint boxes */
+  .sprint{background:#f8f8f8;border:1px solid #d0d0d0;border-top:3px solid #FFC800;padding:14px 16px;margin-bottom:14px;}
+  .sprint-title{font-size:9pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;}
+
+  /* Code block */
+  .code-block{background:#1e1e1e;color:#d4d4d4;padding:14px 16px;font-family:monospace;font-size:9pt;
+              line-height:1.7;margin-bottom:14px;overflow-x:auto;}
+  .code-block .kw{color:#569cd6;}
+  .code-block .str{color:#ce9178;}
+  .code-block .cm{color:#6a9955;}
+
+  /* Grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
+
+  /* Step */
+  .step{display:flex;gap:12px;margin-bottom:12px;}
+  .step-n{flex-shrink:0;width:24px;height:24px;background:#111;color:#FFC800;
+          display:flex;align-items:center;justify-content:center;font-size:9pt;font-weight:800;}
+  .step-body{}
+  .step-title{font-size:10pt;font-weight:800;color:#111;margin-bottom:2px;}
+  .step-desc{font-size:9.5pt;color:#555;}
+
+  /* Note box */
+  .note{background:#fff3e0;border:1px solid #ffcc80;border-left:4px solid #e65100;padding:10px 14px;margin-bottom:12px;font-size:9.5pt;color:#6d4c00;}
+  .info{background:#e8f0fe;border:1px solid #aac4f7;border-left:4px solid #1a3557;padding:10px 14px;margin-bottom:12px;font-size:9.5pt;color:#1a3557;}
+  .success{background:#e8f5e9;border:1px solid #a5d6a7;border-left:4px solid #2e7d32;padding:10px 14px;margin-bottom:12px;font-size:9.5pt;color:#1b5e20;}
+
+  /* Print button */
+  .print-btn{position:fixed;bottom:30px;right:30px;background:#FFC800;color:#000;border:none;
+             padding:12px 20px;font-weight:800;font-size:10pt;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+
+  /* Formula */
+  .formula{background:#f5f5f5;border:1px solid #e0e0e0;padding:12px 16px;font-family:monospace;font-size:10pt;margin-bottom:12px;}
+  .formula-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:6px;}
+
+  .divider{border:none;border-top:1px solid #e0e0e0;margin:28px 0;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <button class="print-btn no-print" onclick="window.print()">Print / Save PDF</button>
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="cover-stripe"></div>
+    <div class="cover-title">MASP IV Data Platform</div>
+    <div class="cover-sub">Full Project Documentation</div>
+    <div class="cover-meta">Solidaridad East &amp; Central Africa &nbsp;·&nbsp; 2026–2030</div>
+    <div class="cover-date">
+      Document prepared: April 2026 &nbsp;·&nbsp; Version 1.0 &nbsp;·&nbsp; Confidential — Internal Use Only
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Table of Contents</div>
+    <ol>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s1">Project Overview</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s2">Technical Architecture</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s3">Database Schema</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s4">KPI Framework</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s5">Data Collection &amp; Extrapolation Methodology</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s6">Index Scoring Details</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s7">Platform Features — Tab by Tab</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s8">Output KPI: Farmers Trained / Reached</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s9">Role-Based Access Control</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s10">KoboToolbox Survey Form</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s11">Build Sprint Log</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s12">Deployment Guide (Vercel)</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s13">Project Register</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s14">Operational Procedures</a></li>
+      <li><a href="file:///C:/Users/Geoffrey%20Rotich/Desktop/Claudeworks/memoari/docs/masp4_platform_full_documentation.html#s15">Known Issues &amp; Pending Items</a></li>
+    </ol>
+  </div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s1">1. Project Overview</h2>
+
+  <p>The <strong>MASP IV Data Platform</strong> is a web-based monitoring and results management system built for Solidaridad East &amp; Central Africa (ECA) to track, aggregate, and visualise programme results under the MASP IV strategy (2026–2030).</p>
+
+  <p>The platform replaces manual spreadsheet reporting and CSV-based static dashboards with a live database-backed system. It covers <strong>seven outcome KPIs</strong> and one <strong>output KPI</strong> across projects in Kenya, Uganda, Tanzania, and Ethiopia, spanning commodities including Coffee, Tea, F&amp;V, Gold, Dairy, Palm Oil, Cocoa, and others.</p>
+
+  <div class="grid2">
+    <div class="card card-yellow">
+      <h4>Programme</h4>
+      <p>MASP IV — Solidaridad East &amp; Central Africa</p>
+      <p><strong>Period:</strong> 2026–2030 &nbsp;·&nbsp; <strong>Baseline year:</strong> 2026</p>
+      <p><strong>Countries:</strong> Kenya, Uganda, Tanzania, Ethiopia</p>
+    </div>
+    <div class="card card-navy">
+      <h4>Platform URL</h4>
+      <p>Production: <strong>masp4-platform.vercel.app</strong><br>
+      GitHub: <strong>github.com/KibetRotich/masp4-platform</strong></p>
+      <p><strong>Target domain:</strong> masp4.solidaridadnetwork.org</p>
+    </div>
+  </div>
+
+  <h3>Design Principles</h3>
+  <ul>
+    <li><strong>Sample-based extrapolation</strong> for farmer-level outcome KPIs (S6.1, S6.2, S2.1)</li>
+    <li><strong>Direct counting</strong> for institutional and company KPIs (S2.5, S6.3, S6.4, S6.5)</li>
+    <li><strong>Direct headcount</strong> for the output KPI (Farmers Trained / Reached — quarterly)</li>
+    <li>2026 is baseline only — no extrapolation applied; achievements calculated from 2027 onwards</li>
+    <li>Role-based access: M&amp;E Officers edit, all others view</li>
+    <li>All approved data is immutable once in the KPI views</li>
+  </ul>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s2">2. Technical Architecture</h2>
+
+  <div class="grid2">
+    <div>
+      <h3>Stack</h3>
+      <table>
+        <tbody><tr><th>Layer</th><th>Technology</th></tr>
+        <tr><td>Frontend framework</td><td>Next.js 16.2.3 (App Router, React 19)</td></tr>
+        <tr><td>Language</td><td>TypeScript 5</td></tr>
+        <tr><td>Database</td><td>Supabase (PostgreSQL 15)</td></tr>
+        <tr><td>Auth</td><td>Supabase Auth + Google OAuth</td></tr>
+        <tr><td>Hosting</td><td>Vercel (auto-deploy from GitHub main)</td></tr>
+        <tr><td>Styling</td><td>Inline styles + globals.css (no CSS framework)</td></tr>
+        <tr><td>CSV parsing</td><td>csv-parse 6.x</td></tr>
+        <tr><td>Font</td><td>Open Sans (Google Fonts)</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <h3>Environment Variables</h3>
+      <table>
+        <tbody><tr><th>Variable</th><th>Purpose</th></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>Supabase project URL</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>Public anon key (client-side)</td></tr>
+        <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Server-side admin key (never exposed)</td></tr>
+      </tbody></table>
+      <div class="note"><strong>Security:</strong> <code>SUPABASE_SERVICE_ROLE_KEY</code> is only used in API routes (server-side). Never include it in client components.</div>
+    </div>
+  </div>
+
+  <h3>Data Flow</h3>
+  <div class="card card-black">
+    <p style="font-family:monospace;font-size:9.5pt;line-height:2;">
+      KoboToolbox survey (mobile)
+      &nbsp;→&nbsp; CSV export
+      &nbsp;→&nbsp; Import CSV tab (upload)
+      &nbsp;→&nbsp; <code>pending submissions</code> table
+      &nbsp;→&nbsp; M&amp;E Officer review &amp; approval
+      &nbsp;→&nbsp; <code>approved</code> status
+      &nbsp;→&nbsp; KPI views (v_s61_kpi … v_s65_kpi)
+      &nbsp;→&nbsp; Dashboard aggregation
+      &nbsp;→&nbsp; Live charts &amp; KPI cards
+    </p>
+  </div>
+
+  <h3>File Structure</h3>
+  <div class="code-block">
+masp4-platform/
+├── app/
+│   ├── layout.tsx              # Nav, header, footer, RoleProvider
+│   ├── globals.css             # Design system (fonts, colours, components)
+│   ├── instructions/page.tsx   # Methodology + how-to guide
+│   ├── upload/page.tsx         # Import CSV tab
+│   ├── targets/page.tsx        # Targets &amp; Achievements tab
+│   ├── dashboard/              # Dashboard (server component + client)
+│   │   ├── page.tsx
+│   │   ├── DashboardClient.tsx
+│   │   ├── KpiCard.tsx
+│   │   ├── CountryTable.tsx
+│   │   └── TrendChart.tsx
+│   ├── submissions/            # Submission review pages
+│   └── api/
+│       ├── import/route.ts     # CSV upload handler
+│       ├── projects/route.ts   # Project list
+│       ├── targets/route.ts    # KPI targets CRUD
+│       ├── outputs/route.ts    # Quarterly output records CRUD
+│       ├── submissions/        # Approve / reject
+│       └── me/route.ts         # Current user role
+├── lib/
+│   ├── supabase.ts             # Supabase admin client
+│   ├── role-context.tsx        # React role context (canEdit)
+│   ├── odk-parser.ts           # CSV → typed rows
+│   └── normalizers/            # Per-KPI data normalizers
+│       ├── farmer-profile.ts
+│       ├── s61.ts  s62.ts  s21.ts
+│       └── s63-s65.ts
+└── pipeline/                   # SQL migrations (run in Supabase)
+    ├── masp4_migration_sprint1-10.sql
+    ├── masp4_seed_projects_2026.sql
+    └── masp4_seed_kpi_targets_2026.sql
+  </div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s3">3. Database Schema</h2>
+
+  <h3>Core Tables</h3>
+  <table>
+    <tbody><tr><th>Table</th><th>Purpose</th><th>Key columns</th></tr>
+    <tr><td><code>projects</code></td><td>Project register</td><td>project_code, project_name, country, commodity, start_year, end_year</td></tr>
+    <tr><td><code>farmer_profiles</code></td><td>One row per surveyed farmer</td><td>project_id, survey_year, gender, age, is_youth (generated), country</td></tr>
+    <tr><td><code>s61_resilience_surveys</code></td><td>S6.1 survey responses</td><td>farmer_id, resilience_index (0–35), meets_threshold, all sub-scores</td></tr>
+    <tr><td><code>s62_viability_surveys</code></td><td>S6.2 survey responses</td><td>farmer_id, viability_index (0–30), meets_threshold, gap_practices_count</td></tr>
+    <tr><td><code>s21_services_surveys</code></td><td>S2.1 survey responses</td><td>farmer_id, qualifies (generated), new_services_introduced, quality_change</td></tr>
+    <tr><td><code>s25_business_surveys</code></td><td>S2.5 co-ownership</td><td>farmer_id, co_ownership_type</td></tr>
+    <tr><td><code>s63_governance_surveys</code></td><td>S6.3 regulations</td><td>project_id, governance_tier (1/2/3)</td></tr>
+    <tr><td><code>s64_company_surveys</code></td><td>S6.4 company rewards</td><td>project_id, farmers_rewarded_count, reward_type</td></tr>
+    <tr><td><code>s65_procurement_surveys</code></td><td>S6.5 procurement</td><td>project_id, 5 criteria columns</td></tr>
+    <tr><td><code>project_kpi_targets</code></td><td>Annual targets per project × KPI</td><td>project_id, survey_year, kpi_code, target_total, target_female, target_male</td></tr>
+    <tr><td><code>project_output_records</code></td><td>Quarterly output headcounts</td><td>project_id, survey_year, quarter (1–4), farmers_trained, female_count, youth_count, channel_notes</td></tr>
+    <tr><td><code>user_roles</code></td><td>User access roles</td><td>id (auth.users FK), role (admin/me_officer/viewer), email</td></tr>
+  </tbody></table>
+
+  <h3>KPI Views</h3>
+  <table>
+    <tbody><tr><th>View</th><th>Source tables</th><th>Key output columns</th></tr>
+    <tr><td><code>v_s61_kpi</code></td><td>s61_resilience_surveys + farmer_profiles + project_kpi_targets</td><td>sample_count, achievement (extrapolated), achievement_female/male/youth, avg_index</td></tr>
+    <tr><td><code>v_s62_kpi</code></td><td>s62_viability_surveys + farmer_profiles + project_kpi_targets</td><td>sample_count, achievement, avg_index</td></tr>
+    <tr><td><code>v_s21_kpi</code></td><td>s21_services_surveys + farmer_profiles + project_kpi_targets</td><td>sample_count, achievement</td></tr>
+    <tr><td><code>v_s25_kpi</code></td><td>s25_business_surveys</td><td>total_count, farmer_co_owners, sp_co_owners</td></tr>
+    <tr><td><code>v_s63_kpi</code></td><td>s63_governance_surveys</td><td>governance_count, tier2_count, tier3_count</td></tr>
+    <tr><td><code>v_s64_kpi</code></td><td>s64_company_surveys</td><td>companies_count, total_farmers_rewarded</td></tr>
+    <tr><td><code>v_s65_kpi</code></td><td>s65_procurement_surveys</td><td>companies_count, tier2_count, tier3_count</td></tr>
+    <tr><td><code>v_kpi_summary</code></td><td>All 7 KPI views + projects (CROSS JOIN years)</td><td>One row per project × year with all KPI counts</td></tr>
+    <tr><td><code>v_output_summary</code></td><td>project_output_records + projects</td><td>total_farmers_trained, total_female, total_male, total_youth per project × year</td></tr>
+  </tbody></table>
+
+  <h3>Generated Columns (automatic — do not insert)</h3>
+  <table>
+    <tbody><tr><th>Column</th><th>Table</th><th>Expression</th></tr>
+    <tr><td><code>is_youth</code></td><td>farmer_profiles</td><td><code>age &lt;= 35</code></td></tr>
+    <tr><td><code>qualifies</code></td><td>s21_services_surveys</td><td><code>new_services_introduced OR quality_change = 'Quality improved'</code></td></tr>
+  </tbody></table>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s4">4. KPI Framework</h2>
+
+  <table>
+    <tbody><tr><th>Code</th><th>Indicator</th><th>Pathway</th><th>Method</th><th>What is counted</th></tr>
+    <tr>
+      <td><span class="badge badge-yellow">S6.1</span></td>
+      <td>Farmers with enhanced resilience</td>
+      <td>Production</td>
+      <td><span class="badge badge-yellow">Sample + Extrapolation</span></td>
+      <td>Farmers whose Resilience Index (0–35) meets or exceeds the threshold (≥18, provisional). Index sums 7 sub-scores: soil health, collective membership, local decision-making, income stability, shock recovery, savings buffer, income diversification.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-yellow">S6.2</span></td>
+      <td>Farmers with improved farm viability</td>
+      <td>Production</td>
+      <td><span class="badge badge-yellow">Sample + Extrapolation</span></td>
+      <td>Farmers whose Farm Viability Index (0–30) exceeds 33% threshold (score &gt;10). Index sums 6 sub-scores: yield growth, income diversification, income perception, service quality (NPS proxy), market access, GAP adoption.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-navy">S2.1</span></td>
+      <td>Farmers accessing new/improved services</td>
+      <td>Services</td>
+      <td><span class="badge badge-yellow">Sample + Extrapolation</span></td>
+      <td>Farmers who received ≥1 new service OR whose service quality improved. Confirmed by SP triangulation.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-navy">S2.5</span></td>
+      <td>Individuals co-owning businesses</td>
+      <td>Services</td>
+      <td><span class="badge badge-grey">Direct Count</span></td>
+      <td>Direct headcount of farmers and SPs holding recognised co-ownership stakes. No extrapolation.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-orange">S6.3</span></td>
+      <td>Regulations / frameworks improved</td>
+      <td>Governance</td>
+      <td><span class="badge badge-grey">Direct Count</span></td>
+      <td>Mandatory regulations or voluntary frameworks improved, established, or implemented. Scored on Tier 1/2/3 scale by CSO respondents.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">S6.4</span></td>
+      <td>Companies rewarding farmers directly</td>
+      <td>Market</td>
+      <td><span class="badge badge-grey">Direct Count</span></td>
+      <td>Partner companies that have implemented direct farmer reward mechanisms (premium payments, bonus schemes). Reported by company respondents.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">S6.5</span></td>
+      <td>Companies with responsible procurement</td>
+      <td>Market</td>
+      <td><span class="badge badge-grey">Direct Count</span></td>
+      <td>Partner companies scored on 5 responsible procurement criteria: policy document, SMART time-bound commitments, action plan, country coverage, third-party verification.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-yellow">OUT.1</span></td>
+      <td>Farmers trained / reached (Output KPI)</td>
+      <td>Cross-cutting</td>
+      <td><span class="badge badge-grey">Direct Count (Quarterly)</span></td>
+      <td>Total headcount of farmers trained or reached through all delivery channels: training events, TV/radio, demo farms, digital platforms. Collected quarterly per project.</td>
+    </tr>
+  </tbody></table>
+
+  <div class="note"><strong>Note on S6.1, S6.2, S2.1:</strong> These three KPIs survey the same farmers in a single combined interview. They are independent outcome measures — do not sum or average them. The Output KPI (OUT.1) is a completely separate headcount from the outcome surveys.</div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s5">5. Data Collection &amp; Extrapolation Methodology</h2>
+
+  <h3>Farmer Survey Cycle</h3>
+  <div class="grid2">
+    <div>
+      <div class="step"><div class="step-n">1</div><div class="step-body"><div class="step-title">Define target population</div><div class="step-desc">Project team enters the total target population in Targets &amp; Achievements — total, female, and male — for each KPI and each survey year.</div></div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-body"><div class="step-title">Draw sample</div><div class="step-desc">A random or systematic sample is drawn. Gender-stratified sampling is recommended so that female and male farmers are sampled proportionally.</div></div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-body"><div class="step-title">Administer survey</div><div class="step-desc">Enumerators use the MASP IV Farmer Survey V1.1 (XLSForm) on KoboToolbox mobile devices. One interview covers S6.1, S6.2, S2.1, and S2.5.</div></div></div>
+    </div>
+    <div>
+      <div class="step"><div class="step-n">4</div><div class="step-body"><div class="step-title">Export CSV from KoboToolbox</div><div class="step-desc">Project officer exports the completed survey as CSV from KoboToolbox (Data → Downloads → CSV, all fields).</div></div></div>
+      <div class="step"><div class="step-n">5</div><div class="step-body"><div class="step-title">Upload to platform</div><div class="step-desc">CSV uploaded via Import CSV tab. Rows enter a pending queue. M&amp;E Officer reviews and approves each submission.</div></div></div>
+      <div class="step"><div class="step-n">6</div><div class="step-body"><div class="step-title">Extrapolation applied</div><div class="step-desc">On approval, the KPI views automatically calculate extrapolated achievement using the post-stratification estimator (from 2027 onwards).</div></div></div>
+    </div>
+  </div>
+
+  <h3>Post-Stratification Estimator</h3>
+  <p>For S6.1, S6.2, and S2.1, the number of farmers meeting the threshold in the full target population is estimated as follows:</p>
+
+  <div class="formula">
+    <div class="formula-label">Formula A — Gender-stratified (preferred)</div>
+    Achievement = (f_threshold / f_surveyed) × Target_Female<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ (m_threshold / m_surveyed) × Target_Male
+  </div>
+
+  <div class="formula">
+    <div class="formula-label">Formula B — Total only (when gender targets not available)</div>
+    Achievement = (sample_count / sample_size) × Target_Total
+  </div>
+
+  <table>
+    <tbody><tr><th>Term</th><th>Definition</th></tr>
+    <tr><td><code>f_threshold</code></td><td>Female farmers in sample who meet the KPI threshold</td></tr>
+    <tr><td><code>f_surveyed</code></td><td>Total female farmers surveyed</td></tr>
+    <tr><td><code>m_threshold / m_surveyed</code></td><td>Same for male</td></tr>
+    <tr><td><code>Target_Female / Target_Male</code></td><td>Gender-disaggregated target population (from Targets &amp; Achievements)</td></tr>
+    <tr><td><code>sample_count</code></td><td>Total farmers in sample meeting the threshold (for Formula B)</td></tr>
+  </tbody></table>
+
+  <div class="info"><strong>Baseline year (2026):</strong> No extrapolation is applied. Raw sample counts are displayed as reference values. The estimator activates from 2027, comparing against 2026 baseline scores.</div>
+
+  <h3>Threshold Definitions</h3>
+  <table>
+    <tbody><tr><th>KPI</th><th>Threshold</th><th>Notes</th></tr>
+    <tr><td>S6.1</td><td>Resilience Index ≥ 18 / 35</td><td>Provisional — to be confirmed after 2026 baseline collection</td></tr>
+    <tr><td>S6.2</td><td>Viability Index &gt; 10 / 30 (&gt;33%)</td><td>Per MASP IV monitoring protocol</td></tr>
+    <tr><td>S2.1</td><td>≥1 new service received OR quality improved</td><td>Confirmed by SP triangulation</td></tr>
+  </tbody></table>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s6">6. Index Scoring Details</h2>
+
+  <div class="grid2">
+    <div class="avoid-break">
+      <h3>S6.1 — Resilience Index (max 35)</h3>
+      <table>
+        <tbody><tr><th>Sub-score</th><th>Max</th><th>Source field</th></tr>
+        <tr><td>Soil health (C:N ratio)</td><td>5</td><td>f_S61_soil_C ÷ f_S61_soil_N → score</td></tr>
+        <tr><td>Collective membership</td><td>5</td><td>f_S61_membership (0–5)</td></tr>
+        <tr><td>Local decision-making</td><td>5</td><td>f_S61_decision (0–5)</td></tr>
+        <tr><td>Income: expense coverage</td><td>5</td><td>f_S61_income_expenses (0–5)</td></tr>
+        <tr><td>Income: shock resilience</td><td>5</td><td>Recategorised(impact × recovery)</td></tr>
+        <tr><td>Income: savings buffer</td><td>5</td><td>f_S61_income_savings (0–5)</td></tr>
+        <tr><td>Income diversification</td><td>5</td><td>f_S61_income_sources (0–5)</td></tr>
+        <tr><td><strong>Total</strong></td><td><strong>35</strong></td><td>Threshold: ≥18</td></tr>
+      </tbody></table>
+      <div class="note" style="font-size:8.5pt;"><strong>Soil C:N scoring:</strong> ratio 10–15 = 5pts, 15–20 or 8–10 = 4pts, 20–25 or 5–8 = 3pts, 25–30 or 3–5 = 2pts, &gt;30 or &lt;3 = 1pt.<br>
+      <strong>Shock resilience:</strong> impact × recovery product (2–15) recategorised: ≤4=5, ≤6=4, ≤9=3, ≤12=2, else=1.</div>
+    </div>
+    <div class="avoid-break">
+      <h3>S6.2 — Farm Viability Index (max 30)</h3>
+      <table>
+        <tbody><tr><th>Sub-score</th><th>Max</th><th>Source field</th></tr>
+        <tr><td>Yield growth</td><td>5</td><td>f_S62_yield_increase + increase %</td></tr>
+        <tr><td>Income diversification</td><td>5</td><td>f_S62_income_diversifcation (0–5)</td></tr>
+        <tr><td>Income perception</td><td>5</td><td>f_S62_income_perception (0–5)</td></tr>
+        <tr><td>Service quality (NPS proxy)</td><td>5</td><td>f_S62_services_netpromoter (1–10 → 1–5)</td></tr>
+        <tr><td>Market access</td><td>5</td><td>f_S62_markets (0–5)</td></tr>
+        <tr><td>GAP adoption (of 9 practices)</td><td>5</td><td>Count of f_S62_markets_practices selected</td></tr>
+        <tr><td><strong>Total</strong></td><td><strong>30</strong></td><td>Threshold: &gt;10 (&gt;33%)</td></tr>
+      </tbody></table>
+      <div class="note" style="font-size:8.5pt;"><strong>GAP scoring:</strong> 9 practices → score: 0=0, 1–2=1, 3–4=2, 5–6=3, 7–8=4, 9=5.<br>
+      <strong>NPS proxy:</strong> 1–2=1, 3–4=2, 5–6=3, 7–8=4, 9–10=5.</div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s7">7. Platform Features — Tab by Tab</h2>
+
+  <h3>Navigation Order</h3>
+  <p>Instructions &nbsp;→&nbsp; Import CSV &nbsp;→&nbsp; Targets &amp; Achievements &nbsp;→&nbsp; Dashboard</p>
+
+  <h3>Instructions Tab</h3>
+  <ul>
+    <li>Platform overview and methodology description</li>
+    <li>KPI framework table (all 7 outcome KPIs + output KPI)</li>
+    <li>Sample-based vs count-based explanation cards</li>
+    <li>Data collection steps (farmer surveys and institutional surveys)</li>
+    <li>Post-stratification extrapolation formulas</li>
+    <li>Index scoring tables (S6.1 and S6.2)</li>
+    <li>Disaggregation guide (gender, youth, country, commodity)</li>
+    <li>Survey form information with link to Import CSV for download</li>
+    <li><strong>Adding a New Project</strong> procedure (6-step guide)</li>
+  </ul>
+
+  <h3>Import CSV Tab</h3>
+  <ul>
+    <li>Step 1: KoboToolbox form download (V1.1 XLSForm)</li>
+    <li>Step 2: Deployment checklist (_project_code, _country, GPS, pilot, sampling frame)</li>
+    <li>Step 3: KoboToolbox export instructions + required CSV columns</li>
+    <li>Step 4: CSV upload form (file selector, survey year, form type auto-detect)</li>
+    <li>Viewers see a read-only notice; upload form is disabled for non-editors</li>
+  </ul>
+
+  <h3>Targets &amp; Achievements Tab</h3>
+  <ul>
+    <li>Filter bar: Year, Country, Commodity, <strong>Project</strong> (cascading — project list narrows by country/commodity)</li>
+    <li>Per-project cards showing all 7 KPI rows: target total, female, male, achievement with est./count badge</li>
+    <li>Inline edit forms for targets (M&amp;E Officer / Admin only)</li>
+    <li>Output KPI section (yellow band) per project:
+      <ul>
+        <li>Annual target with + Add / Edit button</li>
+        <li>Annual achievement (sum of Q1–Q4) with % badge</li>
+        <li>Q1–Q4 tiles labelled "Q1 · 2026" etc. with "Quarterly breakdown — 2026" sub-heading</li>
+        <li>Each quarter: farmers_trained, female, youth, channel notes</li>
+      </ul>
+    </li>
+    <li>All edit/add/delete controls hidden for viewer role</li>
+  </ul>
+
+  <h3>Dashboard Tab</h3>
+  <ul>
+    <li>Filter bar: Year, Country, Commodity (with Baseline year badge)</li>
+    <li>Summary banner (5 cards): Farmers trained/reached, Female (output), Youth ≤35 (output), Companies engaged, Regulations improved</li>
+    <li>KPI cards in 4-column pathway layout: Production | Services | Governance | Market</li>
+    <li>Each KPI card: count, sample size, % threshold, gender disaggregation bar, 5-year target vs achievement sparkbar</li>
+    <li>Country breakdown table (bottom left)</li>
+    <li>Multi-year trend chart — S6.1/S6.2/S2.1 (bottom right)</li>
+  </ul>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s8">8. Output KPI: Farmers Trained / Reached</h2>
+
+  <p>This is a <strong>direct headcount output indicator</strong> — separate from the 7 outcome KPIs. It counts all farmers reached across all delivery channels per project per quarter.</p>
+
+  <div class="grid2">
+    <div class="card card-yellow">
+      <h4>Delivery channels included</h4>
+      <ul>
+        <li>Face-to-face training events</li>
+        <li>TV / radio broadcasts</li>
+        <li>Demonstration farms</li>
+        <li>Digital platforms</li>
+      </ul>
+    </div>
+    <div class="card card-yellow">
+      <h4>How it is collected</h4>
+      <ul>
+        <li>M&amp;E Officer enters Q1–Q4 counts per project in Targets &amp; Achievements</li>
+        <li>Annual achievement = Q1 + Q2 + Q3 + Q4 (auto-summed)</li>
+        <li>Annual target stored in <code>project_kpi_targets</code> as <code>kpi_code = 'OUT.1'</code></li>
+        <li>Dashboard banner shows the programme-wide total</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Database</h3>
+  <p>Quarterly records stored in <code>project_output_records</code> (unique per project × year × quarter). Annual target stored in <code>project_kpi_targets</code> under code <code>OUT.1</code>.</p>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s9">9. Role-Based Access Control</h2>
+
+  <table>
+    <tbody><tr><th>Role</th><th>DB value</th><th>Who</th><th>Permissions</th></tr>
+    <tr>
+      <td><span class="badge badge-black">Admin</span></td>
+      <td><code>admin</code></td>
+      <td>Platform administrator</td>
+      <td>Full access — can also manage user roles</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-navy">M&amp;E Officer</span></td>
+      <td><code>me_officer</code></td>
+      <td>Solidaridad M&amp;E staff</td>
+      <td>Add/edit/delete targets, enter quarterly outputs, upload CSV, approve/reject submissions</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-grey">Viewer</span></td>
+      <td><code>viewer</code></td>
+      <td>All other logged-in users</td>
+      <td>Read only — edit buttons hidden, upload form disabled</td>
+    </tr>
+  </tbody></table>
+
+  <h3>How roles are assigned</h3>
+  <div class="step"><div class="step-n">1</div><div class="step-body"><div class="step-title">New user signs in (Google)</div><div class="step-desc">A trigger automatically inserts a <code>viewer</code> row in <code>user_roles</code> for every new auth user.</div></div></div>
+  <div class="step"><div class="step-n">2</div><div class="step-body"><div class="step-title">Promote to M&amp;E Officer</div><div class="step-desc">Admin runs: <code>UPDATE user_roles SET role = 'me_officer' WHERE email = 'colleague@solidaridadnetwork.org';</code></div></div></div>
+  <div class="step"><div class="step-n">3</div><div class="step-body"><div class="step-title">Promote to Admin</div><div class="step-desc">Run: <code>UPDATE user_roles SET role = 'admin' WHERE email = 'your@solidaridadnetwork.org';</code></div></div></div>
+
+  <div class="note"><strong>Important:</strong> Run <code>pipeline/masp4_migration_sprint10.sql</code> in Supabase SQL Editor before Google login is activated. This creates the <code>user_roles</code> table and the auto-insert trigger.</div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s10">10. KoboToolbox Survey Form</h2>
+
+  <div class="grid2">
+    <div>
+      <h3>Form: MASP IV Farmer Survey V1.1</h3>
+      <ul>
+        <li>Format: XLSForm (.xlsx) — compatible with KoboToolbox and ODK Central</li>
+        <li>Covers: S6.1, S6.2, S2.1, S2.5 in one interview</li>
+        <li>Download from: Import CSV tab on the platform</li>
+        <li>File location: <code>public/MASP_IV_Kobo_Form_V1.1.xlsx</code></li>
+      </ul>
+      <h4>Required metadata columns in every export</h4>
+      <ul>
+        <li><code>_uuid</code> — unique submission ID</li>
+        <li><code>_project_code</code> — must match exactly (e.g. KE-ANK-001)</li>
+        <li><code>_country</code> — Kenya / Uganda / Tanzania / Ethiopia</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Fixes applied in V1.1</h3>
+      <ul>
+        <li>Added <code>_project_code</code> (text, required) at survey start</li>
+        <li>Added <code>_country</code> (select_one, required) at survey start</li>
+        <li>Fixed <code>f_S62_yield_unit</code> choice names (kgha / mtha / lha)</li>
+        <li>Renamed duplicate S62_services group → S62_markets</li>
+        <li>Fixed S12 end_group label</li>
+        <li>Updated form_id to <code>masp4_farmer_survey</code></li>
+      </ul>
+      <div class="note" style="font-size:8.5pt;">Separate forms for CSO (S6.3) and Company (S6.4/S6.5) respondents are under development — V1.2.</div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s11">11. Build Sprint Log</h2>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 1–4 — Foundation</div>
+    <ul>
+      <li>Next.js 15 App Router project scaffold with TypeScript</li>
+      <li>Supabase schema: projects, farmer_profiles, all 7 KPI survey tables</li>
+      <li>Design system: Open Sans, CSS variables (yellow #FFC800, navy #1a3557, etc.)</li>
+      <li>Basic dashboard page with KPI cards and filter bar</li>
+      <li>CSV import pipeline (odk-parser.ts + normalizers for all 7 KPIs)</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 5 — Real Projects Seed</div>
+    <ul>
+      <li>Inserted 18 real ECA programme projects (Kenya, Uganda, Tanzania, Ethiopia)</li>
+      <li>commodity_enum extended with all 10 commodities</li>
+      <li>Fixed SQL errors: removed non-existent project_year_targets references</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 6 — Per-KPI Targets Schema</div>
+    <ul>
+      <li>Replaced single annual target with <code>project_kpi_targets</code> (one row per project × year × KPI)</li>
+      <li>Rebuilt v_s61_kpi, v_s62_kpi, v_s21_kpi views with post-stratification estimator</li>
+      <li>Rebuilt v_kpi_summary CROSS JOIN view</li>
+      <li>Targets &amp; Achievements tab: inline edit forms, achievement column with est./count badges</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 7 — Index Scoring &amp; Kobo Fixes</div>
+    <ul>
+      <li>Added gap_practices_count column to s62_viability_surveys</li>
+      <li>Rewrote all normalizers with full index scoring (resilience_index 0–35, viability_index 0–30)</li>
+      <li>Fixed KoboToolbox form V1.1 (project code field, yield unit choices, group labels)</li>
+      <li>Added Instructions tab with full methodology documentation</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 8 — Output KPI (Farmers Trained / Reached)</div>
+    <ul>
+      <li>Created project_output_records table (quarterly, per project)</li>
+      <li>Created v_output_summary view</li>
+      <li>Created /api/outputs route (GET / POST / DELETE)</li>
+      <li>Dashboard banner now shows output total (not sampled outcome counts)</li>
+      <li>Q1–Q4 quarterly entry tiles in Targets &amp; Achievements, labelled "Q1 · 2026"</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 9 — Output Annual Target</div>
+    <ul>
+      <li>Extended project_kpi_targets CHECK constraint to include 'OUT.1'</li>
+      <li>Annual target + achievement (with % badge) added to output section header</li>
+      <li>Same save/edit/delete functions reused from outcome KPI targets</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid-break">
+    <div class="sprint-title">Sprint 10 — Roles, Deployment &amp; Polish</div>
+    <ul>
+      <li>Created user_roles table with auto-insert trigger for new Google auth users</li>
+      <li>RoleProvider context: canEdit = (role === 'admin' || role === 'me_officer')</li>
+      <li>All edit/add/delete buttons hidden for viewer role across Targets and Upload pages</li>
+      <li>Deployed to Vercel from github.com/KibetRotich/masp4-platform</li>
+      <li>Root font size tuned: 26px → 18px (−30%) for live environment</li>
+      <li>Nav reordered: Instructions → Import CSV → Targets &amp; Achievements → Dashboard</li>
+      <li>Header/footer years corrected to 2026–2030</li>
+      <li>Project filter added to Targets &amp; Achievements filter bar</li>
+      <li>Commodity dropdowns standardised across Dashboard and Targets tabs</li>
+      <li>Acting Now Kenya &amp; Ethiopia corrected to F&amp;V commodity</li>
+      <li>Crop+ CROSL Ethiopia added (ET-CSL-001)</li>
+      <li>Data Quality &amp; Approval Workflow section removed (Review Queue tab removed)</li>
+      <li>Adding a New Project procedure added to Instructions</li>
+    </ul>
+  </div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s12">12. Deployment Guide (Vercel)</h2>
+
+  <div class="grid2">
+    <div>
+      <h3>Current deployment</h3>
+      <ul>
+        <li><strong>Hosting:</strong> Vercel (free hobby tier)</li>
+        <li><strong>Repo:</strong> github.com/KibetRotich/masp4-platform</li>
+        <li><strong>Branch:</strong> main (auto-deploy on push)</li>
+        <li><strong>Database:</strong> Supabase (free tier)</li>
+        <li><strong>Build command:</strong> <code>next build</code></li>
+        <li><strong>Root directory:</strong> / (repo root)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Custom domain (pending)</h3>
+      <ul>
+        <li>Target: <code>masp4.solidaridadnetwork.org</code></li>
+        <li>Add in Vercel → Settings → Domains</li>
+        <li>DNS: CNAME <code>masp4</code> → <code>cname.vercel-dns.com</code></li>
+        <li>SSL: auto-provisioned by Vercel</li>
+        <li>Requires IT access to solidaridadnetwork.org DNS</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Environment Variables (set in Vercel dashboard)</h3>
+  <table>
+    <tbody><tr><th>Variable</th><th>Source</th></tr>
+    <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>Supabase → Project Settings → API → Project URL</td></tr>
+    <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>Supabase → Project Settings → API → anon public key</td></tr>
+    <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Supabase → Project Settings → API → service_role secret key</td></tr>
+  </tbody></table>
+
+  <h3>Google Login Setup (pending)</h3>
+  <div class="step"><div class="step-n">1</div><div class="step-body"><div class="step-title">Google Cloud Console</div><div class="step-desc">Create OAuth 2.0 Client ID → Web application. Authorised redirect URI: <code>https://[supabase-ref].supabase.co/auth/v1/callback</code></div></div></div>
+  <div class="step"><div class="step-n">2</div><div class="step-body"><div class="step-title">Supabase → Authentication → Providers → Google</div><div class="step-desc">Enable Google provider, paste Client ID and Client Secret.</div></div></div>
+  <div class="step"><div class="step-n">3</div><div class="step-body"><div class="step-title">Restrict to @solidaridadnetwork.org</div><div class="step-desc">Supabase → Authentication → Settings → Allowed email domains: <code>solidaridadnetwork.org</code></div></div></div>
+  <div class="step"><div class="step-n">4</div><div class="step-body"><div class="step-title">Run Sprint 10 migration</div><div class="step-desc">Runs user_roles table + auto-insert trigger. After first login, promote yourself: <code>UPDATE user_roles SET role = 'admin' WHERE email = 'your@solidaridadnetwork.org';</code></div></div></div>
+
+  <h3>Ongoing deployment</h3>
+  <p>Every push to the <code>main</code> branch triggers an automatic Vercel redeploy (~2 minutes, zero downtime):</p>
+  <div class="code-block">git add . &amp;&amp; git commit -m "your change" &amp;&amp; git push origin main</div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s13">13. Project Register</h2>
+
+  <table>
+    <tbody><tr><th>Code</th><th>Project Name</th><th>Country</th><th>Commodity</th></tr>
+    <tr><td>KE-ANK-001</td><td>Acting Now - Kenya</td><td>Kenya</td><td>F&amp;V</td></tr>
+    <tr><td>KE-AFR-001</td><td>AFRI00 Kenya</td><td>Kenya</td><td>F&amp;V</td></tr>
+    <tr><td>KE-CCA-001</td><td>CCAC Livestock Methane Reduction Strategy</td><td>Kenya</td><td>Dairy</td></tr>
+    <tr><td>KE-CSV-001</td><td>Creating Shared Value in Maize Value Chain in Kenya</td><td>Kenya</td><td>F&amp;V</td></tr>
+    <tr><td>KE-DFN-001</td><td>Dream Fund Kenya (Climate Heroes)</td><td>Kenya</td><td>Coffee</td></tr>
+    <tr><td>KE-P2P-001</td><td>Pathways to Prosperity - Kenya</td><td>Kenya</td><td>Coffee</td></tr>
+    <tr><td>KE-SVP-001</td><td>Shade for Vegetables Project Kenya</td><td>Kenya</td><td>F&amp;V</td></tr>
+    <tr><td>KE-SYN-001</td><td>Synnefa Solidaridad P4G Project</td><td>Kenya</td><td>F&amp;V</td></tr>
+    <tr><td>ET-ANE-001</td><td>Acting Now - Ethiopia</td><td>Ethiopia</td><td>F&amp;V</td></tr>
+    <tr><td>ET-CSL-001</td><td>Crop+ CROSL Ethiopia</td><td>Ethiopia</td><td>F&amp;V</td></tr>
+    <tr><td>TZ-GOL-001</td><td>Gold ECA FVO Project - Responsible ASGM Trade</td><td>Tanzania</td><td>Gold</td></tr>
+    <tr><td>TZ-P2P-001</td><td>Pathways to Prosperity - Tanzania</td><td>Tanzania</td><td>Coffee</td></tr>
+    <tr><td>UG-DFN-001</td><td>Dreamfund ECA Uganda project</td><td>Uganda</td><td>Coffee</td></tr>
+    <tr><td>UG-FVO-001</td><td>FVO ICAM Cocoa Project</td><td>Uganda</td><td>Cocoa</td></tr>
+    <tr><td>UG-HAR-001</td><td>Harvesting Carbon: Carbon Mitigation DGBP Uganda</td><td>Uganda</td><td>Coffee</td></tr>
+    <tr><td>UG-NOP-001</td><td>NOPP Project Uganda</td><td>Uganda</td><td>Palm Oil</td></tr>
+    <tr><td>UG-REA-001</td><td>Resilient Agroforestry Extension Project (REAP)</td><td>Uganda</td><td>Coffee</td></tr>
+    <tr><td>UG-STB-001</td><td>Starbucks Uganda project</td><td>Uganda</td><td>Coffee</td></tr>
+    <tr><td>UG-RCL-001</td><td>The root causes of child labour - Uganda</td><td>Uganda</td><td>Coffee</td></tr>
+  </tbody></table>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s14">14. Operational Procedures</h2>
+
+  <h3>Adding a new project</h3>
+  <div class="step"><div class="step-n">1</div><div class="step-body"><div class="step-title">Run INSERT in Supabase SQL Editor</div><div class="step-desc">Use <code>pipeline/masp4_seed_projects_2026.sql</code> as template. Required: project_code (unique), project_name, country, commodity, start_year, end_year.</div></div></div>
+  <div class="step"><div class="step-n">2</div><div class="step-body"><div class="step-title">Verify commodity enum</div><div class="step-desc">Commodity must be a registered enum value. If new: <code>ALTER TYPE commodity_enum ADD VALUE IF NOT EXISTS 'NewCommodity';</code></div></div></div>
+  <div class="step"><div class="step-n">3</div><div class="step-body"><div class="step-title">Confirm in platform</div><div class="step-desc">Reload Targets &amp; Achievements — new project card appears. Check country and commodity filters work correctly.</div></div></div>
+  <div class="step"><div class="step-n">4</div><div class="step-body"><div class="step-title">Enter annual KPI targets</div><div class="step-desc">Click + Add next to each of the 7 outcome KPIs. Enter target total + female/male disaggregation. Repeat for each survey year.</div></div></div>
+  <div class="step"><div class="step-n">5</div><div class="step-body"><div class="step-title">Enter output KPI annual target</div><div class="step-desc">In the yellow OUTPUT section, click + Add target. Enter planned annual headcount across all delivery channels.</div></div></div>
+  <div class="step"><div class="step-n">6</div><div class="step-body"><div class="step-title">Enter quarterly output actuals</div><div class="step-desc">At end of each quarter, enter Q1–Q4 counts. Annual achievement sums automatically with % vs target.</div></div></div>
+
+  <hr class="divider">
+
+  <h3>Correcting a project's commodity or country</h3>
+  <p>Run a targeted UPDATE in Supabase SQL Editor. Create a fix file in <code>pipeline/</code> for audit trail:</p>
+  <div class="code-block">UPDATE projects SET commodity = 'F&amp;V' WHERE project_code = 'KE-ANK-001';</div>
+
+  <hr class="divider">
+
+  <h3>Promoting a user to M&amp;E Officer</h3>
+  <p>After the user has signed in at least once via Google:</p>
+  <div class="code-block">UPDATE user_roles SET role = 'me_officer' WHERE email = 'colleague@solidaridadnetwork.org';</div>
+
+  <!-- ─────────────────────────────────── -->
+  <h2 id="s15">15. Known Issues &amp; Pending Items</h2>
+
+  <table>
+    <tbody><tr><th>Item</th><th>Status</th><th>Action required</th></tr>
+    <tr><td>Run Sprint 10 SQL migration (user_roles)</td><td><span class="badge badge-orange">Pending</span></td><td>Run <code>pipeline/masp4_migration_sprint10.sql</code> in Supabase</td></tr>
+    <tr><td>Google OAuth login</td><td><span class="badge badge-orange">Pending</span></td><td>Configure Google Cloud Console + Supabase Auth provider</td></tr>
+    <tr><td>Custom domain masp4.solidaridadnetwork.org</td><td><span class="badge badge-orange">Pending</span></td><td>IT team to add CNAME record; then configure in Vercel</td></tr>
+    <tr><td>S6.1 meets_threshold cut-off (≥18/35)</td><td><span class="badge badge-orange">Provisional</span></td><td>Confirm after 2026 baseline data collected</td></tr>
+    <tr><td>CSO form (S6.3) and Company forms (S6.4/S6.5)</td><td><span class="badge badge-orange">Pending</span></td><td>Develop as KoboToolbox V1.2 forms</td></tr>
+    <tr><td>Run Sprint 7–9 SQL migrations</td><td><span class="badge badge-orange">Pending</span></td><td>Run sprint7, sprint8, sprint9 SQL files in Supabase in order</td></tr>
+    <tr><td>Kobo form V1.1 deployment</td><td><span class="badge badge-orange">Pending</span></td><td>Upload to KoboToolbox and pilot with 3–5 farmers</td></tr>
+    <tr><td>Acting Now commodity fix (live DB)</td><td><span class="badge badge-orange">Pending</span></td><td>Run <code>pipeline/masp4_fix_acting_now_commodity.sql</code></td></tr>
+    <tr><td>Crop+ CROSL Ethiopia (live DB)</td><td><span class="badge badge-orange">Pending</span></td><td>Run <code>pipeline/masp4_add_project_et_csl_001.sql</code></td></tr>
+  </tbody></table>
+
+  <hr class="divider">
+
+  <div style="text-align:center;color:#aaa;font-size:8.5pt;margin-top:30px;text-transform:uppercase;letter-spacing:1px;">
+    Solidaridad East &amp; Central Africa &nbsp;·&nbsp; MASP IV Data Platform &nbsp;·&nbsp; 2026–2030<br>
+    Generated April 2026 &nbsp;·&nbsp; Confidential — Internal Use Only
+  </div>
+
+</div>
+
+
+</body></html>

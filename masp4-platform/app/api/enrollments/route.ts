@@ -5,6 +5,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireEditor } from '@/lib/require-editor'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -24,6 +25,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const authErr = await requireEditor(req)
+  if (authErr) return authErr
+
   let body: any
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -51,6 +55,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const authErr = await requireEditor(req)
+  if (authErr) return authErr
+
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

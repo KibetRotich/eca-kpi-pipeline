@@ -504,49 +504,203 @@ CREATE TABLE s65_procurement_records (
 CREATE INDEX s65_project_year_idx ON s65_procurement_records(project_id, survey_year);
 
 
+-- ── ENROLLED POPULATION PER PROJECT PER YEAR ─────────────────────────────────
+-- Entered by country managers from MIS/Salesforce.
+-- Drives stratified extrapolation in all farmer KPI views.
+
+CREATE TABLE project_year_targets (
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id       UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    survey_year      SMALLINT NOT NULL,
+    target_total   INTEGER NOT NULL CHECK (target_total > 0),
+    target_female  INTEGER CHECK (target_female >= 0),
+    target_male    INTEGER CHECK (target_male   >= 0),
+    data_source      TEXT,    -- e.g. 'Salesforce export', 'MIS April 2026'
+    notes            TEXT,
+    created_at       TIMESTAMPTZ DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (project_id, survey_year)
+);
+
+CREATE TRIGGER trg_enrollment_updated_at
+    BEFORE UPDATE ON project_year_targets
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE project_year_targets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY enrollment_read   ON project_year_targets FOR SELECT USING (current_user_role() IS NOT NULL);
+CREATE POLICY enrollment_write  ON project_year_targets FOR ALL    USING (current_user_role() IN ('admin','country_manager'));
+
+
 -- ── AGGREGATED KPI VIEWS ──────────────────────────────────────────────────────
--- These views power dashboard queries.  All disaggregate by project + year.
+-- Stratified post-stratification estimator (stratified by gender, random sampling).
+--
+-- Formula per KPI for farmer-level indicators (S6.1, S6.2, S2.1):
+--
+--   estimated = (f_threshold / f_surveyed) × f_enrolled
+--             + (m_threshold / m_surveyed) × m_enrolled
+--
+-- Falls back to simple ratio estimator when stratum enrolled counts are NULL:
+--   estimated = (threshold / sample_size) × target_total
+--
+-- Youth is cross-cutting (not a separate stratum):
+--   achievement_youth = (y_threshold / y_surveyed) × target_total
+--
+-- S2.5, S6.3, S6.4, S6.5 are NOT sample-based → no extrapolation.
 
 -- S6.1: Farmers with enhanced resilience
 CREATE VIEW v_s61_kpi AS
+WITH survey AS (
+    SELECT
+        s.project_id,
+        s.survey_year,
+        COUNT(*)                                                            AS sample_size,
+        COUNT(*) FILTER (WHERE s.meets_threshold)                          AS sample_count,
+        COUNT(*) FILTER (WHERE fp.gender = 'Female')                       AS sample_f,
+        COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Female') AS sample_f_threshold,
+        COUNT(*) FILTER (WHERE fp.gender = 'Male')                         AS sample_m,
+        COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Male')   AS sample_m_threshold,
+        COUNT(*) FILTER (WHERE fp.is_youth)                                AS sample_y,
+        COUNT(*) FILTER (WHERE s.meets_threshold AND fp.is_youth)          AS sample_y_threshold,
+        ROUND(AVG(s.resilience_index), 2)                                  AS avg_index
+    FROM s61_resilience_surveys s
+    JOIN farmer_profiles fp ON fp.id = s.farmer_id
+    GROUP BY s.project_id, s.survey_year
+)
 SELECT
     s.project_id,
     s.survey_year,
-    COUNT(*)                                              FILTER (WHERE s.meets_threshold)                        AS resilience_count,
-    COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Female')                                           AS count_female,
-    COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Male')                                             AS count_male,
-    COUNT(*) FILTER (WHERE s.meets_threshold AND fp.is_youth)                                                    AS count_youth,
-    ROUND(AVG(s.resilience_index), 2)                                                                            AS avg_index
-FROM s61_resilience_surveys s
-JOIN farmer_profiles fp ON fp.id = s.farmer_id
-GROUP BY s.project_id, s.survey_year;
+    s.sample_size,
+    s.sample_count,
+    s.avg_index,
+    e.target_total,
+    e.target_female,
+    e.target_male,
+    ROUND(100.0 * s.sample_count / NULLIF(s.sample_size, 0), 1)  AS sample_pct,
+    -- Stratified estimate (gender strata)
+    CASE
+        WHEN e.target_female IS NOT NULL AND e.target_male IS NOT NULL
+        THEN ROUND(
+            COALESCE(s.sample_f_threshold::numeric / NULLIF(s.sample_f, 0), 0) * e.target_female
+          + COALESCE(s.sample_m_threshold::numeric / NULLIF(s.sample_m, 0), 0) * e.target_male
+        )
+        WHEN e.target_total IS NOT NULL
+        THEN ROUND(s.sample_count::numeric / NULLIF(s.sample_size, 0) * e.target_total)
+        ELSE NULL
+    END AS achievement,
+    CASE WHEN e.target_female IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_f_threshold::numeric / NULLIF(s.sample_f, 0), 0) * e.target_female)
+        ELSE NULL END AS achievement_female,
+    CASE WHEN e.target_male IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_m_threshold::numeric / NULLIF(s.sample_m, 0), 0) * e.target_male)
+        ELSE NULL END AS achievement_male,
+    CASE WHEN e.target_total IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_y_threshold::numeric / NULLIF(s.sample_y, 0), 0) * e.target_total)
+        ELSE NULL END AS achievement_youth
+FROM survey s
+LEFT JOIN project_year_targets e
+       ON e.project_id = s.project_id AND e.survey_year = s.survey_year;
 
 -- S6.2: Farmers with improved farm viability
 CREATE VIEW v_s62_kpi AS
+WITH survey AS (
+    SELECT
+        s.project_id,
+        s.survey_year,
+        COUNT(*)                                                            AS sample_size,
+        COUNT(*) FILTER (WHERE s.meets_threshold)                          AS sample_count,
+        COUNT(*) FILTER (WHERE fp.gender = 'Female')                       AS sample_f,
+        COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Female') AS sample_f_threshold,
+        COUNT(*) FILTER (WHERE fp.gender = 'Male')                         AS sample_m,
+        COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Male')   AS sample_m_threshold,
+        COUNT(*) FILTER (WHERE fp.is_youth)                                AS sample_y,
+        COUNT(*) FILTER (WHERE s.meets_threshold AND fp.is_youth)          AS sample_y_threshold,
+        ROUND(AVG(s.viability_index), 2)                                   AS avg_index
+    FROM s62_viability_surveys s
+    JOIN farmer_profiles fp ON fp.id = s.farmer_id
+    GROUP BY s.project_id, s.survey_year
+)
 SELECT
     s.project_id,
     s.survey_year,
-    COUNT(*) FILTER (WHERE s.meets_threshold)                                AS viability_count,
-    COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Female')       AS count_female,
-    COUNT(*) FILTER (WHERE s.meets_threshold AND fp.gender = 'Male')         AS count_male,
-    COUNT(*) FILTER (WHERE s.meets_threshold AND fp.is_youth)                AS count_youth,
-    ROUND(AVG(s.viability_index), 2)                                         AS avg_index
-FROM s62_viability_surveys s
-JOIN farmer_profiles fp ON fp.id = s.farmer_id
-GROUP BY s.project_id, s.survey_year;
+    s.sample_size,
+    s.sample_count,
+    s.avg_index,
+    e.target_total,
+    e.target_female,
+    e.target_male,
+    ROUND(100.0 * s.sample_count / NULLIF(s.sample_size, 0), 1)  AS sample_pct,
+    CASE
+        WHEN e.target_female IS NOT NULL AND e.target_male IS NOT NULL
+        THEN ROUND(
+            COALESCE(s.sample_f_threshold::numeric / NULLIF(s.sample_f, 0), 0) * e.target_female
+          + COALESCE(s.sample_m_threshold::numeric / NULLIF(s.sample_m, 0), 0) * e.target_male
+        )
+        WHEN e.target_total IS NOT NULL
+        THEN ROUND(s.sample_count::numeric / NULLIF(s.sample_size, 0) * e.target_total)
+        ELSE NULL
+    END AS achievement,
+    CASE WHEN e.target_female IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_f_threshold::numeric / NULLIF(s.sample_f, 0), 0) * e.target_female)
+        ELSE NULL END AS achievement_female,
+    CASE WHEN e.target_male IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_m_threshold::numeric / NULLIF(s.sample_m, 0), 0) * e.target_male)
+        ELSE NULL END AS achievement_male,
+    CASE WHEN e.target_total IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_y_threshold::numeric / NULLIF(s.sample_y, 0), 0) * e.target_total)
+        ELSE NULL END AS achievement_youth
+FROM survey s
+LEFT JOIN project_year_targets e
+       ON e.project_id = s.project_id AND e.survey_year = s.survey_year;
 
 -- S2.1: Farmers accessing new/improved services
 CREATE VIEW v_s21_kpi AS
+WITH survey AS (
+    SELECT
+        s.project_id,
+        s.survey_year,
+        COUNT(*)                                                        AS sample_size,
+        COUNT(*) FILTER (WHERE s.qualifies)                             AS sample_count,
+        COUNT(*) FILTER (WHERE fp.gender = 'Female')                   AS sample_f,
+        COUNT(*) FILTER (WHERE s.qualifies AND fp.gender = 'Female')   AS sample_f_threshold,
+        COUNT(*) FILTER (WHERE fp.gender = 'Male')                     AS sample_m,
+        COUNT(*) FILTER (WHERE s.qualifies AND fp.gender = 'Male')     AS sample_m_threshold,
+        COUNT(*) FILTER (WHERE fp.is_youth)                            AS sample_y,
+        COUNT(*) FILTER (WHERE s.qualifies AND fp.is_youth)            AS sample_y_threshold
+    FROM s21_services_surveys s
+    JOIN farmer_profiles fp ON fp.id = s.farmer_id
+    GROUP BY s.project_id, s.survey_year
+)
 SELECT
     s.project_id,
     s.survey_year,
-    COUNT(*) FILTER (WHERE s.qualifies)                                      AS services_count,
-    COUNT(*) FILTER (WHERE s.qualifies AND fp.gender = 'Female')             AS count_female,
-    COUNT(*) FILTER (WHERE s.qualifies AND fp.gender = 'Male')               AS count_male,
-    COUNT(*) FILTER (WHERE s.qualifies AND fp.is_youth)                      AS count_youth
-FROM s21_services_surveys s
-JOIN farmer_profiles fp ON fp.id = s.farmer_id
-GROUP BY s.project_id, s.survey_year;
+    s.sample_size,
+    s.sample_count,
+    e.target_total,
+    e.target_female,
+    e.target_male,
+    ROUND(100.0 * s.sample_count / NULLIF(s.sample_size, 0), 1)  AS sample_pct,
+    CASE
+        WHEN e.target_female IS NOT NULL AND e.target_male IS NOT NULL
+        THEN ROUND(
+            COALESCE(s.sample_f_threshold::numeric / NULLIF(s.sample_f, 0), 0) * e.target_female
+          + COALESCE(s.sample_m_threshold::numeric / NULLIF(s.sample_m, 0), 0) * e.target_male
+        )
+        WHEN e.target_total IS NOT NULL
+        THEN ROUND(s.sample_count::numeric / NULLIF(s.sample_size, 0) * e.target_total)
+        ELSE NULL
+    END AS achievement,
+    CASE WHEN e.target_female IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_f_threshold::numeric / NULLIF(s.sample_f, 0), 0) * e.target_female)
+        ELSE NULL END AS achievement_female,
+    CASE WHEN e.target_male IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_m_threshold::numeric / NULLIF(s.sample_m, 0), 0) * e.target_male)
+        ELSE NULL END AS achievement_male,
+    CASE WHEN e.target_total IS NOT NULL
+        THEN ROUND(COALESCE(s.sample_y_threshold::numeric / NULLIF(s.sample_y, 0), 0) * e.target_total)
+        ELSE NULL END AS achievement_youth
+FROM survey s
+LEFT JOIN project_year_targets e
+       ON e.project_id = s.project_id AND e.survey_year = s.survey_year;
 
 -- S2.5: Individuals co-owning businesses (counted after manual approval)
 CREATE VIEW v_s25_kpi AS
@@ -592,6 +746,7 @@ FROM s65_procurement_records
 GROUP BY project_id, survey_year;
 
 -- Master cross-KPI summary per project per year (used by dashboard overview)
+-- Uses achievement for sample-based KPIs (S6.1, S6.2, S2.1); falls back to sample_count
 CREATE VIEW v_kpi_summary AS
 SELECT
     p.project_code,
@@ -599,13 +754,13 @@ SELECT
     p.country,
     p.commodity,
     y.survey_year,
-    COALESCE(s61.resilience_count, 0) AS s61_count,
-    COALESCE(s62.viability_count,  0) AS s62_count,
-    COALESCE(s21.services_count,   0) AS s21_count,
-    COALESCE(s25.total_count,      0) AS s25_count,
-    COALESCE(s63.governance_count, 0) AS s63_count,
-    COALESCE(s64.companies_count,  0) AS s64_companies,
-    COALESCE(s65.companies_count,  0) AS s65_companies
+    COALESCE(s61.achievement, s61.sample_count, 0) AS s61_count,
+    COALESCE(s62.achievement, s62.sample_count, 0) AS s62_count,
+    COALESCE(s21.achievement, s21.sample_count, 0) AS s21_count,
+    COALESCE(s25.total_count,      0)                  AS s25_count,
+    COALESCE(s63.governance_count, 0)                  AS s63_count,
+    COALESCE(s64.companies_count,  0)                  AS s64_companies,
+    COALESCE(s65.companies_count,  0)                  AS s65_companies
 FROM projects p
 CROSS JOIN (SELECT DISTINCT survey_year FROM farmer_profiles) y
 LEFT JOIN v_s61_kpi s61 ON s61.project_id = p.id AND s61.survey_year = y.survey_year
@@ -717,29 +872,33 @@ CREATE POLICY odk_approve ON odk_submissions FOR UPDATE USING (
 
 
 -- ── SEED DATA ─────────────────────────────────────────────────────────────────
--- Baseline project register for MASP IV (2025–2030).
--- Project codes follow pattern: {ISO2}-{COMMODITY_SHORT}-{SEQ}
+-- Real ECA programme projects active in 2026 survey cohort.
+-- Source: KPI_Data_Cleaned_for_Looker CSV (18 projects with 2026 data).
+-- Project codes: {ISO2}-{SHORT}-{SEQ}
 
 INSERT INTO projects (project_code, project_name, country, commodity, start_year, end_year) VALUES
--- Kenya
-('KE-COF-001', 'Kenya Coffee MASP IV',       'Kenya',     'Coffee',   2026, 2030),
-('KE-TEA-001', 'Kenya Tea MASP IV',          'Kenya',     'Tea',      2026, 2030),
-('KE-COT-001', 'Kenya Cotton MASP IV',       'Kenya',     'Cotton',   2026, 2030),
-('KE-DAI-001', 'Kenya Dairy MASP IV',        'Kenya',     'Dairy',    2026, 2030),
-('KE-FV-001',  'Kenya F&V MASP IV',          'Kenya',     'F&V',      2026, 2030),
--- Uganda
-('UG-COF-001', 'Uganda Coffee MASP IV',      'Uganda',    'Coffee',   2026, 2030),
-('UG-COT-001', 'Uganda Cotton MASP IV',      'Uganda',    'Cotton',   2026, 2030),
-('UG-GOL-001', 'Uganda Gold MASP IV',        'Uganda',    'Gold',     2026, 2030),
--- Tanzania
-('TZ-COF-001', 'Tanzania Coffee MASP IV',    'Tanzania',  'Coffee',   2026, 2030),
-('TZ-COC-001', 'Tanzania Cocoa MASP IV',     'Tanzania',  'Cocoa',    2026, 2030),
-('TZ-TEA-001', 'Tanzania Tea MASP IV',       'Tanzania',  'Tea',      2026, 2030),
-('TZ-LEA-001', 'Tanzania Leather MASP IV',   'Tanzania',  'Leather',  2026, 2030),
--- Ethiopia
-('ET-COF-001', 'Ethiopia Coffee MASP IV',    'Ethiopia',  'Coffee',   2026, 2030),
-('ET-LEA-001', 'Ethiopia Leather MASP IV',   'Ethiopia',  'Leather',  2026, 2030),
-('ET-FAS-001', 'Ethiopia Fashion MASP IV',   'Ethiopia',  'Fashion',  2026, 2030);
+-- Kenya (8 projects)
+('KE-ANK-001', 'Acting Now - Kenya',                                     'Kenya',    'Coffee',   2026, 2030),
+('KE-AFR-001', 'AFRI00 Kenya',                                           'Kenya',    'F&V',      2026, 2030),
+('KE-CCA-001', 'CCAC Livestock Methane Reduction Strategy',              'Kenya',    'Dairy',    2026, 2030),
+('KE-CSV-001', 'Creating Shared Value in Maize Value Chain in Kenya',    'Kenya',    'F&V',      2026, 2030),
+('KE-DFN-001', 'Dream Fund Kenya (Climate Heroes)',                      'Kenya',    'Coffee',   2026, 2030),
+('KE-P2P-001', 'Pathways to Prosperity - Kenya',                         'Kenya',    'Coffee',   2026, 2030),
+('KE-SVP-001', 'Shade for Vegetables Project Kenya',                     'Kenya',    'F&V',      2026, 2030),
+('KE-SYN-001', 'Synnefa Solidaridad P4G Project',                        'Kenya',    'F&V',      2026, 2030),
+-- Ethiopia (1 project)
+('ET-ANE-001', 'Acting Now - Ethiopia',                                  'Ethiopia', 'Coffee',   2026, 2030),
+-- Tanzania (2 projects)
+('TZ-GOL-001', 'Gold ECA FVO Project - Responsible ASGM Trade',         'Tanzania', 'Gold',     2026, 2030),
+('TZ-P2P-001', 'Pathways to Prosperity - Tanzania',                      'Tanzania', 'Coffee',   2026, 2030),
+-- Uganda (7 projects)
+('UG-DFN-001', 'Dreamfund ECA Uganda project',                           'Uganda',   'Coffee',   2026, 2030),
+('UG-FVO-001', 'FVO ICAM Cocoa Project',                                 'Uganda',   'Cocoa',    2026, 2030),
+('UG-HAR-001', 'Harvesting Carbon: Carbon Mitigation DGBP Uganda',      'Uganda',   'Coffee',   2026, 2030),
+('UG-NOP-001', 'NOPP Project Uganda',                                    'Uganda',   'Palm Oil', 2026, 2030),
+('UG-REA-001', 'Resilient Agroforestry Extension Project (REAP)',        'Uganda',   'Coffee',   2026, 2030),
+('UG-STB-001', 'Starbucks Uganda project',                               'Uganda',   'Coffee',   2026, 2030),
+('UG-RCL-001', 'The root causes of child labour - Uganda',              'Uganda',   'Coffee',   2026, 2030);
 
 
 -- ── SCHEMA NOTES ─────────────────────────────────────────────────────────────

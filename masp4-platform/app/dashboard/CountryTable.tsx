@@ -4,6 +4,8 @@ interface CountryRow {
   country: string
   s61_count: number; s62_count: number; s21_count: number; s25_count: number
   s63_count: number; s64_companies: number; s65_companies: number
+  rec01_count: number; rec02_count: number; rec03_count: number
+  rec04_count: number; rec05_count: number
 }
 
 const FLAGS: Record<string, string> = {
@@ -11,13 +13,18 @@ const FLAGS: Record<string, string> = {
 }
 
 const COLS = [
-  { key: 's61_count',     label: 'S6.1' },
-  { key: 's62_count',     label: 'S6.2' },
-  { key: 's21_count',     label: 'S2.1' },
-  { key: 's25_count',     label: 'S2.5' },
-  { key: 's63_count',     label: 'S6.3' },
-  { key: 's64_companies', label: 'S6.4' },
-  { key: 's65_companies', label: 'S6.5' },
+  { key: 's61_count',     label: 'S6.1',  group: 'outcome' },
+  { key: 's62_count',     label: 'S6.2',  group: 'outcome' },
+  { key: 's21_count',     label: 'S2.1',  group: 'outcome' },
+  { key: 's25_count',     label: 'S2.5',  group: 'outcome' },
+  { key: 's63_count',     label: 'S6.3',  group: 'outcome' },
+  { key: 's64_companies', label: 'S6.4',  group: 'outcome' },
+  { key: 's65_companies', label: 'S6.5',  group: 'outcome' },
+  { key: 'rec01_count',   label: 'REC01', group: 'rec'     },
+  { key: 'rec02_count',   label: 'REC02', group: 'rec'     },
+  { key: 'rec03_count',   label: 'REC03', group: 'rec'     },
+  { key: 'rec04_count',   label: 'REC04', group: 'rec'     },
+  { key: 'rec05_count',   label: 'REC05', group: 'rec'     },
 ]
 
 export default function CountryTable({ byCountry }: { byCountry: CountryRow[] }) {
@@ -36,11 +43,24 @@ export default function CountryTable({ byCountry }: { byCountry: CountryRow[] })
         Country breakdown
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ fontSize: '.68rem' }}>
+        <table style={{ fontSize: '.65rem' }}>
           <thead>
             <tr>
+              <th style={{ textAlign: 'left', paddingBottom: 0 }}></th>
+              <th colSpan={7} style={{ textAlign: 'center', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.5px', color: '#888', paddingBottom: 2, borderBottom: '2px solid #FFC800' }}>
+                Outcome KPIs
+              </th>
+              <th colSpan={5} style={{ textAlign: 'center', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.5px', color: '#888', paddingBottom: 2, borderBottom: '2px solid #111' }}>
+                REC Level Indicators
+              </th>
+            </tr>
+            <tr>
               <th style={{ textAlign: 'left' }}>Country</th>
-              {COLS.map(c => <th key={c.key} style={{ textAlign: 'center' }}>{c.label}</th>)}
+              {COLS.map(c => (
+                <th key={c.key} style={{ textAlign: 'center', color: c.group === 'rec' ? '#555' : undefined }}>
+                  {c.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -51,7 +71,7 @@ export default function CountryTable({ byCountry }: { byCountry: CountryRow[] })
                   {row.country}
                 </td>
                 {COLS.map(c => {
-                  const val = (row as any)[c.key] || 0
+                  const val       = (row as any)[c.key] || 0
                   const intensity = Math.round((val / maxes[c.key]) * 80)
                   return (
                     <td key={c.key} style={{
