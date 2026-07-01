@@ -1,0 +1,19 @@
+# ECA Trainings & Events Tracker — Analytics Dashboard
+# Python 3.10+ recommended
+
+streamlit>=1.36,<2
+pandas>=2.1
+numpy>=1.26
+plotly>=5.20
+pydeck>=0.9            # GPS point map with clustering
+openpyxl>=3.1         # Excel export/read
+XlsxWriter>=3.2       # styled Excel export
+kaleido==0.2.1        # static chart image (PNG) export for plotly
+
+# Optional: live ingestion via the KoboToolbox MCP server is done through the
+# already-connected MCP tools (no extra deps). The standalone CLI refresh
+# (data_pipeline/ingest.py --live) uses httpx only as a documented fallback.
+httpx>=0.27
+
+# Testing
+pytest>=8.0

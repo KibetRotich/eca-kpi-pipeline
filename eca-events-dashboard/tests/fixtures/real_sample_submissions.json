@@ -1,0 +1,143 @@
+[
+  {
+    "_id": 282732385,
+    "start": "2023-10-27T09:01:15.862+03:00",
+    "end": "2023-10-27T09:12:51.987+03:00",
+    "general_deatils__training_date": "2023-10-27",
+    "general_deatils__country": "kenya",
+    "general_deatils__admin_level_1": "bungoma",
+    "general_deatils__admin_level_2": "Kimilili ",
+    "general_deatils__training_location": "Kibingei ",
+    "general_deatils__location_gps": "0.7259138 34.6643266 1485.1 4.716",
+    "general_deatils__project": "csv_ke",
+    "general_deatils__is_organization_activity": "yes",
+    "general_deatils__organization_name": "Solidaridad",
+    "agenda__training_title": "G",
+    "agenda__training_topic": "climate_smart_agric",
+    "agenda__is_training_manual_used": "yes",
+    "agenda__manual_name": "New",
+    "participant": [
+      {
+        "participant/has_farmer_id": "no",
+        "participant/first_name": "John ",
+        "participant/last_name": "Wachie",
+        "participant/phone_number": "0707202130",
+        "participant/gender": "male",
+        "participant/age_group": "below_35",
+        "participant/disability": "no"
+      }
+    ],
+    "facilitator": [
+      {
+        "facilitator/facilitator_type": "solidaridad_staff",
+        "facilitator/facilitator_names": "Eugene Oregon "
+      }
+    ],
+    "photos": [
+      {"photos/event_photo": "1698387017084.jpg"}
+    ],
+    "conclusion__enumarator_names": "Salome wanyonyi ",
+    "__version__": "vHPnyP5rNojXySoUUVgKcB",
+    "_submission_time": "2023-10-27T06:13:10",
+    "_geolocation": [0.7259138, 34.6643266],
+    "_submitted_by": null
+  },
+  {
+    "_id": 779056375,
+    "intro__real_test": "real",
+    "general_deatils__training_date": "2026-06-11",
+    "general_deatils__event_type": "training",
+    "general_deatils__training_type": "on_farm_training",
+    "general_deatils__country": "kenya",
+    "general_deatils__admin_level_1_title": "county",
+    "general_deatils__admin_level_2_title": "sub-county",
+    "general_deatils__admin_level_3_title": "ward",
+    "general_deatils__admin_level_1": "makueni",
+    "general_deatils__admin_level_2": "Makueni",
+    "general_deatils__admin_level_3": "Kathonzweni",
+    "general_deatils__training_location": "Munyalo",
+    "general_deatils__location_gps": "-1.9062309 37.6806706 1034.8999999999999 4.633",
+    "general_deatils__project": "p4g_synnefa",
+    "general_deatils__project_commodity_category": "crop",
+    "general_deatils__project_commodity_specific": "fruits_vegetables",
+    "general_deatils__organization_name": "Kasambani cooperative",
+    "general_deatils__beneficiary_type": "cooperative",
+    "general_deatils__total_participants": "40",
+    "general_deatils__female_participants": "24",
+    "general_deatils__male_youth_participants": "2",
+    "general_deatils__female_youth_participants": "1",
+    "general_deatils__youth_participants": "3",
+    "agenda__training_title": "CLIMATE SMART AGRICULTURE (CSA) 2",
+    "agenda__training_topic": "climate_smart_pest_management crop_smart_practices energy_smart_practices importance_of_solar_dryers other_csa_practices",
+    "agenda__is_training_manual_used": "no",
+    "selected_participant__selected_participants": "126207__KEDDH542 124016__KEDDH540-D5 126212__KEDDH067 125006__KEDDG819",
+    "selected_participant__additional_participants_exists": "no",
+    "facilitator": [
+      {
+        "facilitator/facilitator_type": "tot_lead_farmer",
+        "facilitator/facilitator_names": "Hezekiah Kyalo Mwololo"
+      }
+    ],
+    "sheet_page": [
+      {"sheet_page/attendance_sheet_page": "1777445335666.jpg"},
+      {"sheet_page/attendance_sheet_page": "1777445361915.jpg"},
+      {"sheet_page/attendance_sheet_page": "1777445413410.jpg"}
+    ],
+    "conclusion__next_training_date": "2026-08-20",
+    "conclusion__enumarator_names": "Hezekiah Kyalo Mwololo",
+    "conclusion__comment": "No comments",
+    "__version__": "vFt8xYDMcF3N9cY7RbX9Dn",
+    "_submission_time": "2026-06-12T17:40:55",
+    "_geolocation": [-1.9062309, 37.6806706],
+    "_submitted_by": "eca_datacollection4"
+  },
+  {
+    "_id": 787237448,
+    "intro__real_test": "real",
+    "general_deatils__training_date": "2026-06-18",
+    "general_deatils__event_type": "training",
+    "general_deatils__training_type": "on_farm_training",
+    "general_deatils__country": "kenya",
+    "general_deatils__admin_level_1_title": "county",
+    "general_deatils__admin_level_2_title": "sub-county",
+    "general_deatils__admin_level_3_title": "ward",
+    "general_deatils__admin_level_1": "makueni",
+    "general_deatils__admin_level_2": "Makueni",
+    "general_deatils__admin_level_3": "Kathonzweni",
+    "general_deatils__training_location": "Kasambani",
+    "general_deatils__location_gps": "-1.8884919 37.6831403 1131.601 1.793",
+    "general_deatils__project": "p4g_synnefa",
+    "general_deatils__project_commodity_category": "crop",
+    "general_deatils__project_commodity_specific": "fruits_vegetables",
+    "general_deatils__organization_name": "Kasambani youth farmers",
+    "general_deatils__beneficiary_type": "vsla_members farmers",
+    "general_deatils__total_participants": "45",
+    "general_deatils__female_participants": "30",
+    "general_deatils__male_youth_participants": "15",
+    "general_deatils__female_youth_participants": "30",
+    "general_deatils__youth_participants": "45",
+    "agenda__training_title": "CSA(2)",
+    "agenda__training_topic": "climate_smart_pest_management climate_adaptation_practices_options_water_smart_practices crop_smart_practices energy_smart_practices importance_of_solar_dryers other_csa_practices",
+    "agenda__is_training_manual_used": "yes",
+    "agenda__manual_name": "gender_training_manual",
+    "selected_participant__selected_participants": "125498__KEDDG972 126148__KEDDH152",
+    "selected_participant__additional_participants_exists": "no",
+    "facilitator": [
+      {"facilitator/facilitator_type": "tot_lead_farmer", "facilitator/facilitator_names": "Ndinda Mutinda"},
+      {"facilitator/facilitator_type": "tot_lead_farmer", "facilitator/facilitator_names": "Ndinda Mutinda"}
+    ],
+    "photos": [
+      {"photos/event_photo": "1781772941315.jpg"}
+    ],
+    "sheet_page": [
+      {"sheet_page/attendance_sheet_page": "1782042118804.jpg"}
+    ],
+    "conclusion__next_training_date": "2026-08-14",
+    "conclusion__enumarator_names": "Ndinda Mutinda ",
+    "conclusion__comment": "Thanks ",
+    "__version__": "vFt8xYDMcF3N9cY7RbX9Dn",
+    "_submission_time": "2026-06-21T11:50:35",
+    "_geolocation": [-1.8884919, 37.6831403],
+    "_submitted_by": "eca_datacollection4"
+  }
+]

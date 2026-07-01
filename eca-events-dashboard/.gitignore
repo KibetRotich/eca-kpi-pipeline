@@ -1,0 +1,22 @@
+# Local submission cache (pulled from KoBo via MCP; not committed — contains PII)
+data_pipeline/cache/
+*.meta.json
+
+# The workspace root .gitignore has a blanket `*.json` rule. Re-include the
+# JSON this project must ship: the code->label map, the offline synthetic
+# dataset, and the test fixtures. The real cache above stays ignored.
+!choices.json
+!data_pipeline/sample_data/*.json
+!tests/fixtures/*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.streamlit/secrets.toml
+
+# OS
+.DS_Store
+Thumbs.db
