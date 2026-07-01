@@ -22,13 +22,35 @@ import streamlit as st
 from config import CACHE_TTL_SECONDS, MULTISELECT_FIELDS
 from data_pipeline.pipeline import Dataset, build_dataset
 
-# Data source: "auto" (cache else synthetic), "cache", or "synthetic".
-DATA_SOURCE = os.environ.get("ECA_DATA_SOURCE", "auto")
+
+def _bridge_secrets_to_env() -> None:
+    """Streamlit Community Cloud provides config via ``st.secrets`` but does NOT
+    export it to ``os.environ``; the ingest layer reads env vars. Mirror the
+    relevant keys across (env wins if already set, e.g. local dev)."""
+    for key in ("KOBO_TOKEN", "KOBO_URL", "ECA_DATA_SOURCE", "ECA_CACHE_TTL"):
+        if key not in os.environ:
+            try:
+                if key in st.secrets:
+                    os.environ[key] = str(st.secrets[key])
+            except Exception:
+                # st.secrets raises if no secrets file exists (local dev) — fine.
+                pass
+
+
+def _resolve_source() -> str:
+    """Data source: "auto" (cache else synthetic), "cache", "synthetic", or
+    "live" (fetch from KoBo — the hosted path). Resolved after bridging secrets."""
+    _bridge_secrets_to_env()
+    return os.environ.get("ECA_DATA_SOURCE", "auto")
 
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Loading & processing submissions…")
-def load_dataset(source: str = DATA_SOURCE) -> Dataset:
+def _load_dataset_cached(source: str) -> Dataset:
     return build_dataset(source)
+
+
+def load_dataset() -> Dataset:
+    return _load_dataset_cached(_resolve_source())
 
 
 @dataclass

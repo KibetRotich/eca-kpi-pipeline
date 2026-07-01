@@ -1,0 +1,19 @@
+# Streamlit configuration for the ECA Trainings & Events dashboard.
+# Committed so local dev and the Community Cloud deploy render identically.
+# Secrets (KOBO_TOKEN etc.) live in .streamlit/secrets.toml — gitignored.
+
+[theme]
+# Match the Solidaridad / MASP IV platform skin (green accent).
+primaryColor = "#2e7d32"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f7f4"
+textColor = "#1b2a1b"
+font = "sans serif"
+
+[server]
+# Community Cloud terminates TLS and manages the socket; embedding is enabled
+# by loading the app with ?embed=true (see the platform's output-insights page).
+headless = true
+
+[browser]
+gatherUsageStats = false

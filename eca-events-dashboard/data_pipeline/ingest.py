@@ -75,7 +75,16 @@ def get_raw_submissions(source: str = "auto") -> tuple[list[dict], dict]:
       - "auto"      : cache if present, else synthetic (good default for dev)
       - "cache"     : require the on-disk cache
       - "synthetic" : always the bundled synthetic dataset
+      - "live"      : fetch fresh from KoBo via httpx (needs KOBO_TOKEN). This is
+                      the hosted/Community-Cloud path — there is no committed
+                      on-disk cache in that environment (it holds PII and is
+                      gitignored), so the app pulls live and relies on the
+                      st.cache_data TTL to avoid re-fetching on every rerun.
     """
+    if source == "live":
+        subs = fetch_live_httpx(save=False)
+        return subs, {"source": "live", "count": len(subs),
+                      "refreshed_at": datetime.now(timezone.utc).isoformat()}
     if source == "synthetic":
         subs = _read_json(SYNTHETIC_PATH)
         return subs, {"source": "synthetic", "count": len(subs),

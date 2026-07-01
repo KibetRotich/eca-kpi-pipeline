@@ -30,7 +30,7 @@ ECA_DATA_SOURCE=cache streamlit run app.py    # bash
 # PowerShell:  $env:ECA_DATA_SOURCE="cache"; streamlit run app.py
 ```
 
-`ECA_DATA_SOURCE` = `auto` (default: cache if present, else synthetic) · `cache` · `synthetic`.
+`ECA_DATA_SOURCE` = `auto` (default: cache if present, else synthetic) · `cache` · `synthetic` · `live` (fetch from KoBo via `KOBO_TOKEN`; used by the hosted deploy).
 
 ---
 
@@ -206,26 +206,32 @@ python -m pytest tests/ -q
 ## Deployment
 
 The app is a **live Streamlit server** (not a static HTML file), so it is hosted
-separately and embedded into the Solidaridad platform
-(`ecadata.solidaridadnetwork.org/output-insights`) via an `<iframe>` (env var
-`NEXT_PUBLIC_EVENTS_DASHBOARD_URL` on the Next.js side).
+on **Streamlit Community Cloud** and embedded into the Solidaridad platform
+(`ecadata.solidaridadnetwork.org/output-insights`) via an `<iframe>` — as a
+section directly after the Climate Heroes / REAP dashboard. **See
+[`DEPLOY.md`](DEPLOY.md) for the exact step-by-step.**
 
-Checklist for hosting behind the platform:
+In short:
 
-1. Host Streamlit (Streamlit Community Cloud / Cloud Run / behind the platform
-   ingress with `server.baseUrlPath`).
-2. The Streamlit host must send
-   `Content-Security-Policy: frame-ancestors https://ecadata.solidaridadnetwork.org`
-   (Streamlit blocks framing by default).
-3. Streamlit has no built-in auth — keep it private behind the platform's
-   Supabase auth or network restriction; do not expose publicly.
-4. "Automated" refresh = a scheduled job that refreshes the cache (MCP-driven,
-   or `data_pipeline/ingest.py --live` with `KOBO_TOKEN`); the `st.cache_data`
-   TTL then serves fresh data.
+1. Deploy on Community Cloud from `KibetRotich/eca-kpi-pipeline`, main file
+   `eca-events-dashboard/app.py`.
+2. Set secrets: `KOBO_TOKEN`, `KOBO_URL`, `ECA_DATA_SOURCE=live`. The app pulls
+   live from KoBo; `st.cache_data` (TTL 1 h) keeps re-fetches down to hourly.
+3. Set `NEXT_PUBLIC_EVENTS_DASHBOARD_URL` (the `*.streamlit.app` URL) on the
+   platform's Vercel project. The page appends `?embed=true` automatically so
+   Streamlit's chrome is hidden and framing is permitted.
+4. Refresh is automatic (TTL); a push to `main` redeploys the app.
 
-> Alternative: if a fully static artifact is required to match the platform's
-> existing (static-HTML) dashboards exactly, this Streamlit app is **not** a drop-in
-> — that would be a separate self-contained HTML/JS build.
+> Access note: Streamlit has no built-in auth and a Community Cloud public app
+> is reachable by URL — keep the URL unpublished (the intended entry point is
+> the auth-gated platform page). Row-level PII stays behind the sidebar
+> *Restricted detail* gate regardless. For hard access control, host on Cloud
+> Run behind the platform network instead.
+>
+> Alternative pattern: the platform's other dashboards (Seedlings) are
+> **static HTML rebuilt nightly by a GitHub Action** and served from
+> `masp4-platform/public/`. This Streamlit app could be rebuilt as such an
+> artifact too, but that is a separate self-contained HTML/JS build.
 
 ---
 
