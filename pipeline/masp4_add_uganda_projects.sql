@@ -49,7 +49,10 @@ FROM (VALUES
   ('UG-AFR-001',2026,'S2.1', 2435, NULL),
   ('UG-AFR-001',2026,'S2.5', 1000, NULL)
 ) AS t(project_code, survey_year, kpi_code, target_total, notes)
-JOIN projects p ON p.project_code = t.project_code;
+JOIN projects p ON p.project_code = t.project_code
+ON CONFLICT (project_id, survey_year, kpi_code)
+DO UPDATE SET target_total = EXCLUDED.target_total,
+              notes        = EXCLUDED.notes;
 
 
 -- ── 4. Verify ────────────────────────────────────────────────────────────────
