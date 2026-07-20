@@ -877,9 +877,8 @@ CREATE POLICY odk_approve ON odk_submissions FOR UPDATE USING (
 -- Project codes: {ISO2}-{SHORT}-{SEQ}
 
 INSERT INTO projects (project_code, project_name, country, commodity, start_year, end_year) VALUES
--- Kenya (8 projects)
+-- Kenya (7 projects)
 ('KE-ANK-001', 'Acting Now - Kenya',                                     'Kenya',    'Coffee',   2026, 2030),
-('KE-AFR-001', 'AFRI00 Kenya',                                           'Kenya',    'F&V',      2026, 2030),
 ('KE-CCA-001', 'CCAC Livestock Methane Reduction Strategy',              'Kenya',    'Dairy',    2026, 2030),
 ('KE-CSV-001', 'Creating Shared Value in Maize Value Chain in Kenya',    'Kenya',    'F&V',      2026, 2030),
 ('KE-DFN-001', 'Dream Fund Kenya (Climate Heroes)',                      'Kenya',    'Coffee',   2026, 2030),
@@ -891,7 +890,8 @@ INSERT INTO projects (project_code, project_name, country, commodity, start_year
 -- Tanzania (2 projects)
 ('TZ-GOL-001', 'Gold ECA FVO Project - Responsible ASGM Trade',         'Tanzania', 'Gold',     2026, 2030),
 ('TZ-P2P-001', 'Pathways to Prosperity - Tanzania',                      'Tanzania', 'Coffee',   2026, 2030),
--- Uganda (7 projects)
+-- Uganda (8 projects)
+('UG-AFR-001', 'AFRI00 Uganda',                                          'Uganda',   'Tea',      2026, 2030),
 ('UG-DFN-001', 'Dreamfund ECA Uganda project',                           'Uganda',   'Coffee',   2026, 2030),
 ('UG-FVO-001', 'FVO ICAM Cocoa Project',                                 'Uganda',   'Cocoa',    2026, 2030),
 ('UG-HAR-001', 'Harvesting Carbon: Carbon Mitigation DGBP Uganda',      'Uganda',   'Coffee',   2026, 2030),
