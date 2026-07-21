@@ -1,0 +1,54 @@
+form,name,type,group,label,choice_list
+Form1_UG,What_type_of_data_ar_you_proceeding_with,select_one,intro,What type of data are you proceeding with?,wf5sr45
+Form1_UG,Confidentiality_You_e_with_the_interview,select_one,intro,Consent to participate,cz9gr18
+Form1_UG,Record_your_current_location,geopoint,intro,Record your current location (GPS at TOP of form),
+Form1_UG,district,select_one,Farmer Details,Select the district of the farmer,districts
+Form1_UG,farmer_ref,select_one_from_file,Farmer Details,Type Farmer Name or ID (lookup vs hc_seedlings_dist_20260329.csv),
+Form1_UG,__farmer_code,calculate,Farmer Details,[calc] farmer code from registry,
+Form1_UG,__farmer_names,calculate,Farmer Details,[calc] farmer names from registry,
+Form1_UG,__farmer_gender,calculate,Farmer Details,[calc] farmer gender from registry,
+Form1_UG,__farmer_phone_number,calculate,Farmer Details,[calc] farmer phone from registry,
+Form1_UG,__farmer_village,calculate,Farmer Details,[calc] farmer subcounty/village from registry,
+Form1_UG,__farmer_total_seedlings,calculate,Farmer Details,[calc] total seedlings issued from registry,
+Form1_UG,Did_you_receive_any_participated_in_all,select_one,Tree Planting Progress,Did you receive seedlings in all distributions?,lm29x27
+Form1_UG,Why_did_you_not_coll_ssued_by_Solidaridad,text,Tree Planting Progress,Why not collect in all distributions?,
+Form1_UG,How_many_tree_seedli_if_he_she_remembers,text,Tree Planting Progress,Cumulative seedlings received since first distribution (FREE-TEXT RECALL),
+Form1_UG,What_type_of_tree_sp_edlings_distribution,select_multiple,Tree Planting Progress,Tree species taken/received,cr7bx40
+Form1_UG,Kindly_specify_the_o_species_you_received,text,Tree Planting Progress,Other species specify,
+Form1_UG,How_did_you_transfer_g_after_distribution,select_one,Tree Planting Progress,Transport pickup->farm,hq8dw06
+Form1_UG,How_does_the_trees_g_rate_for_the_region,select_one,Tree Planting Progress,Growth vs expected regional rate (perception),ll2zu80
+Form1_UG,What_is_your_reason_for_the_growth_rate,text,Tree Planting Progress,Reason for growth rate,
+Form1_UG,Were_there_any_chall_n_planting_the_trees,select_one,Tree Planting Progress,Any planting challenges?,pv4ry50
+Form1_UG,What_type_of_challen_n_planting_the_trees,select_multiple,Tree Planting Progress,Type of planting challenges,wt2zn18
+Form1_UG,Kindly_specify_any_o_e_planting_the_trees,text,Tree Planting Progress,Other challenge specify,
+Form1_UG,Select_specific_type_eedling_distribution,select_multiple,Tree Survival Rate,Specific species for survival count,jv6sv20
+Form1_UG,How_many_total_seedl_participated_in_both,integer,Tree Survival Rate,Total seedlings COLLECTED for planting,
+Form1_UG,How_many_seedlings_did_you_plant,integer,Tree Survival Rate,Seedlings PLANTED,
+Form1_UG,Are_there_any_seedli_gs_you_did_not_plant,select_one,Tree Survival Rate,Any seedlings not planted?,zi6km75
+Form1_UG,How_many_seedlings_did_you_not_plant,integer,Tree Survival Rate,Seedlings NOT planted,
+Form1_UG,What_was_the_main_re_he_seedling_received,text,Tree Survival Rate,Reason for not planting,
+Form1_UG,How_many_seedlings_a_a_healthy_condition,integer,Tree Survival Rate,Seedlings ALIVE & healthy,
+Form1_UG,What_is_the_average_ll_alive_and_healthy,select_one,Tree Survival Rate,Average tree height (alive),th6bl59
+Form1_UG,How_many_seedlings_are_dead_or_damaged,integer,Tree Survival Rate,Seedlings DEAD/damaged,
+Form1_UG,What_is_the_reason_for_death_or_damage,text,Tree Survival Rate,Reason for death/damage,
+Form1_UG,Have_you_replaced_an_damage_or_mortality,select_one,Tree Survival Rate,Replaced dead trees?,gm9vn59
+Form1_UG,How_did_you_replace_es_that_were_damaged,text,Tree Survival Rate,How replaced,
+Form1_UG,Have_the_planted_tre_e_g_droughts_pests,select_one,Tree Survival Rate,Resilience to drought/pests?,fc3gr32
+Form1_UG,What_is_the_reason_f_answer_on_resilience,text,Tree Survival Rate,Reason for resilience answer,
+Form1_UG,What_is_the_current_of_the_planted_Trees,select_one,Tree Survival Rate,Current health of trees,bh0dh36
+Form1_UG,Which_type_of_health_features_is_showing,select_multiple,Tree Survival Rate,Healthy features,ac9oc23
+Form1_UG,Which_type_of_unheal_features_is_showing,select_multiple,Tree Survival Rate,Unhealthy features,fq2gj48
+Form1_UG,How_many_seedlings_did_you_receive,integer,COFFEE SEEDLINGS,COFFEE seedlings received,
+Form1_UG,How_many_coffee_seedlings_did_you_plant,integer,COFFEE SEEDLINGS,Coffee seedlings planted,
+Form1_UG,How_many_coffee_seed_ings_are_alive_today,integer,COFFEE SEEDLINGS,Coffee seedlings alive today,
+Form1_UG,Have_you_replanted_g_ed_missing_seedlings,select_one,COFFEE SEEDLINGS,Replanted/gapped coffee?,kt7in50
+Form1_UG,How_many_did_you_replace,integer,COFFEE SEEDLINGS,Coffee seedlings replaced,
+Form1_UG,Overall_condition_of_seedlings,select_one,COFFEE SEEDLINGS,Overall coffee condition,mi0rm90
+Form1_UG,What_measures_are_in_enance_of_the_trees_,select_multiple,Maintenance,Maintenance measures,pw7py03
+Form1_UG,Have_you_received_an_roforestry_practices,select_one,Additional comments,Received training/capacity building?,rs4ap51
+Form1_UG,From_which_organisat_building_activities,select_multiple,Additional comments,Training organisation,oc88e31
+Form1_UG,What_additional_supp_forestry_sustainably,select_multiple,Additional comments,Additional support needed,wx4sq11
+Form1_UG,Kindly_take_photos_o_till_the_last_photo,image,Photo Section (repeat),Photos of monitored trees,
+Form1_UG,Species_name,text,Photo Section (repeat),Species name (per-photo free-text caption),
+Form1_UG,Do_you_have_any_other_observable_comment,select_one,Enumerator Comments,Any observable comment?,tl4iv58
+Form1_UG,Enumerator_names,select_one,Enumerator Comments,Enumerator names,lg8ke48

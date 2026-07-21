@@ -4,25 +4,16 @@
  * Landing page for analytics derived from Kobo form submissions. It currently
  * hosts the Climate Heroes / REAP dashboard (rendered verbatim from
  * /public/Seedlings_Dashboard.html via an iframe) and is structured to hold
- * additional Kobo-form analytics over time.
+ * additional static Kobo-form analytics over time.
  */
+
+import SurvivalDashboards from './SurvivalDashboards'
 
 export const metadata = {
   title: 'Output Insights — MASP IV Data Platform',
 }
 
 export default function OutputInsightsPage() {
-  // The Trainings & Events dashboard is a Streamlit app (a live Python server),
-  // not a static file like the dashboards above — so it is hosted separately
-  // (Streamlit Community Cloud) and embedded via iframe. Point this env var at
-  // the hosted Streamlit URL, e.g. https://<app>.streamlit.app
-  const eventsDashboardUrlRaw = process.env.NEXT_PUBLIC_EVENTS_DASHBOARD_URL
-  // Streamlit only permits iframe embedding (and hides its chrome/menu) when the
-  // app is loaded with ?embed=true. Append it, preserving any existing query.
-  const eventsDashboardUrl = eventsDashboardUrlRaw
-    ? eventsDashboardUrlRaw + (eventsDashboardUrlRaw.includes('?') ? '&' : '?') + 'embed=true'
-    : undefined
-
   return (
     <div>
       <header style={{ marginBottom: '.8rem' }}>
@@ -61,23 +52,9 @@ export default function OutputInsightsPage() {
         />
       </section>
 
-      {/* ECA Trainings & Events Tracker — training/event delivery analytics.
-          Built as a Streamlit app (Python/pandas/plotly): a LIVE SERVER, so
-          unlike the static HTML dashboards above it cannot live in /public/.
-          It is hosted separately and embedded via iframe here.
-          Deployment checklist:
-            1. Host the app in eca-events-dashboard/ (Streamlit) — e.g. Streamlit
-               Community Cloud, Cloud Run, or behind the platform ingress with
-               server.baseUrlPath set.
-            2. Set NEXT_PUBLIC_EVENTS_DASHBOARD_URL to that host.
-            3. The Streamlit host MUST allow framing by this origin
-               (CSP frame-ancestors https://ecadata.solidaridadnetwork.org).
-            4. It has no auth of its own — keep it private and gate access behind
-               this platform's Supabase auth, or restrict by network.
-            5. Automation = a scheduled job refreshing the Kobo data cache
-               (MCP-driven, or ingest.py --live with KOBO_TOKEN); Streamlit's
-               st.cache_data TTL then serves fresh data. */}
-      <section style={{ marginTop: '1.25rem' }}>
+      {/* Tree-Survival Monitoring — Harvesting Carbon (Uganda) + SAVE KE (Kenya).
+          Two SEPARATE cohort dashboards (never pooled); tab switches between them. */}
+      <section style={{ marginTop: '1.4rem' }}>
         <h2 style={{
           margin: '0 0 .5rem',
           fontSize: '.7rem',
@@ -86,28 +63,9 @@ export default function OutputInsightsPage() {
           letterSpacing: '1px',
           color: '#2e7d32',
         }}>
-          ECA Trainings &amp; Events Tracker
+          Tree Survival Monitoring (Harvesting Carbon / SAVE KE)
         </h2>
-        {eventsDashboardUrl ? (
-          <iframe
-            src={eventsDashboardUrl}
-            title="ECA Trainings & Events Tracker Dashboard"
-            style={{
-              display: 'block',
-              width: '100%',
-              height: 'calc(100vh - 230px)',
-              border: '1px solid #d4d4d4',
-              borderRadius: 6,
-              background: '#fff',
-              boxShadow: '0 1px 4px rgba(0,0,0,.07)',
-            }}
-          />
-        ) : (
-          <p style={{ fontSize: '.78rem', color: '#777', margin: 0 }}>
-            Set <code>NEXT_PUBLIC_EVENTS_DASHBOARD_URL</code> to the hosted
-            Streamlit URL to embed the Trainings &amp; Events dashboard here.
-          </p>
-        )}
+        <SurvivalDashboards />
       </section>
     </div>
   )

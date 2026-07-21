@@ -1,0 +1,3 @@
+# Dependencies for the HC/SAVE tree-survival dashboard pipeline
+# fetch_survival_json.py -> transform.py -> load_supabase.py -> build_dashboard.py
+httpx

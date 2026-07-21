@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# seedlings pipeline working data (re-fetched from Kobo every run, never committed)
+pipeline/seedlings/seedlings_*.csv
+__pycache__/
+
+# hc_survival pipeline working data (re-fetched/rebuilt from Kobo every run, never committed)
+pipeline/hc_survival/data/

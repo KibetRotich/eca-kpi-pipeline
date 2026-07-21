@@ -1,0 +1,36 @@
+check,form,n_applicable,pct,note
+Consistency: planted+not_planted ~= collected,Form1 (batch),179,98.9,% within tol; 2 fail
+Consistency: planted+not_planted ~= collected,Form2 (species),1366,95.5,% within tol; 61 fail
+alive+dead <= planted (+missing),Form1 (batch),200,93.5,13 overcount rows
+survival<=1 (alive<=planted),Form1 (batch),200,99.5,1 impossible (alive>planted)
+alive+dead <= planted (+missing),Form2 (species),12489,99.3,82 overcount rows
+survival<=1 (alive<=planted),Form2 (species),12489,99.7,41 impossible (alive>planted)
+Farmer lookup resolved (code/bene_id present),Form1 (batch),208,88.0,25 unresolved
+Farmer lookup resolved (code/bene_id present),Form2 (batch),2157,100.0,0 unresolved
+Duplicate farmer (any period),Form1 (batch),208,6.7,14 rows share a farmer; 14 same farmer+month (true dup risk)
+Duplicate farmer (any period),Form2 (batch),2157,88.6,1911 rows share a farmer; 143 same farmer+month (true dup risk)
+Collected <= 1.5x registry-issued,Form1 (batch),202,90.1,20 implausibly high vs issued
+Collected <= 1.5x registry-issued,"Form2 (batch, aggregated)",1089,99.4,6 implausibly high vs issued
+Complete: district,Form1 (batch),208,100.0,
+Complete: planted,Form1 (batch),208,98.1,
+Complete: alive,Form1 (batch),208,97.1,
+Complete: dead,Form1 (batch),208,97.6,
+Complete: species_taken,Form1 (batch),208,98.6,
+Complete: transport,Form1 (batch),208,98.1,
+Complete: training_received,Form1 (batch),208,96.2,
+Complete: farmer_gender,Form1 (batch),208,67.3,
+Complete: admin2,Form2 (batch),2157,100.0,
+Complete: cooperative,Form2 (batch),2157,100.0,
+Complete: transport,Form2 (batch),2157,98.9,
+Complete: training_received,Form2 (batch),2157,100.0,
+Complete: species_taken,Form2 (batch),2157,96.4,
+Complete: crop_failure,Form2 (batch),2157,76.5,
+Complete: forest_cover_increase,Form2 (batch),2157,100.0,
+Complete: species,Form2 (species),12728,100.0,
+Complete: planted,Form2 (species),12728,100.0,
+Complete: alive,Form2 (species),12728,98.1,
+Complete: dead,Form2 (species),12728,100.0,
+Geopoint present,Form1 (batch),208,96.6,7 missing GPS
+Geopoint within country bounds,Form1 (batch),201,100.0,0 out of bounds
+Geopoint present,Form2 (batch),2157,76.5,506 missing GPS
+Geopoint within country bounds,Form2 (batch),1651,99.9,1 out of bounds

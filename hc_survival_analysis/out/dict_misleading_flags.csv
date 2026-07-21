@@ -1,0 +1,11 @@
+form,field,issue
+Form1,How_many_seedlings_did_you_receive,"Generic name but sits in COFFEE SEEDLINGS group -> it is COFFEE received, NOT total tree seedlings. Easy to mis-map."
+Form1,How_many_tree_seedli_if_he_she_remembers,"TYPE = text (free recall), not the integer count. The real collected count is 'How_many_total_seedl_participated_in_both'."
+Form1,Species_name,"In Photo Section repeat = a per-photo free-text caption, NOT structured per-species survival data. Do not treat as species grain."
+Form1,Select_specific_type_eedling_distribution,"Truncated auto-name; a SECOND species select_multiple that duplicates 'What_type_of_tree_sp...'. Survival counts are batch-level, not tied to this."
+Form1,How_many_seedlings_a_a_healthy_condition,Garbled truncation of 'are still alive and in a healthy condition' = ALIVE count.
+Form1,What_is_the_average_ll_alive_and_healthy,Garbled truncation; label = average tree HEIGHT of alive trees (not a count).
+Form1,Did_you_receive_any_participated_in_all,Truncated; = received seedlings during ALL distributions (yes/no).
+Form2,Has_species_name_p_ronmental_conditions,Repeat field auto-name; = resilience of ${species_name} to environmental conditions.
+Form2,first_seed_num / total_seedlings_received,Batch cumulative received; distinct from per-species amount_species_collected inside the repeat.
+Form2,farmer__admin_level_2 / _3,Geography comes ONLY from the registry lookup (no district question on the form). Blank if farmer lookup failed.

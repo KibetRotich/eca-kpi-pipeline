@@ -1,0 +1,81 @@
+form,group,name,type,label,choice_list,choices,in_repeat
+Form2_KE,disclaimer,type_of_data,select_one,What type of data are you proceeding with?,tj7jb59,"yes__real_data_collection=Yes, real data collection; no__testing_data_collection=No, testing data collection",
+Form2_KE,disclaimer,confidentiality,select_one,Confidentiality: Your identity and responses shall be treated with confidentiality and all the information you give will only be used for the purposes of this study. The information you share today is confidential. The data collected may be published as reports but we will not share your information with anyone else without your permission. Consent to participate in the study: You may choose to participate in the evaluation since participation is voluntary and you may opt to drop out of the interview at any stage. Do you allow me to continue with the interview?,um78x28,yes=Yes; no=No,
+Form2_KE,farmer_details,farmer_ref_no,select_one_from_file,Select the farmer,,,
+Form2_KE,farmer_details,farmer__sol_beneficiary_id,calculate,,,,
+Form2_KE,farmer_details,farmer__names,calculate,,,,
+Form2_KE,farmer_details,farmer__admin_level_2,calculate,,,,
+Form2_KE,farmer_details,farmer__admin_level_3,calculate,,,,
+Form2_KE,farmer_details,farmer__village,calculate,,,,
+Form2_KE,farmer_details,farmer__cooperative_name,calculate,,,,
+Form2_KE,farmer_details,farmer__enumerator_names,calculate,,,,
+Form2_KE,farmer_details,farmer__phone_number,calculate,,,,
+Form2_KE,farmer_details,farmer__total_seedlings,calculate,,,,
+Form2_KE,tree_planting_progress,receive_seedlings,select_one,Did you receive any tree seedling as a result of Solidaridad support during all the seedling distributions done?,ve7kx08,yes=Yes; no=No,
+Form2_KE,tree_planting_progress,reason_not_collect,text,Why did you not collect tree seedlings during all the distributions that was done & issued by Solidaridad?,,,
+Form2_KE,tree_planting_progress,first_seed_num,integer,How many tree seedlings in total (cumulatively) did/have you receive since the first distribution?,,,
+Form2_KE,tree_planting_progress,tree_species_received,select_multiple,What type of tree species did you take and have you received during the seedlings distribution?,jp3ip99,cordia_africana=Cordia Africana (Muringa); giant_bamboo=Giant Bamboo (Bamboo); grevillearobusta=Grevillea robusta (Mukima); dombeya_torrida=Dombeya torrida (Mukeu); sesbania_sesban=Sesbania sesban; calliandra_calothyrsus=Calliandra calothyrsus; azadirachta_indica=Azadirachta indica (Muharobaini); avocado=Avocado; apple=Apple; other=Other,
+Form2_KE,tree_planting_progress,other_tree_species,text,Kindly specify the other type of trees species you received,,,
+Form2_KE,tree_planting_progress,transfer_the_trees,select_one,How did you transfer the trees from the pick up point to the farm during/after distribution?,cr4uk86,pick_up_trucks_lorries=Pick-up trucks/Lorries; motorcycles__boda_bodas=Motorcycles (Boda bodas); vans=Vans; donkeys_ox_carts=Donkeys/Ox-carts; bicycles=Bicycles; wheelbarrows=Wheelbarrows; head_or_hand_carrying=Head or hand carrying; other=Other,
+Form2_KE,tree_planting_progress,region_growth_comparison,select_one,How does the trees growth compare to the expected growth rate for the region?,zt18x83,very_good=Very Good; good=Good; same=Same; poor=Poor; very_poor=Very Poor,
+Form2_KE,tree_planting_progress,reason_for_specific_growth,text,What is your reason for ${region_growth_comparison} growth rate?,,,
+Form2_KE,tree_planting_progress,chall,select_one,Were there any challenges in planting the trees?,la9fj30,yes=Yes; no=No,
+Form2_KE,tree_planting_progress,challenges_in_planting,select_multiple,What type of challenges did you experience in planting the trees?,zm2oe36,"weather=Weather conditions (Drought, floods e.t.c); soil_conditions=Soil conditions; pest___diseases=Pest & Diseases; physical_injuries_of_seedlings=Physical injuries of seedlings; theft=Theft; others=Others",
+Form2_KE,tree_planting_progress,other_challenge_planting,text,Kindly specify any other general challenge while planting the trees?,,,
+Form2_KE,survival_rate,species_name,select_one,Select specific type of tree species taken during the seedling distribution?,pj53y60,cordia_africana__muringa=Cordia Africana (Muringa); giant_bamboo__bamboo=Giant Bamboo (Bamboo); grevillea_robusta__mukima=Grevillea robusta (Mukima); dombeya_torrida__mukeu=Dombeya torrida (Mukeu); sesbania_sesban=Sesbania sesban; calliandra_calothyrsus=Calliandra calothyrsus; azadirachta_indica__muharobaini=Azadirachta indica (Muharobaini); avocado=Avocado; apple=Apple,Y
+Form2_KE,survival_rate,amount_species_collected,integer,How many ${species_name} total seedlings did you collect for planting?,,,Y
+Form2_KE,survival_rate,amount_species_planted,integer,How many ${species_name} seedlings did you plant?,,,Y
+Form2_KE,survival_rate,species_not_planted,select_one,Are there any ${species_name} seedlings you did not plant?,ds7zr20,yes=Yes; no=No,Y
+Form2_KE,survival_rate,amount_species_notplanted,integer,How many ${species_name} seedlings did you not plant?,,,Y
+Form2_KE,survival_rate,reason_species_notplant,text,What was the main reason for not planting the ${species_name} seedling received?,,,Y
+Form2_KE,survival_rate,amount_species_healthy,integer,How many ${species_name} seedlings are still alive and in a healthy condition?,,,Y
+Form2_KE,survival_rate,tree_height,select_one,What is the average tree height of ${species_name} that is still alive and healthy?,vn4qq39,above_average_5m=Above average 5m; average_1_5_4m=Average 1.5-4m; below_0_1m=Below 0-1m,Y
+Form2_KE,survival_rate,amount_species_dead,integer,How many ${species_name} seedlings are dead or damaged?,,,Y
+Form2_KE,survival_rate,reason_species_death,text,What is the reason for death or damage?,,,Y
+Form2_KE,survival_rate,replaced_species,select_one,Have you replaced any trees due to damage or mortality?,sd9hw24,yes=Yes; no=No,Y
+Form2_KE,survival_rate,replacement_how,text,How did you replace any of the trees that were damaged?,,,Y
+Form2_KE,survival_rate,amount_species_missing,integer,How many ${species_name} seedlings are missings?,,,Y
+Form2_KE,survival_rate,reselience,select_one,Has ${species_name} planted shown resilience to local environmental conditions?,xm8nt62,yes=Yes; no=No,Y
+Form2_KE,survival_rate,resilience_reason,text,What is the reason for your answer on resilience?,,,Y
+Form2_KE,survival_rate,tree_health,select_one,What is the current health of ${species_name}?,dy9iq15,healthy=Healthy; same=Same; unhealthy=Unhealthy,Y
+Form2_KE,survival_rate,healthy_features,select_multiple,Which type of healthy features is ${species_name} showing?,sz1xg13,exhibited_by_continuous_growth=Exhibited by continuous growth; growing_full_canopies=Growing/full canopies; strong_branches=Strong branches; good_colour_and_shape_of_leaves=Good colour and shape of leaves; sturdy_trunk=Sturdy trunk; few_signs_of_pests_or_diseases=Few signs of pests or diseases; other=Other,Y
+Form2_KE,survival_rate,unhealthy_features,select_multiple,Which type of unhealthy features is ${species_name} showing?,zw2ku75,no_continuous_growth=No continuous growth; no_growth_and_stunted_canopies=No growth and stunted canopies; weak_branches=Weak branches; bad_color_and_shape_of_leaves=Bad color and shape of leaves; unsteady_trunks=Unsteady trunks; more_signs_of_pests_or_diseases=More signs of pests or diseases; other=Other,Y
+Form2_KE,crop_progress,crops_grown,select_multiple,What types of crops have been integrated with the trees?,uw0hx52,option_1=Fruits; option_2=Vegetables; option_3=Potatoes; onions=Onions; tomatoes=Tomatoes; other=Other,
+Form2_KE,crop_progress,Kindly_specify_other_crops_planted,text,Kindly specify other crops planted,,,
+Form2_KE,crop_progress,Were_there_any_challenges_face,select_one,Were there any challenges faced in planting and growing the crops?,se1nf65,yes=Yes; no=No,
+Form2_KE,crop_progress,challenges_cropplant,select_multiple,Were any challenges faced in planting and growing the crops?,rg6tk97,poor_soil_quality=Poor soil quality; pest_infestation=Pest infestation; disease=Disease; water_scarcity=Water scarcity; floods=Floods; mudslides=Mudslides; other=Other,
+Form2_KE,crop_progress,other_chall_plant,text,Kindly specify other challeneges faced in growing the crops,,,
+Form2_KE,crop_progress,crop_failure,select_one,Have you or do you experience crop failure on your farm?,pl2gg30,yes=Yes; no=No,
+Form2_KE,crop_progress,measures_crop_failure,select_multiple,What measures have been taken to address issues such as crop failure?,pm81s54,promotion_of_climate_smart_agriculture__=Promotion of Climate-Smart Agriculture (CSA); diversification_of_crops_and_livelihoods=Diversification of Crops and Livelihoods; access_to_quality_inputs_and_extension_s=Access to Quality Inputs and Extension Services; integration_of_agroforestry=Integration of agroforestry; access_to_trainings=Access to trainings; other=Other,
+Form2_KE,env_impact,forest_cover_increase,select_one,Has there been an observable increase in forest cover or canopy density since the project began?,yh9ef73,yes=Yes; no=No,
+Form2_KE,env_impact,soil_quality_improvement,select_one,Has the agroforestry project led to any observable improvements in soil quality?,qe0ox08,yes=Yes; no=No,
+Form2_KE,env_impact,env_benefits,select_one,Has the project area experienced any environmental benefits since planting of the trees?,ez1nt92,yes=Yes; no=No,
+Form2_KE,env_impact,biodiversity_evidence,select_one,Is there evidence of enhanced biodiversity in your area after planting of trees?,tk3ge40,yes=Yes; no=No,
+Form2_KE,env_impact,deforestation_reduction,select_one,"In your opinion, has the project contributed to reducing deforestation or land degradation in the surrounding areas?",fc6zb98,yes=Yes; no=No,
+Form2_KE,env_impact,livelihood_benefit,select_multiple,How has the agroforestry project impacted the livelihoods of the participating community members and farmers?,bh6jm71,income_generation=Income generation; food_security=Food security; improved_access_to_resources=Improved access to resources; improved_soil_conditions=Improved soil conditions; other=Other; none_of_the_above=None of the above,
+Form2_KE,env_impact,other_livelihood_benefit,text,Specify other benefit of livelihoods,,,
+Form2_KE,env_impact,economic_benefits_products,select_one,Have there been any economic benefits derived from the sale of crops?,nb9ga51,yes=Yes; no=No,
+Form2_KE,env_impact,Reason_for_your_answ_on_economic_benefit,text,Reason for your answer above on economic benefit?,,,
+Form2_KE,env_impact,benefits_specific,select_multiple,What has been the benefits?,tj6yv25,selling_of_crops_and_fruits=Selling of crops and fruits; sale_of_firewood=Sale of firewood; no_benefit_yet=No benefit yet; other=Other,
+Form2_KE,env_impact,mention_other_benefits,text,Kindly mention other benefits?,,,
+Form2_KE,env_impact,Have_you_observed_any_of_the_l,select_one,Have you observed any of the local communities involved in the ongoing monitoring and maintenance of the trees?,kq75i46,yes=Yes; no=No,
+Form2_KE,env_impact,support,text,Who has supported/involved in the monitoring?,,,
+Form2_KE,env_impact,Kindly_specify_how_this_has_been_noted,text,Kindly specify how this has been noted?,,,
+Form2_KE,maintenance_sustainability,measures_in_place,select_multiple,What measures are in place to ensure the ongoing care and maintenance of the trees and crops?,jz9fj80,watering=Watering; prunning=Prunning; pollarding=Pollarding; coppicing=Coppicing; pest___disease_control=Pest & Disease control; weeding=Weeding; protection_from_livestock=Protection from livestock; other=Other; none_of_the_above=None of the above,
+Form2_KE,maintenance_sustainability,any_other_measures,text,Kindly mention any other measures,,,
+Form2_KE,maintenance_sustainability,frequency_of_monitoring,select_one,"How frequently are the crops and trees inspected for health, growth, and potential threats?",ae8mh75,daily=Daily; weekly=Weekly; monthly=Monthly; semi_annually=Semi_annually; annually=Annually,
+Form2_KE,maintenance_sustainability,plans_protocals,select_one,Are there any plans or protocols in place for the long-term sustainability of the planted trees?,eo7tc90,yes=Yes; no=No,
+Form2_KE,maintenance_sustainability,resources,select_multiple,What resources have you allocated for post-planting care of the trees?,qi7ay62,funds=Funds; equipment=Equipment; labor=Labor; other=Other,
+Form2_KE,maintenance_sustainability,other_resources,text,What other resources have you allocated?,,,
+Form2_KE,additional_comments,training,select_one,Have you received any training or capacity-building activities regarding agroforestry practices?,xb2yo15,yes=Yes; no=No,
+Form2_KE,additional_comments,From_which_organisation_did_yo,select_multiple,From which organisation did you receive this capacity building activities?,fn8hr34,solidaridad=Solidaridad; ngos_csos=NGOs/CSOs; ministry_of_agriculture=Ministry of Agriculture; other=Other,
+Form2_KE,additional_comments,Specify_any_other_organisation,text,Specify any other organisation,,,
+Form2_KE,additional_comments,additional_support,select_multiple,What additional support is needed for you to enhance?,ru6ll28,technical_expertise=Technical expertise; trainings__capacity_building=Trainings (Capacity building); input_supply__tree_seedlings=Input supply (Tree seedlings); community_engagement=Community engagement; other=Other,
+Form2_KE,additional_comments,other_additonal_support,text,What other additonal support do you require?,,,
+Form2_KE,additional_comments,recommendations,text,What recommendations would you make to enhance project outcomes and sustainability,,,
+Form2_KE,additional_comments,additional_observation,text,"Are there any additional observations from the field regarding tree growth, community involvement, or environmental changes?",,,
+Form2_KE,photo_section,Species_name_001,text,Species name,,,Y
+Form2_KE,enumerator_comments,Do_you_have_any_other_observab,select_one,Do you have any other observable comment?,ke1jx93,yes=Yes; no=No,
+Form2_KE,enumerator_comments,enu_comments,text,Do you have any observable comment?,,,
+Form2_KE,enumerator_comments,gps_point,geopoint,Kindly take the GPS point of the farm that has been monitored.,,,
+Form2_KE,enumerator_comments,enumerator_names,select_one,Enumerator names?,pg4xt04,kelvin_kariuki=Kelvin Kariuki; virginiah_kuria=Virginiah Kuria; john_hinga=John Hinga; esther_macharia=Esther Macharia; beatrice_kinyanjui=Beatrice Kinyanjui; harrison_kania=Harrison Kania; dancan_kimondo=Dancan Kimondo; victor_eyanae=Victor Eyanae; zachary_mwangi=Zachary Mwangi; mary_wanjiru=Mary Wanjiru; joseph_murage=Joseph Murage; francis_njoroge=Francis Njoroge; boniface_ndirangu=Boniface Ndi,
