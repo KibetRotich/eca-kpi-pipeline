@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Climate Vulnerability Assessment — Insights Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--g:#2e7d32;--g2:#1b5e20;--accent:#e65100;--blue:#1565c0;--bg:#eef0ee;--card:#fff;--ink:#222;--mut:#6b6b6b;--bd:#d8d8d8;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Open Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--g);color:#fff;padding:12px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:30;border-bottom:3px solid var(--g2)}
+  header h1{font-size:17px;margin:0;font-weight:800}
+  header .sub{font-size:12px;opacity:.85}
+  .wrap{display:flex;min-height:calc(100vh - 48px)}
+  nav{width:216px;background:#fff;border-right:1px solid var(--bd);padding:10px 0;position:sticky;top:48px;height:calc(100vh - 48px);overflow:auto;flex:none}
+  nav a{display:block;padding:10px 18px;color:var(--ink);text-decoration:none;font-size:13px;border-left:3px solid transparent;cursor:pointer}
+  nav a:hover{background:#f1f8f1}
+  nav a.active{border-left-color:var(--g);background:#f1f8f1;font-weight:700;color:var(--g2)}
+  main{flex:1;padding:16px 22px;max-width:1560px}
+  .sec-title{font-size:19px;font-weight:800;color:var(--g2);margin:2px 0 2px}
+  .sec-desc{color:var(--mut);font-size:13px;margin-bottom:12px;max-width:960px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .block{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .block.full{grid-column:1/-1}
+  .block h3{margin:0 0 8px;font-size:13.5px;font-weight:700}
+  .note{color:var(--mut);font-size:11.5px;margin-top:8px;line-height:1.5}
+  .chartbox{position:relative;height:290px}
+  .chartbox.tall{height:520px}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .kpi{flex:1;min-width:135px;background:#f4faf4;border:1px solid var(--bd);border-top:3px solid var(--g);border-radius:8px;padding:11px 13px}
+  .kpi .v{font-size:21px;font-weight:800;color:var(--g2)}
+  .kpi .l{font-size:11px;color:var(--mut);margin-top:3px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left}
+  th{background:#f5f5f5;font-weight:650;position:sticky;top:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .tablebox{max-height:460px;overflow:auto}
+  .hm{overflow:auto}
+  .hm td{text-align:center;font-size:11px;border:1px solid #fff;min-width:42px}
+  .hm th{font-size:10.5px;font-weight:600}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:14px;position:sticky;top:48px;z-index:20}
+  .filters label{font-size:10.5px;color:var(--mut);display:block;margin-bottom:3px}
+  .filters select{padding:5px 7px;border:1px solid var(--bd);border-radius:6px;font-size:12.5px;min-width:118px;max-width:190px}
+  .filters button{padding:6px 12px;border:0;background:var(--g);color:#fff;font-weight:600;border-radius:6px;cursor:pointer;font-size:12.5px}
+  .filters button:hover{background:var(--g2)}
+  .filters .fnote{font-size:10.5px;color:var(--mut);margin-left:auto;align-self:center;max-width:210px}
+  .mapbox{height:500px;border-radius:8px;border:1px solid var(--bd);overflow:hidden;background:#eef3f5}
+  .leaflet-container{background:#eef3f5;font-family:inherit;font-size:12px}
+  .mapctl{margin-bottom:8px;font-size:12px}
+  .mapctl select{padding:5px 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px}
+  .legend{background:#fff;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:11px;line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .legend i{display:inline-block;width:14px;height:12px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.1)}
+  .pill{display:inline-block;background:#eafaea;border:1px solid #cbe8cb;border-radius:20px;padding:2px 9px;font-size:11px;margin:2px}
+  .footer{color:var(--mut);font-size:11px;margin-top:24px;padding-top:12px;border-top:1px solid var(--bd)}
+  .clickable{cursor:pointer}
+  .badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700}
+  .badge.p{background:#f8d7da;color:#a31515}
+  /* drill-down overlay */
+  #ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none}
+  #ov .panel{position:absolute;top:5%;left:50%;transform:translateX(-50%);width:min(1000px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  #ov h3{margin:0 0 8px;font-size:15px;color:var(--g2)}
+  #ov .close{position:sticky;top:0;float:right;border:0;background:var(--accent);color:#fff;border-radius:6px;padding:5px 11px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<header><h1>🌍 Climate Vulnerability Assessment</h1><span class="sub" id="hdrsub"></span></header>
+<div class="wrap"><nav id="nav"></nav><main id="main">
+  <div class="filters" id="filters"></div>
+  <div id="secwrap"></div>
+</main></div>
+<div id="ov"><div class="panel"><button class="close" onclick="closeOverlay()">✕ Close</button><div id="ovbody"></div></div></div>
+<script>
+const DATA = /*__DATA__*/;
+const L = DATA.lookups, RECS = DATA.records, META = DATA.meta;
+// positional record indices
+const CO=0,A1=1,PJ=2,GE=3,CR=4,YM=5,AG=6,HH=7,GP=8,DQ=9,EX=10,CA=11,PR=12,LA=13,LO=14,NM=15,ID=16,H=17,I=18,CAP=19,ADO=20,AP=21,CS=22,ED=23,ACIX=24,SUB=25,ALT=26,MIS=27,HOT=28,CLU=29;
+// ALT (26)=altitude m (-1 missing); MIS (27)=crop-altitude mismatch 1/0/-1(unknown);
+// HOT (28)=spatial hotspot (clustered high-VI) 0/1; CLU (29)=DBSCAN cluster id (-1 none).
+// EX (index 10) is the Hazard Exposure Index (HEI). ACIX (24) is the weighted
+// Adaptive Capacity Index. SUB (25) = [institutional,financial,information,
+// technical,market] sub-scores (0-100, -1 = not applicable). VI + quadrant derive:
+const hasACI=r=>r[ACIX]>=0;
+const viOf=r=>hasACI(r)?0.5*r[EX]+0.5*(100-r[ACIX]):null;
+const quadOf=r=>{if(!hasACI(r))return null;const hi=r[EX]>=50,lc=r[ACIX]<50;
+  return hi&&lc?"Critical":hi&&!lc?"Stressed":!hi&&lc?"Latent risk":"Stable";};
+// elevation band index from altitude (shared edges for the AEZ proxy); -1 = no altitude
+const altBand=r=>{const a=r[ALT];if(a==null||a<0)return -1;const b=L.elevBands;
+  for(let i=0;i<b.length;i++)if(a>=b[i].lo&&a<b[i].hi)return i;return -1;};
+// Pearson r over [[x,y],...] pairs (nulls dropped); null if <3 usable pairs
+function pearson(xy){const v=xy.filter(p=>p[0]!=null&&p[1]!=null&&!isNaN(p[0])&&!isNaN(p[1]));
+  const n=v.length;if(n<3)return null;let sx=0,sy=0,sxx=0,syy=0,sxy=0;
+  v.forEach(([x,y])=>{sx+=x;sy+=y;sxx+=x*x;syy+=y*y;sxy+=x*y;});
+  const cov=sxy-sx*sy/n,vx=sxx-sx*sx/n,vy=syy-sy*sy/n;return (vx>0&&vy>0)?cov/Math.sqrt(vx*vy):null;}
+const PAL=["#2e7d32","#66bb6a","#1565c0","#e65100","#7b1fa2","#00838f","#c62828","#9e9d24","#ad1457","#4527a0","#0277bd","#5d4037"];
+const SEVC={3:"#c62828",2:"#e65100",1:"#f9a825"};      // high/med/low severity colors
+const charts={}; const leafletMaps=[]; const rendered={};
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const fmt=n=>n==null?"–":Math.round(n).toLocaleString();
+const pct1=x=>x==null||isNaN(x)?"–":x.toFixed(1)+"%";
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// ── global filter state ──────────────────────────────────────
+const F={co:null,a1:null,pj:null,ge:null,cr:null,from:null,to:null};
+function filtered(){
+  return RECS.filter(r=>
+    (F.co==null||r[CO]===F.co)&&(F.a1==null||r[A1]===F.a1)&&(F.pj==null||r[PJ]===F.pj)&&
+    (F.ge==null||r[GE]===F.ge)&&(F.cr==null||r[CR]===F.cr)&&
+    (F.from==null||(r[YM]&&r[YM]>=F.from))&&(F.to==null||(r[YM]&&r[YM]<=F.to)));
+}
+
+// ── aggregation helpers ──────────────────────────────────────
+function tally(rows,keyfn){const m=new Map();rows.forEach(r=>{const k=keyfn(r);if(k==null||k==="")return;m.set(k,(m.get(k)||0)+1);});return m;}
+function topEntries(map,n){return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n);}
+function mean(arr){const v=arr.filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+function median(arr){const v=arr.filter(x=>x!=null&&!isNaN(x)).sort((a,b)=>a-b);if(!v.length)return null;const m=v.length>>1;return v.length%2?v[m]:(v[m-1]+v[m])/2;}
+function distinct(rows,i){return new Set(rows.map(r=>r[i]).filter(x=>x!=null&&x!==""&&x!==-1)).size;}
+
+// ── chart factory (tooltips on by default) ───────────────────
+function bar(id,labels,values,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"bar",
+    data:{labels,datasets:[{label:o.axis||"",data:values,
+      backgroundColor:o.colors||PAL[0],borderRadius:2}]},
+    options:{indexAxis:o.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{if(o.onClick&&els.length)o.onClick(els[0].index);},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${o.fmt?o.fmt(c.parsed[o.horizontal?'x':'y'],c.dataIndex):c.parsed[o.horizontal?'x':'y']}`}}},
+      scales:{[o.horizontal?'x':'y']:{beginAtZero:true,max:o.max,ticks:{font:{size:9},callback:o.pctAxis?(v=>v+"%"):undefined}},
+              [o.horizontal?'y':'x']:{ticks:{font:{size:9},autoSkip:!o.horizontal,maxRotation:o.horizontal?0:55}}}}});
+}
+function stacked(id,labels,series){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"bar",
+    data:{labels,datasets:series.map((s,i)=>({label:s.label,data:s.data,backgroundColor:s.color||PAL[i%PAL.length]}))},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10},boxWidth:12}},tooltip:{mode:"index"}},
+      scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9}}}}}});
+}
+function groupedBar(id,labels,series,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"bar",
+    data:{labels,datasets:series.map((s,i)=>({label:s.label,data:s.data,backgroundColor:s.color||PAL[i%PAL.length],borderRadius:2}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}${o.pctAxis?"%":""}`}}},
+      scales:{y:{beginAtZero:true,max:o.max,ticks:{font:{size:9},callback:o.pctAxis?(v=>v+"%"):undefined}},
+              x:{ticks:{font:{size:9},maxRotation:55}}}}});
+}
+function doughnut(id,labels,values){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:PAL}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{size:11},boxWidth:12}}}}});
+}
+function scatter(id,groups,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"scatter",data:{datasets:groups},
+    options:{responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{if(o.onClick&&els.length){const d=els[0];o.onClick(groups[d.datasetIndex].data[d.index]);}},
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>c.raw.t}}},
+      scales:{x:{title:{display:true,text:o.xt},min:0,max:100,ticks:{callback:v=>v+"%"}},
+              y:{title:{display:true,text:o.yt},min:0,max:100,ticks:{callback:v=>v+"%"}}}}});
+}
+function histBins(vals,step){const m={};vals.forEach(v=>{const b=Math.floor(v/step)*step;m[b]=(m[b]||0)+1;});
+  const keys=Object.keys(m).map(Number).sort((a,b)=>a-b);return {labels:keys.map(k=>k+"–"+(k+step)),values:keys.map(k=>m[k])};}
+
+// ── layout helpers ───────────────────────────────────────────
+function chartCard(id,title,note,tall){return `<div class="block${tall?' full':''}"><h3>${esc(title)}</h3><div class="chartbox${tall?' tall':''}"><canvas id="${id}"></canvas></div>${note?`<div class=note>${note}</div>`:""}</div>`;}
+function kpiRow(cards){return `<div class="kpis">${cards.map(c=>`<div class="kpi"><div class="v">${c[1]}</div><div class="l">${esc(c[0])}</div></div>`).join("")}</div>`;}
+
+// ── drill-down overlay: list underlying households ───────────
+function openHouseholds(rows,title){
+  rows=rows.slice().sort((a,b)=>b[EX]-a[EX]);
+  const head="<tr><th>Name</th><th>Farmer ID</th><th>Country</th><th>Admin-1</th><th>Crop</th><th class=num>Exposure</th><th class=num>Capacity</th><th># hazards</th><th>Priority</th></tr>";
+  const body=rows.slice(0,500).map(r=>`<tr><td>${esc(r[NM])}</td><td>${esc(r[ID])}</td><td>${esc(L.countries[r[CO]]||"—")}</td><td>${esc(r[A1]>=0?L.admin1[r[A1]].label:"—")}</td><td>${esc(r[CR]>=0?L.crops[r[CR]]:"—")}</td><td class=num>${r[EX].toFixed(0)}</td><td class=num>${r[CA]>=0?r[CA].toFixed(0):"–"}</td><td class=num>${r[H].length}</td><td>${r[PR]?'<span class="badge p">Priority</span>':""}</td></tr>`).join("");
+  $("#ovbody").innerHTML=`<h3>${esc(title)} — ${rows.length} household(s)</h3><div class="tablebox"><table>${head}${body}</table></div>${rows.length>500?'<div class=note>Showing first 500 by exposure.</div>':""}`;
+  $("#ov").style.display="block";
+}
+function closeOverlay(){$("#ov").style.display="none";}
+
+// ═══════════════ TAB RENDERERS ═══════════════
+function rCoverage(c){
+  const R=filtered();
+  const cards=[["Households",fmt(R.length)],["Distinct farmer IDs",fmt(distinct(R,ID))],
+    ["Countries",fmt(distinct(R,CO))],["Projects",fmt(distinct(R,PJ))],
+    ["Avg age",(mean(R.map(r=>r[AG]>=0?r[AG]:null))||0).toFixed(0)],
+    ["Avg household size",(mean(R.map(r=>r[HH]>=0?r[HH]:null))||0).toFixed(1)],
+    ["% GPS in-bounds",pct1(100*R.filter(r=>r[GP]===1).length/Math.max(R.filter(r=>r[GP]!==-1).length,1))],
+    ["% clean (no DQ flag)",pct1(100*R.filter(r=>r[DQ]===0).length/Math.max(R.length,1))]];
+  const byCountry=L.countries.map((n,i)=>[n,R.filter(r=>r[CO]===i).length]);
+  const byA1=topEntries(tally(R,r=>r[A1]),12).map(([i,n])=>[L.admin1[i]?L.admin1[i].label:"—",n]);
+  const byProj=L.projects.map((n,i)=>[n,R.filter(r=>r[PJ]===i).length]).filter(x=>x[1]);
+  const byGender=L.genders.map((n,i)=>R.filter(r=>r[GE]===i).length);
+  const ageH=histBins(R.map(r=>r[AG]).filter(v=>v>=10&&v<=100),10);
+  const hhH=histBins(R.map(r=>r[HH]).filter(v=>v>=1&&v<=25),2);
+  const byCrop=topEntries(tally(R,r=>r[CR]),12).map(([i,n])=>[L.crops[i],n]);
+  const byEnum=[]; // enumerator not encoded per record; productivity by admin1 proxy omitted
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("cov_country","Households by country")
+    +chartCard("cov_admin1","Households by admin-1 (top 12)")
+    +chartCard("cov_proj","Households by project")
+    +chartCard("cov_gender","Gender split")
+    +chartCard("cov_age","Age distribution")
+    +chartCard("cov_hh","Household-size distribution")
+    +chartCard("cov_crop","Main-crop distribution (top 12)",null,true)
+    +'<div class="block full"><h3>Data-completeness checks</h3><table id="cov_dq"></table><div class=note>Defensive DQ handled in the pipeline (transform.py); issues are surfaced, never dropped.</div></div>'
+    +'</div>';
+  bar("cov_country",byCountry.map(x=>x[0]),byCountry.map(x=>x[1]),{colors:PAL});
+  bar("cov_admin1",byA1.map(x=>x[0]),byA1.map(x=>x[1]),{horizontal:true,colors:PAL[1]});
+  bar("cov_proj",byProj.map(x=>x[0]),byProj.map(x=>x[1]),{horizontal:true,colors:PAL[2]});
+  doughnut("cov_gender",L.genders,byGender);
+  bar("cov_age",ageH.labels,ageH.values,{colors:PAL[4]});
+  bar("cov_hh",hhH.labels,hhH.values,{colors:PAL[5]});
+  bar("cov_crop",byCrop.map(x=>x[0]),byCrop.map(x=>x[1]),{horizontal:true,colors:PAL[0]});
+  const N=R.length||1;
+  const dqrows=[["GPS present",R.filter(r=>r[GP]!==-1).length],["GPS in-bounds",R.filter(r=>r[GP]===1).length],
+    ["Country recovered from GPS (legacy)",R.filter(r=>r[A1]===-1&&r[CO]>=0).length],
+    ["Admin-1 present",R.filter(r=>r[A1]>=0).length],["Farmer ID present",R.filter(r=>r[ID]).length],
+    ["Any DQ flag",R.filter(r=>r[DQ]===1).length]];
+  $("#cov_dq").innerHTML="<tr><th>Check</th><th class=num>Households</th><th class=num>%</th></tr>"+
+    dqrows.map(([k,v])=>`<tr><td>${k}</td><td class=num>${fmt(v)}</td><td class=num>${(100*v/N).toFixed(1)}%</td></tr>`).join("");
+}
+
+function rHazard(c){
+  const R=filtered(); const nH=L.hazards.length;
+  const prev=new Array(nH).fill(0), sev=Array.from({length:nH},()=>[0,0,0]), frq=Array.from({length:nH},()=>[0,0,0]);
+  R.forEach(r=>r[H].forEach(([hi,sw,fw])=>{prev[hi]++; if(sw)sev[hi][3-sw]++; if(fw)frq[hi][fw-1]++;}));
+  const order=[...prev.keys()].sort((a,b)=>prev[a]-prev[b]); // ascending for horizontal bar
+  const N=R.length||1;
+  const cards=[["Households",fmt(R.length)],["Mean hazards / household",(mean(R.map(r=>r[H].length))||0).toFixed(1)],
+    ["Mean exposure score",(mean(R.map(r=>r[EX]))||0).toFixed(1)],
+    ["Priority households",fmt(R.filter(r=>r[PR]).length)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("hz_prev","Hazard prevalence (% of households) — click a bar to drill",null,true)
+    +chartCard("hz_sev","Severity mix by hazard")
+    +chartCard("hz_frq","Frequency mix by hazard")
+    +chartCard("hz_exp","Exposure-score distribution")
+    +'<div class="block full"><h3>Geographic distribution</h3><div class="mapctl">Colour admin-1 by: <select id="hz_metric"><option value="exp">Mean exposure score</option><option value="haz">Mean # hazards</option><option value="pri">% priority</option></select> &nbsp;·&nbsp; grey points = households (GPS), shaded by exposure</div><div class="mapbox" id="hz_map"></div><div class=note>Choropleth covers the '+fmt(R.filter(r=>r[A1]>=0).length)+' households with an admin-1 value; GPS points cover all with coordinates.</div></div>'
+    +'<div class="block full"><h3>Hazard co-occurrence (households experiencing both)</h3><div class="hm" id="hz_co"></div></div>'
+    +'</div>';
+  bar("hz_prev",order.map(i=>L.hazards[i].label),order.map(i=>+(100*prev[i]/N).toFixed(1)),
+    {horizontal:true,pctAxis:true,max:100,colors:order.map(i=>PAL[i%PAL.length]),
+     fmt:(v,idx)=>`${v}%  (${fmt(prev[order[idx]])} hh)`,
+     onClick:idx=>{const hi=order[idx];openHouseholds(R.filter(r=>r[H].some(x=>x[0]===hi)),"Exposed to "+L.hazards[hi].label);}});
+  const sevLabels=order.map(i=>L.hazards[i].label);
+  stacked("hz_sev",sevLabels,[{label:"High",color:SEVC[3],data:order.map(i=>sev[i][0])},
+    {label:"Medium",color:SEVC[2],data:order.map(i=>sev[i][1])},{label:"Low",color:SEVC[1],data:order.map(i=>sev[i][2])}]);
+  stacked("hz_frq",sevLabels,[{label:">4×/yr",color:"#c62828",data:order.map(i=>frq[i][2])},
+    {label:"2–3×/yr",color:"#e65100",data:order.map(i=>frq[i][1])},{label:"1–2×/yr",color:"#f9a825",data:order.map(i=>frq[i][0])}]);
+  const eh=histBins(R.map(r=>r[EX]),10); bar("hz_exp",eh.labels,eh.values,{colors:PAL[6]});
+  // co-occurrence matrix
+  const co=Array.from({length:nH},()=>new Array(nH).fill(0));
+  R.forEach(r=>{const hs=r[H].map(x=>x[0]);for(let a=0;a<hs.length;a++)for(let b=0;b<hs.length;b++)co[hs[a]][hs[b]]++;});
+  const mx=Math.max(1,...co.flat().filter((v,i)=>Math.floor(i/nH)!==i%nH));
+  let hm="<table><tr><th></th>"+L.hazards.map(h=>`<th>${esc(h.label.split(/[ ,\/]/)[0])}</th>`).join("")+"</tr>";
+  L.hazards.forEach((h,a)=>{hm+=`<tr><th>${esc(h.label.split(/[ ,\/]/)[0])}</th>`+L.hazards.map((_,b)=>{const v=co[a][b];const al=a===b?0:v/mx;return `<td title="${esc(h.label)} ∩ ${esc(L.hazards[b].label)}: ${v}" style="background:rgba(198,40,40,${a===b?0.05:0.08+al*0.85});color:${al>0.5?'#fff':'#222'}">${a===b?'·':v}</td>`;}).join("")+"</tr>";});
+  $("#hz_co").innerHTML=hm+"</table>";
+  buildMap(R);
+}
+
+function rImpacts(c){
+  const R=filtered();
+  c.innerHTML='<div class="grid">'
+    +L.impactCats.map((cat,ci)=>chartCard("imp_"+ci,"Top "+cat.label.toLowerCase()+" impacts",null,ci>1)).join("")
+    +'<div class="block full"><h3>Hazard × impact-category co-reporting (household counts)</h3><div class="hm" id="imp_cross"></div><div class=note>Rows = hazard experienced; columns = impact category reported by the same household.</div></div>'
+    +'</div>';
+  L.impactCats.forEach((cat,ci)=>{
+    const cnt=new Map();
+    R.forEach(r=>r[I][ci].forEach(ii=>cnt.set(ii,(cnt.get(ii)||0)+1)));
+    const top=topEntries(cnt,12);
+    bar("imp_"+ci,top.map(([ii])=>L.impacts[ci][ii].label),top.map(([,n])=>n),
+      {horizontal:true,colors:PAL[ci%PAL.length],
+       onClick:idx=>{const ii=top[idx][0];openHouseholds(R.filter(r=>r[I][ci].includes(ii)),cat.label+": "+L.impacts[ci][ii].label);}});
+  });
+  // hazard x category
+  const nH=L.hazards.length, nC=L.impactCats.length;
+  const m=Array.from({length:nH},()=>new Array(nC).fill(0));
+  R.forEach(r=>{const hs=new Set(r[H].map(x=>x[0]));hs.forEach(hi=>{for(let ci=0;ci<nC;ci++)if(r[I][ci].length)m[hi][ci]++;});});
+  const mx=Math.max(1,...m.flat());
+  let hm="<table><tr><th></th>"+L.impactCats.map(x=>`<th>${esc(x.label)}</th>`).join("")+"</tr>";
+  L.hazards.forEach((h,a)=>{hm+=`<tr><th>${esc(h.label)}</th>`+L.impactCats.map((_,b)=>{const v=m[a][b],al=v/mx;return `<td style="background:rgba(21,101,192,${0.06+al*0.85});color:${al>0.5?'#fff':'#222'}">${v}</td>`;}).join("")+"</tr>";});
+  $("#imp_cross").innerHTML=hm+"</table>";
+}
+
+function rCapacity(c){
+  const R=filtered(); const N=R.length||1;
+  const posRate=L.capKeys.map((k,ki)=>{let yes=0,ans=0;R.forEach(r=>{const ch=r[CAP][ki];if(ch!=="-"){ans++;if(ch==="1")yes++;}});return [k.label,ans?100*yes/ans:0];});
+  posRate.sort((a,b)=>b[1]-a[1]);
+  const capH=histBins(R.map(r=>r[CA]).filter(v=>v>=0),10);
+  const eduCnt=tally(R,r=>r[ED]);
+  const cards=[["Households",fmt(R.length)],["Mean capacity score",(mean(R.map(r=>r[CA]>=0?r[CA]:null))||0).toFixed(1)],
+    ["% high capacity (≥60)",pct1(100*R.filter(r=>r[CA]>=60).length/N)],
+    ["% low capacity (<40)",pct1(100*R.filter(r=>r[CA]>=0&&r[CA]<40).length/N)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("cap_rate","Capacity indicators — % positive",null,true)
+    +chartCard("cap_dist","Adaptive-capacity score distribution")
+    +chartCard("cap_edu","Education level")
+    +L.srcInd.map((s,si)=>chartCard("cap_src"+si,s.label+" (top)")).join("")
+    +'</div>';
+  bar("cap_rate",posRate.map(x=>x[0]),posRate.map(x=>+x[1].toFixed(1)),{horizontal:true,pctAxis:true,max:100,colors:PAL[0],fmt:v=>v+"%"});
+  bar("cap_dist",capH.labels,capH.values,{colors:PAL[2]});
+  bar("cap_edu",[...eduCnt.keys()],[...eduCnt.values()],{colors:PAL[4]});
+  L.srcInd.forEach((s,si)=>{
+    const cnt=new Map();R.forEach(r=>r[CS][si].forEach(vi=>cnt.set(vi,(cnt.get(vi)||0)+1)));
+    const top=topEntries(cnt,10);
+    bar("cap_src"+si,top.map(([vi])=>L.sources[si][vi].label),top.map(([,n])=>n),{horizontal:true,colors:PAL[si%PAL.length]});
+  });
+}
+
+function rAdaptation(c){
+  const R=filtered(); const nD=L.domains.length; const N=R.length||1;
+  const domAd=new Array(nD).fill(0);
+  R.forEach(r=>{for(let d=0;d<nD;d++)if(r[ADO]&(1<<d))domAd[d]++;});
+  const domOrder=[...domAd.keys()].sort((a,b)=>domAd[a]-domAd[b]);
+  const nDomsHist=histBins(R.map(r=>{let c2=0;for(let d=0;d<nD;d++)if(r[ADO]&(1<<d))c2++;return c2;}),1);
+  // practice top across domains
+  const pracCnt=new Map();
+  R.forEach(r=>{for(let d=0;d<nD;d++)r[AP][d].forEach(pi=>pracCnt.set(d+":"+pi,(pracCnt.get(d+":"+pi)||0)+1));});
+  const pracTop=topEntries(pracCnt,14).map(([k,n])=>{const [d,pi]=k.split(":").map(Number);return [L.practices[d][pi].label,n,d,pi];});
+  // adoption (mean domains adopted) by exposure quartile & capacity quartile
+  const q=(r,i)=>r[i];
+  function byQuart(valFn){const withv=R.filter(r=>valFn(r)>=0);const vals=withv.map(valFn).sort((a,b)=>a-b);
+    const cut=p=>vals[Math.floor(p*vals.length)]||0;const q1=cut(.25),q2=cut(.5),q3=cut(.75);
+    const buckets=[[],[],[],[]];withv.forEach(r=>{const v=valFn(r);const b=v<=q1?0:v<=q2?1:v<=q3?2:3;buckets[b].push(countDoms(r));});
+    return buckets.map(b=>mean(b)||0);}
+  function countDoms(r){let c2=0;for(let d=0;d<nD;d++)if(r[ADO]&(1<<d))c2++;return c2;}
+  const byExp=byQuart(r=>r[EX]); const byCap=byQuart(r=>r[CA]);
+  const cards=[["Households",fmt(R.length)],["Mean domains adopted",(mean(R.map(countDoms))||0).toFixed(1)],
+    ["% adopting ≥5 domains",pct1(100*R.filter(r=>countDoms(r)>=5).length/N)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("ad_dom","Adoption rate per practice domain — click to drill",null,true)
+    +chartCard("ad_prac","Top specific practices — click to drill",null,true)
+    +chartCard("ad_ndom","Domains adopted per household")
+    +chartCard("ad_exp","Mean domains adopted by hazard-exposure quartile")
+    +chartCard("ad_cap","Mean domains adopted by adaptive-capacity quartile")
+    +'</div>';
+  bar("ad_dom",domOrder.map(d=>L.domains[d]),domOrder.map(d=>+(100*domAd[d]/N).toFixed(1)),
+    {horizontal:true,pctAxis:true,max:100,colors:PAL[0],fmt:(v,idx)=>`${v}%  (${fmt(domAd[domOrder[idx]])} hh)`,
+     onClick:idx=>{const d=domOrder[idx];openHouseholds(R.filter(r=>r[ADO]&(1<<d)),"Adopted: "+L.domains[d]);}});
+  bar("ad_prac",pracTop.map(x=>x[0]),pracTop.map(x=>x[1]),{horizontal:true,colors:PAL[1],
+    onClick:idx=>{const [,,d,pi]=pracTop[idx];openHouseholds(R.filter(r=>r[AP][d].includes(pi)),pracTop[idx][0]);}});
+  bar("ad_ndom",nDomsHist.labels,nDomsHist.values,{colors:PAL[5]});
+  bar("ad_exp",["Q1 (low)","Q2","Q3","Q4 (high)"],byExp.map(v=>+v.toFixed(2)),{colors:PAL[3]});
+  bar("ad_cap",["Q1 (low)","Q2","Q3","Q4 (high)"],byCap.map(v=>+v.toFixed(2)),{colors:PAL[2]});
+}
+
+function rMatrix(c){
+  const R=filtered(); const N=R.length||1;
+  const me=median(R.map(r=>r[EX])), mc=median(R.map(r=>r[CA]).filter(v=>v>=0));
+  const prio=R.filter(r=>r[PR]);
+  const cards=[["Households",fmt(R.length)],["Priority (high exp / low cap)",fmt(prio.length)],
+    ["% priority",pct1(100*prio.length/N)],["Country median exp / cap",(me||0).toFixed(0)+" / "+(mc||0).toFixed(0)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("mx_scatter","Exposure vs adaptive capacity — click a point for the household",
+       "Upper-left quadrant (high exposure, low capacity) = priority for targeting. Click a point to inspect.",true)
+    +'<div class="block full"><h3>Priority households (high exposure &amp; low capacity)</h3>'
+      +'<div class=note>The '+fmt(prio.length)+' households flagged priority — targeting shortlist. Filter with the global bar above.</div>'
+      +'<div class="tablebox" id="mx_tbl"></div></div>'
+    +'</div>';
+  const gPri={label:"Priority",data:[],backgroundColor:"#c62828",pointRadius:3},
+        gOth={label:"Other",data:[],backgroundColor:"rgba(46,125,50,.45)",pointRadius:2.5};
+  R.forEach(r=>{if(r[CA]<0)return;const pt={x:r[CA],y:r[EX],r,t:`${r[NM]} · ${L.countries[r[CO]]||"—"}${r[A1]>=0?" / "+L.admin1[r[A1]].label:""} · exp ${r[EX].toFixed(0)} / cap ${r[CA].toFixed(0)}`};(r[PR]?gPri:gOth).data.push(pt);});
+  scatter("mx_scatter",[gOth,gPri],{xt:"Adaptive-capacity score (%)",yt:"Hazard-exposure score (%)",onClick:pt=>openHouseholds([pt.r],pt.r[NM])});
+  const head="<tr><th>Name</th><th>Farmer ID</th><th>Country</th><th>Admin-1</th><th>Crop</th><th class=num>Exposure</th><th class=num>Capacity</th><th class=num># hazards</th><th class=num>Domains</th></tr>";
+  const body=prio.slice().sort((a,b)=>b[EX]-a[EX]||a[CA]-b[CA]).slice(0,500).map(r=>{let dc=0;for(let d=0;d<L.domains.length;d++)if(r[ADO]&(1<<d))dc++;return `<tr><td>${esc(r[NM])}</td><td>${esc(r[ID])}</td><td>${esc(L.countries[r[CO]]||"—")}</td><td>${esc(r[A1]>=0?L.admin1[r[A1]].label:"—")}</td><td>${esc(r[CR]>=0?L.crops[r[CR]]:"—")}</td><td class=num>${r[EX].toFixed(0)}</td><td class=num>${r[CA].toFixed(0)}</td><td class=num>${r[H].length}</td><td class=num>${dc}</td></tr>`;}).join("");
+  $("#mx_tbl").innerHTML=`<table>${head}${body}</table>`+(prio.length>500?'<div class=note>Showing first 500.</div>':"");
+}
+
+// ═══════════════ NEW: Impacts deep-dive (cross-tabs) ═══════════════
+// single-valued category for a record on a chosen cross-tab dimension
+function singleCat(r,dim){
+  if(dim==="region")  return r[A1]>=0?L.admin1[r[A1]].label:null;
+  if(dim==="crop")    return r[CR]>=0?L.crops[r[CR]]:null;
+  if(dim==="gender")  return r[GE]>=0?L.genders[r[GE]]:null;
+  if(dim==="project") return r[PJ]>=0?L.projects[r[PJ]]:null;
+  if(dim==="severity"){let m=0;r[H].forEach(x=>{if(x[1]>m)m=x[1];});return m===3?"High":m===2?"Medium":m===1?"Low":"Unrated";}
+  return null;
+}
+function rImpactsDeep(c){
+  const R=filtered(); const N=R.length||1;
+  const anyImp=R.filter(r=>r[I].some(a=>a.length)).length;
+  const catTot=L.impactCats.map((_,ci)=>R.reduce((s,r)=>s+(r[I][ci].length?1:0),0));
+  const worstCat=L.impactCats[catTot.indexOf(Math.max(...catTot))];
+  const cards=[["Households",fmt(R.length)],["% reporting any impact",pct1(100*anyImp/N)],
+    ["Mean impact items / hh",(mean(R.map(r=>r[I].reduce((s,a)=>s+a.length,0)))||0).toFixed(1)],
+    ["Most-affected domain",worstCat?worstCat.label:"–"]];
+  c.innerHTML=kpiRow(cards)
+    +'<div class="grid">'
+    +L.impactCats.map((cat,ci)=>chartCard("impd_"+ci,cat.label+" impacts (% of households reporting)",null,ci>1)).join("")
+    +'<div class="block full"><h3>Cross-tab: impact choice × dimension</h3>'
+      +'<div class="mapctl">Impact domain: <select id="impd_cat">'+L.impactCats.map((x,i)=>`<option value="${i}">${esc(x.label)}</option>`).join("")+'</select>'
+      +' &nbsp;·&nbsp; against: <select id="impd_dim">'
+        +'<option value="hazard">Hazard experienced</option><option value="severity">Max hazard severity</option>'
+        +'<option value="region">Region (admin-1)</option><option value="crop">Main crop</option><option value="gender">Gender</option>'
+      +'</select> &nbsp;·&nbsp; cells = % of that column-group reporting the impact (count in tooltip)</div>'
+      +'<div class="hm" id="impd_cross"></div>'
+      +'<div class=note>Denominator per column = households in that group; darker = higher share reporting the row impact.</div></div>'
+    +'</div>';
+  // full per-choice frequency (% of households), all choices, per category
+  L.impactCats.forEach((cat,ci)=>{
+    const cnt=new Map(); R.forEach(r=>r[I][ci].forEach(ii=>cnt.set(ii,(cnt.get(ii)||0)+1)));
+    const ent=[...cnt.entries()].sort((a,b)=>b[1]-a[1]);
+    bar("impd_"+ci,ent.map(([ii])=>L.impacts[ci][ii].label),ent.map(([,n])=>+(100*n/N).toFixed(1)),
+      {horizontal:true,pctAxis:true,max:100,colors:PAL[ci%PAL.length],
+       fmt:(v,idx)=>`${v}%  (${fmt(cnt.get(ent[idx][0]))} hh)`,
+       onClick:idx=>{const ii=ent[idx][0];openHouseholds(R.filter(r=>r[I][ci].includes(ii)),cat.label+": "+L.impacts[ci][ii].label);}});
+  });
+  function drawCross(){
+    const ci=+$("#impd_cat").value, dim=$("#impd_dim").value;
+    let cols;
+    if(dim==="hazard"){cols=L.hazards.map((hz,hi)=>({label:hz.label,rows:R.filter(r=>r[H].some(x=>x[0]===hi))}));}
+    else{const cnt=tally(R,r=>singleCat(r,dim));const keys=topEntries(cnt,12).map(x=>x[0]);
+      const ord=(dim==="severity")?["High","Medium","Low","Unrated"].filter(k=>keys.includes(k)):keys;
+      cols=ord.map(v=>({label:v,rows:R.filter(r=>singleCat(r,dim)===v)}));}
+    cols=cols.filter(co=>co.rows.length);
+    const rowsC=L.impacts[ci];
+    let mx=1; const M=rowsC.map((_,ii)=>cols.map(co=>{const v=co.rows.filter(r=>r[I][ci].includes(ii)).length;const p=100*v/(co.rows.length||1);if(p>mx)mx=p;return {v,p};}));
+    let hm="<table><tr><th></th>"+cols.map(co=>`<th title="${esc(co.label)} — ${co.rows.length} hh">${esc(String(co.label).split(/[ ,\/]/)[0])}<br><span style='font-weight:400;color:#888'>n=${co.rows.length}</span></th>`).join("")+"</tr>";
+    rowsC.forEach((ch,ii)=>{hm+=`<tr><th style="text-align:left">${esc(ch.label)}</th>`+M[ii].map(cell=>{const al=cell.p/mx;return `<td title="${cell.v} of group reporting (${cell.p.toFixed(1)}%)" style="background:rgba(198,40,40,${0.05+al*0.85});color:${al>0.5?'#fff':'#222'}">${cell.p.toFixed(0)}%</td>`;}).join("")+"</tr>";});
+    $("#impd_cross").innerHTML=hm+"</table>";
+  }
+  $("#impd_cat").onchange=drawCross; $("#impd_dim").onchange=drawCross; drawCross();
+}
+
+// ═══════════════ NEW: Vulnerability index (ACI · HEI · VI · quadrants) ═══════════════
+function rVulnIndex(c){
+  const R=filtered(); const scored=R.filter(hasACI); const N=scored.length||1;
+  const quadCol={}; L.quadrants.forEach(q=>quadCol[q.key]=q.color);
+  const quadCnt=new Map(); scored.forEach(r=>{const q=quadOf(r);quadCnt.set(q,(quadCnt.get(q)||0)+1);});
+  const crit=quadCnt.get("Critical")||0;
+  const cards=[["Scored households",fmt(scored.length)],["Mean HEI (exposure)",(mean(scored.map(r=>r[EX]))||0).toFixed(1)],
+    ["Mean ACI (capacity)",(mean(scored.map(r=>r[ACIX]))||0).toFixed(1)],["Mean VI",(mean(scored.map(viOf))||0).toFixed(1)],
+    ["% Critical",pct1(100*crit/N)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("vi_quad","Vulnerability quadrants (fixed 50 thresholds)")
+    +chartCard("vi_sub","Mean adaptive-capacity sub-dimensions")
+    +chartCard("vi_dist","Vulnerability Index (VI) distribution")
+    +chartCard("vi_hist","Adaptive-capacity index (ACI) distribution")
+    +chartCard("vi_scatter","ACI vs HEI — quadrant scatter (click a point)","VI = 0.5·HEI + 0.5·(100−ACI). Upper-left (high HEI, low ACI) = Critical.",true)
+    +'<div class="block full"><h3>Quadrant composition by group</h3>'
+      +'<div class="mapctl">Break down by: <select id="vi_by"><option value="region">Region (admin-1)</option><option value="project">Project</option><option value="crop">Main crop</option></select></div>'
+      +'<div class="chartbox tall"><canvas id="vi_break"></canvas></div></div>'
+    +'<div class="block"><h3>Priority capacity gaps (&lt;30% uptake)</h3><table id="vi_gaps"></table>'
+      +'<div class=note>Capacity indicators positive for under 30% of applicable respondents — lowest-hanging adaptation levers.</div></div>'
+    +'<div class="block"><h3>Quadrant counts</h3><table id="vi_qtbl"></table></div>'
+    +'<div class="block full"><h3>Top 20 highest-VI households — targeting shortlist</h3><div class="tablebox" id="vi_top"></div></div>'
+    +'</div>';
+  // quadrant donut
+  const qLabels=L.quadrants.map(q=>q.key), qVals=qLabels.map(k=>quadCnt.get(k)||0);
+  (function(){const cv=$("#vi_quad");if(charts.vi_quad)charts.vi_quad.destroy();
+    charts.vi_quad=new Chart(cv,{type:"doughnut",data:{labels:L.quadrants.map(q=>q.label),datasets:[{data:qVals,backgroundColor:L.quadrants.map(q=>q.color)}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{size:10},boxWidth:12}}}}});})();
+  // sub-dimension means
+  const subMean=L.aciSub.map((s,si)=>{const v=mean(scored.map(r=>r[SUB][si]>=0?r[SUB][si]:null));return +(v||0).toFixed(1);});
+  bar("vi_sub",L.aciSub.map(s=>s.label),subMean,{horizontal:true,pctAxis:true,max:100,colors:PAL[0],fmt:v=>v+"%"});
+  const vh=histBins(scored.map(viOf),10); bar("vi_dist",vh.labels,vh.values,{colors:PAL[6]});
+  const ah=histBins(scored.map(r=>r[ACIX]),10); bar("vi_hist",ah.labels,ah.values,{colors:PAL[1]});
+  // quadrant scatter (4 groups)
+  const groups=L.quadrants.map(q=>({label:q.key,data:[],backgroundColor:q.color,pointRadius:2.6}));
+  const gi2={}; L.quadrants.forEach((q,i)=>gi2[q.key]=i);
+  scored.forEach(r=>{const q=quadOf(r);groups[gi2[q]].data.push({x:r[ACIX],y:r[EX],r,t:`${r[NM]} · ${L.countries[r[CO]]||"—"} · HEI ${r[EX].toFixed(0)} / ACI ${r[ACIX].toFixed(0)} / VI ${viOf(r).toFixed(0)} · ${q}`});});
+  scatter("vi_scatter",groups,{xt:"Adaptive-capacity index ACI (%)",yt:"Hazard-exposure index HEI (%)",onClick:pt=>openHouseholds([pt.r],pt.r[NM])});
+  // quadrant composition by group (stacked)
+  function drawBreak(){
+    const dim=$("#vi_by").value;
+    const cnt=tally(scored,r=>singleCat(r,dim)); const cats=topEntries(cnt,14).map(x=>x[0]);
+    const series=L.quadrants.map(q=>({label:q.key,color:q.color,data:cats.map(cv=>scored.filter(r=>singleCat(r,dim)===cv&&quadOf(r)===q.key).length)}));
+    stacked("vi_break",cats,series);
+  }
+  $("#vi_by").onchange=drawBreak; drawBreak();
+  // priority capacity gaps <30%
+  const gaps=L.capKeys.map((k,ki)=>{let yes=0,ans=0;R.forEach(r=>{const ch=r[CAP][ki];if(ch!=="-"){ans++;if(ch==="1")yes++;}});return [k.label,ans?100*yes/ans:0,ans];})
+    .filter(x=>x[1]<30).sort((a,b)=>a[1]-b[1]);
+  $("#vi_gaps").innerHTML="<tr><th>Indicator</th><th class=num>% positive</th><th class=num>applicable</th></tr>"+
+    (gaps.length?gaps.map(g=>`<tr><td>${esc(g[0])}</td><td class=num>${g[1].toFixed(1)}%</td><td class=num>${fmt(g[2])}</td></tr>`).join(""):"<tr><td colspan=3>None below 30%.</td></tr>");
+  // quadrant counts table
+  $("#vi_qtbl").innerHTML="<tr><th>Quadrant</th><th class=num>Households</th><th class=num>%</th></tr>"+
+    L.quadrants.map(q=>{const v=quadCnt.get(q.key)||0;return `<tr><td><span class="badge" style="background:${q.color};color:#fff">${q.key}</span></td><td class=num>${fmt(v)}</td><td class=num>${(100*v/N).toFixed(1)}%</td></tr>`;}).join("");
+  // top 20 highest VI
+  const top=scored.slice().sort((a,b)=>viOf(b)-viOf(a)).slice(0,20);
+  const head="<tr><th>#</th><th>Name</th><th>Farmer ID</th><th>Country</th><th>Admin-1</th><th>Crop</th><th class=num>HEI</th><th class=num>ACI</th><th class=num>VI</th><th>Quadrant</th></tr>";
+  $("#vi_top").innerHTML="<table>"+head+top.map((r,i)=>`<tr><td class=num>${i+1}</td><td>${esc(r[NM])}</td><td>${esc(r[ID])}</td><td>${esc(L.countries[r[CO]]||"—")}</td><td>${esc(r[A1]>=0?L.admin1[r[A1]].label:"—")}</td><td>${esc(r[CR]>=0?L.crops[r[CR]]:"—")}</td><td class=num>${r[EX].toFixed(0)}</td><td class=num>${r[ACIX].toFixed(0)}</td><td class=num>${viOf(r).toFixed(0)}</td><td><span class="badge" style="background:${quadCol[quadOf(r)]};color:#fff">${quadOf(r)}</span></td></tr>`).join("")+"</table>";
+}
+
+// ═══════════════ NEW: Geospatial & elevation (altitude-derived analytics) ═══════════════
+function rGeo(c){
+  const R=filtered(); const N=R.length||1;
+  const withAlt=R.filter(r=>r[ALT]>=0);
+  const G=DATA.geo||{};
+  const nHot=R.filter(r=>r[HOT]===1).length, nMis=R.filter(r=>r[MIS]===1).length;
+  const cards=[["Households (filtered)",fmt(R.length)],
+    ["% with altitude",pct1(100*withAlt.length/N)],
+    ["Mean altitude (m)",fmt(mean(withAlt.map(r=>r[ALT])))],
+    ["Moran's I — VI (full data)",G.morans_i==null?"–":G.morans_i.toFixed(3)],
+    ["High-VI hotspot farmers",fmt(nHot)],
+    ["Crop-altitude mismatches",fmt(nMis)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +'<div class="block full"><h3>Spatial Vulnerability Index — farmer points</h3>'
+      +'<div class="mapctl">Colour points by: <select id="geo_color"><option value="quad">Quadrant</option><option value="vi">Vulnerability Index</option><option value="hot">Hotspot vs scattered</option></select> &nbsp;·&nbsp; marker size = elevation band · dark ring = clustered hotspot</div>'
+      +'<div class="mapbox" id="geo_map"></div>'
+      +'<div class=note>Points cover the '+fmt(withAlt.filter(r=>r[LA]!=null).length)+'+ households with GPS. Hotspots = high-VI farmers (VI ≥ '+(G.vi_threshold!=null?G.vi_threshold:"–")+', top quartile) whose neighbours are also high-VI (DBSCAN, ε=5 km, minPts=5); '+fmt(G.n_clusters||0)+' cluster(s), '+fmt(G.n_hotspot||0)+' clustered vs '+fmt(G.n_scattered||0)+' scattered. Moran\'s I(VI) = '+(G.morans_i==null?"n/a":G.morans_i.toFixed(3))+' (>0 = VI spatially clustered; computed on the full dataset).</div></div>'
+    +chartCard("geo_band_vi","Mean HEI / ACI / VI by elevation band")
+    +chartCard("geo_band_quad","Quadrant composition by elevation band")
+    +chartCard("geo_corr","Altitude vs adaptive-capacity index (ACI)","Each point a farmer with altitude + capacity. Correlation coefficients below.",true)
+    +'<div class="block"><h3>Altitude ↔ capacity correlation (Pearson r)</h3><table id="geo_corrtbl"></table><div class=note>Negative r = higher altitude / remoteness predicts lower access to that capacity dimension.</div></div>'
+    +'<div class="block"><h3>Agro-ecological zone benchmark (altitude-derived)</h3><table id="geo_aez"></table><div class=note>Elevation-derived agro-ecological proxy; benchmarks mean VI/ACI per zone beyond admin region.</div></div>'
+    +chartCard("geo_band_haz","Hazard prevalence by elevation band (top 6 hazards)",null,true)
+    +'<div class="block full"><h3>Crop-altitude mismatches — '+fmt(nMis)+' farmer(s) outside their crop\'s optimal elevation</h3>'
+      +'<div class=note>Reported main crop grown outside its agronomic altitude range — an independent vulnerability signal. Click a bar to inspect the households.</div>'
+      +'<div class="chartbox tall"><canvas id="geo_mis"></canvas></div></div>'
+    +'</div>';
+  const bandRows=i=>withAlt.filter(r=>altBand(r)===i);
+  const bandLabels=L.elevBands.map(b=>b.label);
+  // mean HEI/ACI/VI per elevation band
+  groupedBar("geo_band_vi",bandLabels,[
+    {label:"HEI (exposure)",color:"#e65100",data:L.elevBands.map((_,i)=>+(mean(bandRows(i).map(r=>r[EX]))||0).toFixed(1))},
+    {label:"ACI (capacity)",color:"#2e7d32",data:L.elevBands.map((_,i)=>+(mean(bandRows(i).filter(hasACI).map(r=>r[ACIX]))||0).toFixed(1))},
+    {label:"VI (vulnerability)",color:"#a31515",data:L.elevBands.map((_,i)=>+(mean(bandRows(i).filter(hasACI).map(viOf))||0).toFixed(1))}],
+    {pctAxis:true,max:100});
+  // quadrant composition per band (stacked, horizontal)
+  stacked("geo_band_quad",bandLabels,L.quadrants.map(q=>({label:q.key,color:q.color,
+    data:L.elevBands.map((_,i)=>bandRows(i).filter(r=>hasACI(r)&&quadOf(r)===q.key).length)})));
+  // altitude vs ACI scatter (custom axes: x = metres)
+  (function(){const cv=$("#geo_corr");if(!cv)return;if(charts.geo_corr)charts.geo_corr.destroy();
+    const pts=withAlt.filter(hasACI).map(r=>({x:r[ALT],y:r[ACIX],t:`${r[NM]} · ${r[ALT]} m / ACI ${r[ACIX].toFixed(0)}`}));
+    charts.geo_corr=new Chart(cv,{type:"scatter",data:{datasets:[{label:"Farmer",data:pts,backgroundColor:"rgba(21,101,192,.4)",pointRadius:2.4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.t}}},
+        scales:{x:{title:{display:true,text:"Altitude (m)"},beginAtZero:true},y:{title:{display:true,text:"ACI (%)"},min:0,max:100}}}});})();
+  // correlation table: altitude vs ACI + each sub-dimension
+  const base=withAlt.filter(hasACI);
+  const corrRows=[["Adaptive-capacity index (ACI)",pearson(base.map(r=>[r[ALT],r[ACIX]]))]]
+    .concat(L.aciSub.map((s,si)=>[s.label,pearson(base.map(r=>[r[ALT],r[SUB][si]>=0?r[SUB][si]:null]))]));
+  $("#geo_corrtbl").innerHTML="<tr><th>vs altitude</th><th class=num>Pearson r</th><th class=num>n</th></tr>"+
+    corrRows.map(([lab,rv])=>`<tr><td>${esc(lab)}</td><td class=num>${rv==null?"–":rv.toFixed(3)}</td><td class=num>${fmt(base.length)}</td></tr>`).join("");
+  // AEZ benchmark
+  $("#geo_aez").innerHTML="<tr><th>Agro-ecological zone</th><th class=num>Farmers</th><th class=num>Mean VI</th><th class=num>Mean ACI</th></tr>"+
+    L.elevBands.map((b,i)=>{const rs=bandRows(i),sc=rs.filter(hasACI);
+      return `<tr><td>${esc(L.aez[i])}</td><td class=num>${fmt(rs.length)}</td><td class=num>${sc.length?mean(sc.map(viOf)).toFixed(1):"–"}</td><td class=num>${sc.length?mean(sc.map(r=>r[ACIX])).toFixed(1):"–"}</td></tr>`;}).join("");
+  // hazard prevalence by elevation band (top 6 hazards)
+  const hazPrev=new Array(L.hazards.length).fill(0);
+  withAlt.forEach(r=>{new Set(r[H].map(x=>x[0])).forEach(hi=>hazPrev[hi]++);});
+  const topHaz=[...hazPrev.keys()].sort((a,b)=>hazPrev[b]-hazPrev[a]).slice(0,6);
+  groupedBar("geo_band_haz",topHaz.map(hi=>L.hazards[hi].label),
+    L.elevBands.map((b,i)=>{const rs=bandRows(i),n=rs.length||1;
+      return {label:b.label,color:PAL[i],data:topHaz.map(hi=>+(100*rs.filter(r=>r[H].some(x=>x[0]===hi)).length/n).toFixed(1))};}),
+    {pctAxis:true,max:100});
+  // crop-altitude mismatch by crop
+  const misCnt=new Map();R.filter(r=>r[MIS]===1&&r[CR]>=0).forEach(r=>misCnt.set(r[CR],(misCnt.get(r[CR])||0)+1));
+  const misTop=topEntries(misCnt,14);
+  bar("geo_mis",misTop.map(([ci])=>L.crops[ci]),misTop.map(([,n])=>n),{horizontal:true,colors:PAL[3],
+    onClick:idx=>{const ci=misTop[idx][0];openHouseholds(R.filter(r=>r[MIS]===1&&r[CR]===ci),"Crop-altitude mismatch: "+L.crops[ci]);}});
+  geoMap(R);
+}
+
+// ═══════════════ Leaflet map (uses window.Lft = Leaflet) ═══════════════
+const Lft = window.L;   // Leaflet global (our data lookups are the const L)
+function buildMapReal(R){
+  const md=document.getElementById("hz_map"); if(!md||!Lft)return;
+  const map=Lft.map(md,{zoomControl:true,attributionControl:false,scrollWheelZoom:false}).setView([0.5,34],6);
+  const gj=DATA.geojson;
+  const a1key={}; L.admin1.forEach((a,i)=>a1key[a.key]=i);
+  let layer=null,legend=null,ptLayer=null;
+  const STOPS=["#fff7cc","#ffe066","#ffc800","#ff9a00","#e65100","#a31515"];
+  function metricByKey(metric){
+    const agg={};
+    R.forEach(r=>{if(r[A1]<0)return;const k=L.admin1[r[A1]].key;(agg[k]=agg[k]||[]).push(r);});
+    const out={};
+    for(const k in agg){const rs=agg[k];
+      out[k]=metric==="exp"?mean(rs.map(x=>x[EX])):metric==="haz"?mean(rs.map(x=>x[H].length)):100*rs.filter(x=>x[PR]).length/rs.length;}
+    return out;
+  }
+  function draw(metric){
+    const vals=metricByKey(metric); const arr=Object.values(vals).sort((a,b)=>a-b);
+    const br=[];for(let i=1;i<STOPS.length;i++)br.push(arr.length?arr[Math.floor(i/STOPS.length*arr.length)]:0);
+    const col=v=>v==null?"#e8e8e8":STOPS[Math.min(STOPS.length-1,br.filter(t=>v>=t).length)];
+    if(layer)layer.remove();
+    layer=Lft.geoJSON(gj,{style:f=>{const v=vals[f.properties.key];return {fillColor:col(v),weight:0.8,color:"#777",fillOpacity:v==null?0.25:0.82};},
+      onEachFeature:(f,ly)=>{const v=vals[f.properties.key];ly.bindTooltip(`<b>${f.properties.name}</b> (${f.properties.country})<br>${metric==="pri"?"% priority":metric==="haz"?"mean # hazards":"mean exposure"}: ${v==null?"no data":v.toFixed(1)}`,{sticky:true});
+        ly.on("mouseover",()=>ly.setStyle({weight:2,color:"#222"}));ly.on("mouseout",()=>layer.resetStyle(ly));}}).addTo(map);
+    if(legend)legend.remove();
+    legend=Lft.control({position:"bottomright"});legend.onAdd=()=>{const d=el("div","legend");const lo=[0].concat(br);
+      d.innerHTML="<b>"+(metric==="pri"?"% priority":metric==="haz"?"Mean # hazards":"Mean exposure")+"</b><br>";
+      STOPS.forEach((cc,i)=>d.innerHTML+=`<i style="background:${cc}"></i>≥ ${(lo[i]||0).toFixed(0)}<br>`);
+      d.innerHTML+='<i style="background:#e8e8e8"></i>no data';return d;};legend.addTo(map);
+  }
+  function drawPoints(){
+    if(ptLayer)ptLayer.remove();
+    ptLayer=Lft.layerGroup();
+    R.forEach(r=>{if(r[LA]==null||r[LO]==null)return;const e=r[EX];
+      Lft.circleMarker([r[LA],r[LO]],{radius:2.5,weight:0,fillOpacity:.55,
+        fillColor:e>=60?"#a31515":e>=35?"#e65100":"#2e7d32"})
+        .bindTooltip(`${r[NM]} · exp ${e.toFixed(0)}${r[CA]>=0?" / cap "+r[CA].toFixed(0):""}`,{sticky:true}).addTo(ptLayer);});
+    ptLayer.addTo(map);
+  }
+  const sel=document.getElementById("hz_metric");
+  draw(sel.value); drawPoints();
+  sel.onchange=()=>draw(sel.value);
+  const fit=()=>{if(layer&&map.getSize().x>0)try{map.fitBounds(layer.getBounds(),{padding:[10,10]});}catch(e){}};
+  leafletMaps.push({map,refit:()=>{map.invalidateSize();fit();}});
+  fit();
+  if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(map.getSize().x>0){map.invalidateSize();fit();}});ro.observe(md);}
+}
+// hoisted wrapper the hazard renderer calls
+function buildMap(R){ setTimeout(()=>buildMapReal(R),0); }
+
+// spatial VI point map for the Geospatial tab (points coloured by quadrant/VI/hotspot,
+// sized by elevation band; clustered hotspots get a dark ring)
+function geoMapReal(R){
+  const md=document.getElementById("geo_map"); if(!md||!Lft)return;
+  const pts=R.filter(r=>r[LA]!=null&&r[LO]!=null);
+  const map=Lft.map(md,{zoomControl:true,attributionControl:false,scrollWheelZoom:false}).setView([0.5,34],6);
+  const quadCol={}; L.quadrants.forEach(q=>quadCol[q.key]=q.color);
+  const viCol=v=>v==null?"#9e9e9e":v>=60?"#a31515":v>=45?"#e65100":v>=30?"#f9a825":"#2e7d32";
+  const radius=r=>{const b=altBand(r);return b<0?2.6:3+b*1.5;};
+  let layer=null,legend=null;
+  function draw(mode){
+    if(layer)layer.remove(); layer=Lft.layerGroup();
+    pts.forEach(r=>{const vi=viOf(r),q=quadOf(r);
+      const col=mode==="vi"?viCol(vi):mode==="hot"?(r[HOT]===1?"#a31515":"rgba(21,101,192,.7)"):(q?quadCol[q]:"#9e9e9e");
+      Lft.circleMarker([r[LA],r[LO]],{radius:radius(r),weight:r[HOT]===1?1.5:0,color:"#3d005c",
+        fillColor:col,fillOpacity:.72})
+        .bindTooltip(`${r[NM]} · ${r[ALT]>=0?r[ALT]+" m":"alt n/a"}${vi!=null?" · VI "+vi.toFixed(0):""}${q?" · "+q:""}${r[HOT]===1?" · hotspot":""}`,{sticky:true})
+        .addTo(layer);});
+    layer.addTo(map);
+    if(legend)legend.remove();
+    legend=Lft.control({position:"bottomright"});legend.onAdd=()=>{const d=el("div","legend");
+      if(mode==="quad"){d.innerHTML="<b>Quadrant</b><br>";L.quadrants.forEach(q=>d.innerHTML+=`<i style="background:${q.color}"></i>${q.key}<br>`);}
+      else if(mode==="vi"){d.innerHTML="<b>Vulnerability Index</b><br>";[["≥ 60","#a31515"],["45–60","#e65100"],["30–45","#f9a825"],["< 30","#2e7d32"]].forEach(([t,cc])=>d.innerHTML+=`<i style="background:${cc}"></i>${t}<br>`);}
+      else{d.innerHTML="<b>Hotspot</b><br><i style='background:#a31515'></i>clustered hotspot<br><i style='background:#1565c0'></i>other<br>";}
+      d.innerHTML+="<hr style='border:0;border-top:1px solid #ddd;margin:4px 0'><span style='font-size:10px'>marker size = elevation band</span>";
+      return d;};
+    legend.addTo(map);
+  }
+  const sel=document.getElementById("geo_color");
+  draw(sel.value); sel.onchange=()=>draw(sel.value);
+  const fit=()=>{if(pts.length&&map.getSize().x>0){try{map.fitBounds(Lft.latLngBounds(pts.map(r=>[r[LA],r[LO]])),{padding:[12,12]});}catch(e){}}};
+  leafletMaps.push({map,refit:()=>{map.invalidateSize();fit();}}); fit();
+  if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(map.getSize().x>0){map.invalidateSize();fit();}});ro.observe(md);}
+}
+function geoMap(R){ setTimeout(()=>geoMapReal(R),0); }
+
+// ═══════════════ sections + nav ═══════════════
+const SECTIONS=[
+  {id:"coverage",title:"Coverage",desc:"Who and where: households by country, admin area, project, demographics, main crop, and data-completeness checks.",render:rCoverage},
+  {id:"hazard",title:"Hazard exposure",desc:"Exposure to the 10 climate hazards — prevalence, severity, frequency, a composite exposure score, geography, and co-occurrence.",render:rHazard},
+  {id:"impacts",title:"Impacts",desc:"Reported impacts on production, harvest/storage, marketing and social wellbeing, and how they co-occur with hazards.",render:rImpacts},
+  {id:"capacity",title:"Sensitivity & adaptive capacity",desc:"Extension, finance, education, insurance, markets, connectivity and re-investment — and a composite adaptive-capacity score.",render:rCapacity},
+  {id:"adaptation",title:"Adaptation uptake",desc:"Adoption of the 10 adaptation-practice domains and specific practices, cut by exposure and capacity.",render:rAdaptation},
+  {id:"matrix",title:"Vulnerability matrix",desc:"Hazard-exposure vs adaptive-capacity. The high-exposure/low-capacity quadrant is the targeting shortlist.",render:rMatrix},
+  {id:"impactsdeep",title:"Impacts deep-dive",desc:"Full per-choice frequency of every production, harvest/storage, marketing and social impact, cross-tabulated against hazard, severity, region, crop and gender.",render:rImpactsDeep},
+  {id:"vindex",title:"Vulnerability index",desc:"Weighted Adaptive Capacity Index (5 sub-dimensions), Hazard Exposure Index, composite Vulnerability Index and the fixed-threshold Critical / Stressed / Latent-risk / Stable quadrants.",render:rVulnIndex},
+  {id:"geospatial",title:"Geospatial & elevation",desc:"Altitude-derived analytics: elevation-banded vulnerability, an agro-ecological-zone benchmark, altitude↔capacity correlation, crop-altitude mismatch, a spatial VI point map, and DBSCAN hotspots / Moran's I of the Vulnerability Index.",render:rGeo},
+];
+let active=SECTIONS[0].id;
+function renderActive(){
+  leafletMaps.length=0;   // drop refit handles for maps in the DOM we're about to replace
+  const sec=SECTIONS.find(s=>s.id===active);
+  const wrap=$("#secwrap");
+  wrap.innerHTML=`<div class="sec-title">${sec.title}</div><div class="sec-desc">${sec.desc}</div><div id="secbody"></div>`
+    +`<div class="footer">Source: KoBoToolbox form <code>${META.form_uid}</code> · ${fmt(META.n)} households · ${META.date_min}→${META.date_max} · refreshed nightly from KoBoToolbox. Global filters apply across every tab.</div>`;
+  sec.render($("#secbody"));
+  setTimeout(()=>leafletMaps.forEach(m=>m.refit()),60);
+}
+function show(id){active=id;document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===id));window.scrollTo(0,0);
+  for(const k in charts){charts[k].destroy();delete charts[k];} leafletMaps.length=0; renderActive();}
+
+// ── filters UI ───────────────────────────────────────────────
+function buildFilters(){
+  const fb=$("#filters");
+  const mk=(id,label,opts)=>{const w=el("div");w.appendChild(el("label",null,label));const s=el("select");s.id="flt_"+id;
+    s.appendChild(new Option("All",""));opts.forEach(([v,t])=>s.appendChild(new Option(t,v)));w.appendChild(s);return w;};
+  fb.appendChild(mk("co","Country",L.countries.map((n,i)=>[i,n])));
+  fb.appendChild(mk("a1","Admin-1",L.admin1.map((a,i)=>[i,a.label+" ("+a.country.slice(0,2).toUpperCase()+")"])));
+  fb.appendChild(mk("pj","Project",L.projects.map((n,i)=>[i,n])));
+  fb.appendChild(mk("ge","Gender",L.genders.map((n,i)=>[i,n])));
+  fb.appendChild(mk("cr","Main crop",L.crops.map((n,i)=>[i,n.length>26?n.slice(0,26)+"…":n])));
+  const months=[...new Set(RECS.map(r=>r[YM]).filter(Boolean))].sort();
+  fb.appendChild(mk("from","Month from",months.map(m=>[m,m])));
+  fb.appendChild(mk("to","Month to",months.map(m=>[m,m])));
+  const btn=el("button",null,"Reset");btn.onclick=()=>{Object.keys(F).forEach(k=>F[k]=null);document.querySelectorAll(".filters select").forEach(s=>s.value="");renderActive();};
+  fb.appendChild(btn);
+  fb.appendChild(el("div","fnote","Global filters — apply across every tab."));
+  const map={co:"co",a1:"a1",pj:"pj",ge:"ge",cr:"cr",from:"from",to:"to"};
+  Object.entries(map).forEach(([fk,id])=>{$("#flt_"+id).onchange=e=>{const v=e.target.value;F[fk]=v===""?null:(fk==="from"||fk==="to"?v:+v);renderActive();};});
+}
+
+// ── boot ─────────────────────────────────────────────────────
+function boot(){
+  $("#hdrsub").textContent=`${fmt(META.n)} households · ${L.countries.join(" / ")} · ${META.date_min}→${META.date_max}`;
+  const nav=$("#nav");
+  SECTIONS.forEach(s=>{const a=el("a",s.id===active?"active":"",s.title);a.dataset.id=s.id;a.onclick=()=>show(s.id);nav.appendChild(a);});
+  buildFilters();
+  renderActive();
+}
+boot();
+</script>
+</body>
+</html>

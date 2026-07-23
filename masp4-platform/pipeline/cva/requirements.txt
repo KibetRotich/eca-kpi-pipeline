@@ -1,0 +1,3 @@
+# Dependencies for the Climate Vulnerability Assessment (CVA) dashboard pipeline
+# fetch_cva_json.py -> transform.py -> load_supabase.py -> build_dashboard.py
+httpx
