@@ -488,8 +488,8 @@ export default function TargetsPage() {
                       <span style={{ background: '#FFC800', color: '#000', fontSize: '.48rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.5px', padding: '.1rem .35rem' }}>
                         OUTPUT
                       </span>
-                      <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#333' }}>Farmers Trained / Reached</span>
-                      <span style={{ fontSize: '.54rem', color: '#888' }}>training events · TV/radio · demo farms · digital</span>
+                      <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#333' }}>{project.commodity === 'Gold' ? 'Miners Trained / Reached' : 'Farmers Trained / Reached'}</span>
+                      <span style={{ fontSize: '.54rem', color: '#888' }}>{project.commodity === 'Gold' ? 'training events · TV/radio · demo sites · digital' : 'training events · TV/radio · demo farms · digital'}</span>
                     </div>
 
                     {/* Annual target */}
