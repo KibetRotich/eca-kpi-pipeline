@@ -1,0 +1,6 @@
+# Dependencies for the UG Tree Seedlings dashboard pipeline
+# (fetch_seedlings_json.py + build_dashboard.py)
+httpx
+pandas
+numpy
+matplotlib

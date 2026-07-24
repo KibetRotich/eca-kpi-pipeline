@@ -400,6 +400,47 @@ def crop_alt_mismatch(crop_label, alt):
         return None
     return 1 if (alt < rng[0] or alt > rng[1]) else 0
 
+# ---- main-crop canonicalisation ----------------------------------------------
+# The main-crop field mixes select_one codes (current form) with free text and
+# legacy codes from older versions: case/whitespace variants ("COFFEE", "Coffee "),
+# typos ("Mazie", "Cofffee"), descriptive free text ("Karo's coffee field") and
+# multi-crop answers ("Maize, beans, cassava"). canon_crop() folds every raw value
+# into ONE of the approved commodity labels below. Agreed rules: a multi-crop answer
+# maps to its FIRST-listed crop; anything not in the approved set -> "Others"; a
+# blank answer -> None (unknown, not a crop). Keyword order matters — more specific
+# keywords come first (irish before potato; common-bean & soya before bean).
+import re
+
+CROP_CANON = [
+    ("common bean", "Common beans"), ("common_bean", "Common beans"),
+    ("soya", "Others"), ("soy", "Others"),          # soya / soyabeans are out of list
+    ("irish", "Irish potatoes"), ("potato", "Potatoes"),
+    ("cereal", "Cereals (Maize, Sorghum, and Millet)"),
+    ("maiz", "Maize"), ("mazie", "Maize"),          # incl. common "Mazie" typo
+    ("coff", "Coffee"), ("ccffee", "Coffee"),       # incl. "Coffe"/"Cofffee"/"Ccffee"
+    ("mango", "Mangoes"), ("tomato", "Tomatoes"), ("onion", "Onions"),
+    ("banana", "Banana"), ("matooke", "Banana"), ("plantain", "Banana"),
+    ("cassava", "Cassava"),
+    ("vegetable", "Vegetables (Amaranthus, Kales, spinach)"),
+    ("amaranth", "Vegetables (Amaranthus, Kales, spinach)"),
+    ("kales", "Vegetables (Amaranthus, Kales, spinach)"),
+    ("bean", "Beans"),                              # after common-bean / soya
+    ("other", "Others"),
+]
+_CROP_SPLIT = re.compile(r"[,/&;\n]| and ")
+
+def canon_crop(raw):
+    """Fold a raw main-crop value into one approved commodity label.
+    Multi-crop free text -> first-listed crop; unmatched -> 'Others'; blank -> None."""
+    if not raw or not str(raw).strip():
+        return None
+    parts = [p for p in (t.strip() for t in _CROP_SPLIT.split(str(raw))) if p]
+    first = (parts[0] if parts else str(raw).strip()).lower()
+    for kw, label in CROP_CANON:
+        if kw in first:
+            return label
+    return "Others"
+
 def _haversine_km(a, b):
     R = 6371.0
     la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
@@ -521,9 +562,12 @@ def transform(records, formdef):
         if farmer_id is None:
             flags.append("farmer_id_missing")
 
-        # main crop: field renamed farmer_main_crop (new) / main_crop (old)
+        # main crop: field renamed farmer_main_crop (new) / main_crop (old). The raw
+        # value mixes select codes, legacy codes and free text across form versions,
+        # so canonicalise into the approved commodity set (see canon_crop) rather than
+        # decoding against the current form def alone (which leaves ~49 messy variants).
         crop_code = _s(pick_first(seg, "farmer_main_crop", "main_crop"))
-        crop_label = decode("farmer_main_crop", crop_code) if crop_code else None
+        crop_label = canon_crop(crop_code)
 
         dob = _s(pick(seg, "date_of_birth"))
         age = None

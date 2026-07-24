@@ -190,13 +190,13 @@ export default function InstructionsPage() {
             <Card>
               <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.6rem' }}>Farmer surveys (S6.1, S6.2, S2.1, S2.5)</div>
               <Step n={1} title="Sampling frame">
-                Project teams define the target population for each project (e.g. all registered farmers in the programme area). Targets are entered in the <em>Targets &amp; Achievements</em> tab, disaggregated by KPI and gender where available.
+                Project teams define the target population for each project (e.g. all registered farmers in the programme area). Targets are entered in the <em>Targets &amp; Achievements</em> tab, disaggregated by KPI and gender where available. Under commodity-wise deployment, the extrapolation formula aggregates targets across all projects sharing the same commodity and country before estimating achievement.
               </Step>
               <Step n={2} title="Sample design">
                 A random or systematic sample of farmers is drawn from the target population. Gender-stratified sampling is recommended so that female and male farmers are sampled in proportion to their share of the target.
               </Step>
               <Step n={3} title="Survey administration">
-                Enumerators use the KoboToolbox form (download above) on mobile devices. Each response is submitted to the Solidaridad KoboToolbox server in real time. The form covers S6.1, S6.2, S2.1, and S2.5 in a single interview per farmer.
+                Enumerators use the KoboToolbox form (V2.0, download from the Import CSV tab) on mobile devices. Each response is submitted to the Solidaridad KoboToolbox server in real time. The form covers S6.1, S6.2, S2.1, and S2.5 in a single interview per farmer. V2.0 uses commodity-wise deployment: one KoboToolbox project covers all field projects within a commodity. Enumerators select their commodity first, then their specific project code from a filtered dropdown.
               </Step>
               <Step n={4} title="Export &amp; upload">
                 Project officers export the completed survey as a CSV from KoboToolbox and upload it via the <em>Import CSV</em> tab on this platform. Submissions enter a review queue before being approved and counted.
@@ -357,9 +357,10 @@ export default function InstructionsPage() {
             <div>
               <div style={{ fontWeight: 800, color: GREEN, marginBottom: '.35rem' }}>Country &amp; Commodity</div>
               <div style={{ color: '#555', lineHeight: 1.7 }}>
-                Every submission is tagged with a project code which links to a country and commodity.
-                The dashboard filter bar lets users slice all KPIs by country (Kenya, Uganda, Tanzania, Ethiopia)
-                and by commodity (Coffee, Tea, F&amp;V, Gold, Dairy, etc.).
+                Every submission is tagged with a commodity (<code>_commodity</code>), a project code (<code>_project_code</code>),
+                and a survey round (<code>_survey_round</code>). The commodity and project code together link each
+                submission to a country and target population for extrapolation. The dashboard filter bar lets users
+                slice all KPIs by country (Kenya, Uganda, Tanzania, Ethiopia) and by commodity (Coffee, Tea, F&amp;V, Gold, Dairy, etc.).
               </div>
             </div>
           </div>
@@ -372,10 +373,17 @@ export default function InstructionsPage() {
           <Card>
             <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.5rem' }}>About the Form</div>
             <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.8 }}>
-              The <strong>MASP IV Farmer Survey V1.1</strong> covers S6.1, S6.2, S2.1, and S2.5 in a single
+              The <strong>MASP IV Farmer Survey V2.0</strong> covers S6.1, S6.2, S2.1, and S2.5 in a single
               combined interview. It is an XLSForm compatible with <strong>KoboToolbox</strong> and ODK Central.
               Download it from the <a href="/upload" style={{ color: NAVY, fontWeight: 700 }}>Import CSV</a> tab and
               upload to your KoboToolbox account to deploy to enumerators.
+              <br /><br />
+              V2.0 introduces <strong>commodity-wise deployment</strong>: instead of one KoboToolbox project per
+              field project (20+ deployments), one deployment covers all projects within a commodity (~10 deployments
+              total). The form has three new admin fields at the top: <code>_commodity</code> (select commodity first),
+              <code>_project_code</code> (filtered dropdown showing only projects in that commodity), and{' '}
+              <code>_survey_round</code> (Baseline / Midline / Endline / Annual). All KPI field names are unchanged
+              from V1.1.
             </div>
             <div style={{ marginTop: '.6rem', padding: '.5rem .7rem', background: '#fff3e0', border: '1px solid #ffcc80', fontSize: '0.64rem', color: '#6d4c00' }}>
               <strong>Note:</strong> Separate forms for CSO (S6.3) and Company (S6.4/S6.5) respondents are under development and will be released as V1.2.
@@ -385,7 +393,9 @@ export default function InstructionsPage() {
             <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.5rem' }}>Before Deploying</div>
             <div style={{ fontSize: '0.65rem', color: '#555', lineHeight: 1.7 }}>
               <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-                <li>Set <code>_project_code</code> to exactly match the code in the Projects table (e.g. <code>KE-ANK-001</code>)</li>
+                <li>Select <code>_commodity</code> first (e.g. Coffee) — this filters the project list automatically</li>
+                <li>Select <code>_project_code</code> from the filtered dropdown — use only codes listed in the Targets &amp; Achievements table (e.g. <code>KE-COF-001</code>). Wrong codes will cause import failures.</li>
+                <li>Select <code>_survey_round</code> — Baseline (2026), Midline, Endline, or Annual monitoring</li>
                 <li>Confirm enumerators select the correct <code>_country</code> from the dropdown</li>
                 <li>Enable GPS on all devices before the first interview</li>
                 <li>Run a 3–5 farmer pilot; export and import the pilot CSV to validate before full deployment</li>
@@ -399,7 +409,7 @@ export default function InstructionsPage() {
               <ol style={{ paddingLeft: '1.1rem', margin: 0 }}>
                 <li>Open your project in KoboToolbox and go to <em>Data → Downloads</em></li>
                 <li>Select <strong>CSV</strong> format, all fields, all versions</li>
-                <li>Click <em>Export</em> and download the file to your computer</li>
+                <li>Click <em>Export</em> and download the file to your computer. In V2.0 the CSV contains all projects within the commodity — the importer handles mixed <code>_project_code</code> values automatically</li>
                 <li>Upload via the <a href="/upload" style={{ color: NAVY, fontWeight: 700 }}>Import CSV</a> tab — select the survey year and click Upload</li>
               </ol>
             </div>

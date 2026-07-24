@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Climate Heroes / REAP Projects — Insights Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--g:#FFC800;--g2:#e6b400;--t:#2a2a2a;--b:#1565c0;--accent:#e65100;--bg:#e6e6e6;--card:#fff;--ink:#222;--mut:#6b6b6b;--bd:#d8d8d8;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Open Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#FFC800;color:#000;padding:14px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20;border-bottom:3px solid #2a2a2a}
+  header h1{font-size:18px;margin:0;font-weight:800}
+  header .sub{font-size:12px;color:#000;opacity:.7}
+  .wrap{display:flex;min-height:calc(100vh - 50px)}
+  nav{width:230px;background:#fff;border-right:1px solid var(--bd);padding:10px 0;position:sticky;top:50px;height:calc(100vh - 50px);overflow:auto;flex:none}
+  nav a{display:block;padding:10px 18px;color:var(--ink);text-decoration:none;font-size:13px;border-left:3px solid transparent;cursor:pointer}
+  nav a:hover{background:#fffce8}
+  nav a.active{border-left-color:#FFC800;background:#fffce8;font-weight:700;color:#000}
+  main{flex:1;padding:20px 26px;max-width:1500px}
+  .sec-title{font-size:20px;font-weight:800;color:var(--accent);margin:6px 0 2px}
+  .sec-desc{color:var(--mut);font-size:13px;margin-bottom:16px;max-width:900px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .block{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .block.full{grid-column:1/-1}
+  .block h3{margin:0 0 10px;font-size:14px;font-weight:650}
+  .note{color:var(--mut);font-size:11.5px;margin-top:8px;line-height:1.5}
+  .chartbox{position:relative;height:300px}
+  .chartbox.tall{height:560px}
+  .kpis{display:flex;flex-wrap:wrap;gap:12px}
+  .kpi{flex:1;min-width:150px;background:#faf8f0;border:1px solid var(--bd);border-top:3px solid #FFC800;border-radius:8px;padding:12px 14px}
+  .kpi .v{font-size:22px;font-weight:800;color:var(--accent)}
+  .kpi .l{font-size:11.5px;color:var(--mut);margin-top:3px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left}
+  th{background:#f5f5f5;font-weight:650;position:sticky;top:0}
+  .tablebox{max-height:420px;overflow:auto}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  img.map{width:100%;border-radius:8px;border:1px solid var(--bd)}
+  .hm{overflow:auto}
+  .hm td{text-align:center;font-size:11px;color:#222;border:1px solid #fff;min-width:48px}
+  .hm th{font-size:11px}
+  .filters{display:flex;flex-wrap:wrap;gap:14px;align-items:end;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .filters label{font-size:11px;color:var(--mut);display:block;margin-bottom:4px}
+  .filters select{padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font-size:13px;min-width:140px}
+  .filters button{padding:7px 14px;border:0;background:#FFC800;color:#000;font-weight:600;border-radius:6px;cursor:pointer;font-size:13px}
+  .filters button:hover{background:#e6b400}
+  .rag-g{background:#c8e6c9}.rag-a{background:#fff3cd}.rag-r{background:#f8d7da}
+  .footer{color:var(--mut);font-size:11px;margin-top:30px;padding-top:14px;border-top:1px solid var(--bd)}
+  .pill{display:inline-block;background:#fffce8;border:1px solid var(--bd);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px}
+  .mapbox{height:540px;border-radius:8px;border:1px solid var(--bd);overflow:hidden;background:#eef3f5}
+  .leaflet-container{background:#eef3f5;font-family:inherit;font-size:12px}
+  .mapctl{margin-bottom:8px;font-size:12px}
+  .mapctl select{padding:5px 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px}
+  .legend{background:#fff;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:11px;line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .legend i{display:inline-block;width:14px;height:12px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.1)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌱 Climate Heroes / REAP Projects — Insights Dashboard</h1>
+  <span class="sub" id="hdr-sub"></span>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script>
+const DATA = /*__DATA__*/;
+const PAL = ["#FFC800","#2e7d32","#1565c0","#e65100","#7b1fa2","#888888","#00838f","#c62828","#4527a0","#ad1457","#9e9d24","#0277bd"];
+const fmt = n => (n==null?"–":n.toLocaleString());
+const charts = [];
+const leafletMaps = [];   // {map, refit} — refit on section show (Leaflet inits in hidden divs)
+const CHORO_STOPS = ["#fff7cc","#ffe066","#ffc800","#ff9a00","#e65100","#a31515"];
+
+function el(tag, cls, html){const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;}
+
+// ── generic block renderers ───────────────────────────────────────────────
+function renderBlock(b){
+  const box = el("div","block"+((b.tall||b.type=="table"||b.type=="heatmap"||b.type=="choropleth"||b.full)?" full":""));
+  if(b.title) box.appendChild(el("h3",null,b.title));
+  if(b.type=="kpi"){
+    const k=el("div","kpis");
+    b.cards.forEach(c=>{const d=el("div","kpi"); d.appendChild(el("div","v",c.value)); d.appendChild(el("div","l",c.label)); k.appendChild(d);});
+    box.appendChild(k);
+  } else if(b.type=="bar"||b.type=="line"||b.type=="stacked"){
+    const cb=el("div","chartbox"+(b.tall?" tall":"")); const cv=el("canvas"); cb.appendChild(cv); box.appendChild(cb);
+    setTimeout(()=>drawChart(cv,b),0);
+  } else if(b.type=="image"){
+    const im=el("img","map"); im.src=b.src; box.appendChild(im);
+  } else if(b.type=="table"){
+    box.appendChild(buildTable(b.columns,b.rows));
+  } else if(b.type=="heatmap"){
+    box.appendChild(buildHeatmap(b));
+  } else if(b.type=="choropleth"){
+    box.appendChild(buildChoropleth(b));
+  } else if(b.type=="note"){
+    box.appendChild(el("div","note","⚠ "+b.text));
+  }
+  if(b.note) box.appendChild(el("div","note",b.note));
+  return box;
+}
+
+function buildTable(cols,rows){
+  const wrap=el("div","tablebox"); const t=el("table");
+  const thead=el("thead"); const tr=el("tr");
+  cols.forEach((c,i)=>{const th=el("th",i>0?"num":null,c); tr.appendChild(th);}); thead.appendChild(tr); t.appendChild(thead);
+  const tb=el("tbody");
+  rows.forEach(r=>{const tr=el("tr"); r.forEach((v,i)=>{const td=el("td",(i>0&&typeof v=="number")?"num":null, typeof v=="number"?fmt(v):v); tr.appendChild(td);}); tb.appendChild(tr);});
+  t.appendChild(tb); wrap.appendChild(t); return wrap;
+}
+
+function buildHeatmap(b){
+  const wrap=el("div","hm"); const t=el("table");
+  const max=Math.max(...b.matrix.flat(),1);
+  const head=el("tr"); head.appendChild(el("th",null,""));
+  b.xlabels.forEach(x=>head.appendChild(el("th",null,x.replace(/_/g," ")))); t.appendChild(head);
+  b.ylabels.forEach((y,i)=>{const tr=el("tr"); tr.appendChild(el("th",null,y));
+    b.matrix[i].forEach(v=>{const a=v/max; const td=el("td",null,fmt(v));
+      td.style.background=`rgba(230,81,0,${0.06+a*0.9})`; td.style.color=a>0.5?"#fff":"#222"; tr.appendChild(td);});
+    t.appendChild(tr);});
+  wrap.appendChild(t); return wrap;
+}
+
+// ── GeoJSON choropleth (Leaflet, no tile basemap → boundaries embedded inline) ─
+function buildChoropleth(b){
+  const wrap=el("div");
+  const ctl=el("div","mapctl");
+  ctl.appendChild(el("span",null,"Colour by: "));
+  const sel=el("select"); b.metrics.forEach(m=>sel.appendChild(new Option(m.label,m.key)));
+  ctl.appendChild(sel); wrap.appendChild(ctl);
+  const md=el("div","mapbox"); wrap.appendChild(md);
+  setTimeout(()=>initChoropleth(md,sel,b),0);
+  return wrap;
+}
+
+function initChoropleth(md,sel,b){
+  // Initialised inside a hidden section (and an iframe), so the container is 0×0
+  // at first. Set a valid Uganda view up front, never fitBounds at zero size, and
+  // re-fit once the container actually gets a size (ResizeObserver + show() refit).
+  const map=L.map(md,{zoomControl:true,attributionControl:false,scrollWheelZoom:false})
+    .setView([1.4,32.5],6);
+  const feats=b.geojson.features;
+  let layer=null, legend=null;
+  const vals=key=>feats.map(f=>f.properties.m?f.properties.m[key]:null).filter(v=>v!=null);
+  // Quantile breaks (district counts are heavily skewed; a linear scale washes
+  // most districts out). 5 thresholds → 6 colour buckets of ~equal population.
+  function breaksFor(key){
+    const v=vals(key).slice().sort((a,b)=>a-b); const n=CHORO_STOPS.length, br=[];
+    for(let i=1;i<n;i++) br.push(v.length?v[Math.min(v.length-1,Math.floor(i/n*v.length))]:0);
+    return br;
+  }
+  const colorFor=(val,br)=>val==null?"#e8e8e8":CHORO_STOPS[Math.min(CHORO_STOPS.length-1,br.filter(t=>val>=t).length)];
+  const fmtv=(key,val)=>val==null?"no data":(key=="disbursed"?"UGX "+val.toLocaleString():val.toLocaleString());
+  const fit=()=>{ if(layer && map.getSize().x>0) map.fitBounds(layer.getBounds(),{padding:[8,8]}); };
+  function draw(key){
+    const br=breaksFor(key);
+    if(layer) layer.remove();
+    layer=L.geoJSON(b.geojson,{
+      style:f=>({fillColor:colorFor(f.properties.m?f.properties.m[key]:null,br),weight:0.6,color:"#999",fillOpacity:0.85}),
+      onEachFeature:(f,lyr)=>{
+        const m=f.properties.m;
+        lyr.bindTooltip("<b>"+f.properties.name+"</b><br>"+
+          b.metrics.map(mt=>mt.label+": "+fmtv(mt.key,m?m[mt.key]:null)).join("<br>"),{sticky:true});
+        lyr.on("mouseover",()=>lyr.setStyle({weight:2,color:"#222"}));
+        lyr.on("mouseout",()=>layer.resetStyle(lyr));
+      }}).addTo(map);
+    fit();
+    if(legend) legend.remove();
+    legend=L.control({position:"bottomright"});
+    legend.onAdd=()=>{const div=el("div","legend"); const lo=[0].concat(br);
+      div.innerHTML="<b>"+b.metrics.find(m=>m.key==key).label+"</b><br>";
+      CHORO_STOPS.forEach((c,i)=>{div.innerHTML+='<i style="background:'+c+'"></i>≥ '+Math.round(lo[i]).toLocaleString()+'<br>';});
+      div.innerHTML+='<i style="background:#e8e8e8"></i>no data'; return div;};
+    legend.addTo(map);
+  }
+  // Register for refit BEFORE drawing so show()/resize can always recover the map.
+  leafletMaps.push({map,refit:()=>{map.invalidateSize(); fit();}});
+  draw(sel.value);
+  sel.onchange=()=>draw(sel.value);
+  // Auto-recover the instant the container gets a real size (hidden→shown, iframe layout).
+  if(window.ResizeObserver){
+    const ro=new ResizeObserver(()=>{ if(map.getSize().x>0){ map.invalidateSize(); fit(); } });
+    ro.observe(md);
+  }
+}
+
+function drawChart(cv,b){
+  let cfg;
+  if(b.type=="bar"){
+    cfg={type:"bar",data:{labels:b.labels,datasets:[{label:b.axisLabel||"",data:b.values,backgroundColor:PAL[0]}]},
+      options:{indexAxis:b.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{autoSkip:!b.horizontal,maxRotation:b.horizontal?0:60,minRotation:0,font:{size:9}}},y:{ticks:{font:{size:9},autoSkip:false}}}}};
+  } else if(b.type=="line"){
+    cfg={type:"line",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+"33",borderWidth:1.6,pointRadius:0,tension:.25,fill:false}))},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:14,font:{size:9}}},y:{ticks:{font:{size:9}}}}}};
+  } else if(b.type=="stacked"){
+    cfg={type:"bar",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,backgroundColor:PAL[i%PAL.length]}))},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:60}},y:{stacked:true,ticks:{font:{size:9}}}}}};
+  }
+  charts.push(new Chart(cv,cfg));
+}
+
+// ── navigation & sections ─────────────────────────────────────────────────
+function show(id){
+  document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("active",a.dataset.id==id));
+  document.querySelectorAll("main > .section").forEach(sd=>sd.style.display=sd.id==id?"block":"none");
+  window.scrollTo(0,0);
+  setTimeout(()=>leafletMaps.forEach(m=>m.refit()),0);   // Leaflet needs a resize once its container is visible
+}
+
+function build(){
+  const g=DATA.global;
+  document.getElementById("hdr-sub").textContent =
+    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
+  const nav=document.getElementById("nav"), main=document.getElementById("main");
+
+  // Exec section first
+  const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec"); nav.appendChild(exNav);
+  main.appendChild(buildExec());
+
+  DATA.sections.forEach(sc=>{
+    const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
+    const sd=el("div","section"); sd.id=sc.id; sd.style.display="none";
+    sd.appendChild(el("div","sec-title",sc.title));
+    if(sc.desc) sd.appendChild(el("div","sec-desc",sc.desc));
+    const grid=el("div","grid");
+    sc.blocks.forEach(b=>grid.appendChild(renderBlock(b)));
+    sd.appendChild(grid);
+    sd.appendChild(el("div","footer","Source: KoBoToolbox form a5rJdqQGuy2DtTXvEx3cpq · implausible quantities (>10k) excluded from all totals."));
+    main.appendChild(sd);
+  });
+  show("exec");
+}
+
+// ── Executive interactive section ─────────────────────────────────────────
+const EX=DATA.exec; const F={region:"region",district:"district",project:"project",ym:"ym",seedlings:"seedlings",cost:"cost",coop:"coop_type"};
+const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
+
+function buildExec(){
+  const sd=el("div","section"); sd.id="exec";
+  sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
+  sd.appendChild(el("div","sec-desc","Live KPIs filterable by region, project and month. Below: regional health scorecard (RAG) and monthly executive summary."));
+
+  // filters
+  const fb=el("div","filters");
+  const mkSel=(id,label,opts)=>{const w=el("div"); w.appendChild(el("label",null,label));
+    const s=el("select"); s.id=id; s.appendChild(new Option("All","")); opts.forEach(o=>s.appendChild(new Option(o,o))); w.appendChild(s); return w;};
+  fb.appendChild(mkSel("f-region","Region",EX.regions));
+  fb.appendChild(mkSel("f-project","Project",EX.projects));
+  fb.appendChild(mkSel("f-from","Month from",EX.months));
+  fb.appendChild(mkSel("f-to","Month to",EX.months));
+  const btn=el("button",null,"Reset"); btn.onclick=()=>{["f-region","f-project","f-from","f-to"].forEach(i=>document.getElementById(i).value=""); applyExec();};
+  fb.appendChild(btn);
+  sd.appendChild(fb);
+
+  const kp=el("div","block full"); kp.appendChild(el("h3",null,"Key indicators (filtered)")); const kc=el("div","kpis"); kc.id="exec-kpis"; kp.appendChild(kc); sd.appendChild(kp);
+
+  const grid=el("div","grid");
+  const c1=el("div","block"); c1.appendChild(el("h3",null,"Applications by region (filtered)")); const cb1=el("div","chartbox"); const cv1=el("canvas"); cv1.id="exec-reg"; cb1.appendChild(cv1); c1.appendChild(cb1); grid.appendChild(c1);
+  const c2=el("div","block"); c2.appendChild(el("h3",null,"Seedlings by month (filtered)")); const cb2=el("div","chartbox"); const cv2=el("canvas"); cv2.id="exec-mon"; cb2.appendChild(cv2); c2.appendChild(cb2); grid.appendChild(c2);
+  sd.appendChild(grid);
+
+  // health scorecard
+  const hb=el("div","block full"); hb.appendChild(el("h3",null,"Regional Health Scorecard (RAG)"));
+  const cols=["region","applications","avg_seedlings","cost_per_seedling","enum_productivity","all_photos_pct"];
+  const t=el("table"); const head=el("tr"); ["Region","Applications","Avg seedlings","UGX/seedling","Enum productivity","All-photos %"].forEach((c,i)=>head.appendChild(el("th",i>0?"num":null,c))); t.appendChild(head);
+  EX.health.sort((a,b)=>b.applications-a.applications).forEach(h=>{
+    const tr=el("tr");
+    tr.appendChild(el("td",null,h.region));
+    tr.appendChild(el("td","num",fmt(h.applications)));
+    tr.appendChild(el("td","num",h.avg_seedlings));
+    const cps=el("td","num "+(h.cost_per_seedling>1100?"rag-r":h.cost_per_seedling>1010?"rag-a":"rag-g"),fmt(h.cost_per_seedling)); tr.appendChild(cps);
+    tr.appendChild(el("td","num",h.enum_productivity));
+    const ph=el("td","num "+(h.all_photos_pct<40?"rag-r":h.all_photos_pct<70?"rag-a":"rag-g"),h.all_photos_pct+"%"); tr.appendChild(ph);
+    t.appendChild(tr);
+  });
+  hb.appendChild(t); sd.appendChild(hb);
+
+  // monthly exec summary
+  const mb=el("div","block full"); mb.appendChild(el("h3",null,"Monthly Executive Summary"));
+  mb.appendChild(buildTable(["Month","Applications","Seedlings","Disbursed (UGX)"],EX.monthly));
+  sd.appendChild(mb);
+
+  setTimeout(()=>{["f-region","f-project","f-from","f-to"].forEach(i=>document.getElementById(i).onchange=applyExec); applyExec();},0);
+  return sd;
+}
+
+let execCharts=[];
+function applyExec(){
+  const r=document.getElementById("f-region").value, p=document.getElementById("f-project").value,
+        from=document.getElementById("f-from").value, to=document.getElementById("f-to").value;
+  const rows=EX.records.filter(x=>(!r||x[IDX.region]==r)&&(!p||x[IDX.project]==p)&&(!from||x[IDX.ym]>=from)&&(!to||x[IDX.ym]<=to));
+  const n=rows.length, seed=rows.reduce((a,x)=>a+x[IDX.seedlings],0), cost=rows.reduce((a,x)=>a+x[IDX.cost],0),
+        scost=rows.reduce((a,x)=>a+x[IDX.seedlings_cost],0);
+  const kc=document.getElementById("exec-kpis"); kc.innerHTML="";
+  [["Applications",fmt(n)],["Seedlings",fmt(seed)],["Total cost (UGX)",fmt(cost)],
+   ["Seedling unit price (UGX)",seed?("UGX "+(scost/seed).toFixed(0)):"–"],
+   ["Avg seedlings/farmer",n?(seed/n).toFixed(1):"–"]]
+   .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
+
+  const byReg={}, byMon={};
+  rows.forEach(x=>{byReg[x[IDX.region]]=(byReg[x[IDX.region]]||0)+1; byMon[x[IDX.ym]]=(byMon[x[IDX.ym]]||0)+x[IDX.seedlings];});
+  const rl=Object.keys(byReg).sort((a,b)=>byReg[b]-byReg[a]); const ml=Object.keys(byMon).sort();
+  execCharts.forEach(c=>c.destroy()); execCharts=[];
+  execCharts.push(new Chart(document.getElementById("exec-reg"),{type:"bar",
+    data:{labels:rl,datasets:[{data:rl.map(k=>byReg[k]),backgroundColor:PAL[0]}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:9}}}}}}));
+  execCharts.push(new Chart(document.getElementById("exec-mon"),{type:"line",
+    data:{labels:ml,datasets:[{data:ml.map(k=>byMon[k]),borderColor:PAL[1],backgroundColor:PAL[1]+"33",borderWidth:1.6,pointRadius:0,tension:.25}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:12,font:{size:9}}}}}}));
+}
+
+build();
+</script>
+</body>
+</html>

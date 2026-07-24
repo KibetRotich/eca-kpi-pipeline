@@ -1,0 +1,7 @@
+# ECA Trainings & Events — data pipeline + Supabase sync
+pandas>=2.1
+numpy>=1.26
+httpx>=0.27          # REST ingestion (headless / GitHub Action path)
+supabase>=2.6        # Supabase upsert client
+python-dateutil>=2.9
+pytest>=8.0          # pipeline tests

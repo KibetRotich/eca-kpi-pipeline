@@ -76,6 +76,58 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           ].map(({ href, label }) => (
             <a key={href} href={href} className="nav-link">{label}</a>
           ))}
+
+          {/* Output Insights — hub for Kobo-form analytics (Climate Heroes / REAP, etc.) */}
+          <a
+            href="/output-insights"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              marginLeft: 'auto',
+              marginRight: '.5rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '.4rem',
+              background: '#2e7d32',
+              color: '#fff',
+              fontSize: '.62rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              padding: '0 .9rem',
+              height: 26,
+              borderRadius: 4,
+              textDecoration: 'none',
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
+            }}
+          >
+            Output Insights <span aria-hidden="true">↗</span>
+          </a>
+
+          {/* MASP III Dashboard — opens the standalone legacy dashboard in a new browser page */}
+          <a
+            href="/ECA_Dashboard.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '.4rem',
+              background: '#FFC800',
+              color: '#000',
+              fontSize: '.62rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              padding: '0 .9rem',
+              height: 26,
+              borderRadius: 4,
+              textDecoration: 'none',
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)',
+            }}
+          >
+            MASP III Dashboard <span aria-hidden="true">↗</span>
+          </a>
         </nav>
 
         {/* ── Content ─────────────────────────────────────────────────────── */}

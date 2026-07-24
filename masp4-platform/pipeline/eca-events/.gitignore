@@ -1,0 +1,8 @@
+# Local raw-submission cache pulled from Kobo — contains PII, never commit.
+data_pipeline/cache/
+*.meta.json
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -64,7 +64,7 @@ export default function UploadPage() {
             </div>
             <div style={{ padding: '.8rem .9rem', display: 'flex', gap: '1.2rem', alignItems: 'flex-start' }}>
               <a
-                href="/MASP_IV_Kobo_Form_V1.1.xlsx"
+                href="/MASP_IV_Kobo_Form_V2.0.xlsx"
                 download
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -76,12 +76,14 @@ export default function UploadPage() {
                 <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', marginTop: '.35rem' }}>
                   Kobo Form
                 </div>
-                <div style={{ fontSize: '.5rem', color: '#aaa', marginTop: '.2rem' }}>V1.1 · XLSForm</div>
+                <div style={{ fontSize: '.5rem', color: '#aaa', marginTop: '.2rem' }}>V2.0 · XLSForm</div>
               </a>
               <div style={{ fontSize: '.68rem', color: '#555', lineHeight: 1.7 }}>
-                The <strong>MASP IV Farmer Survey V1.1</strong> covers S6.1, S6.2, S2.1, and S2.5 in one interview.
-                Compatible with <strong>KoboToolbox</strong> and ODK Central. Upload the .xlsx file to your
-                KoboToolbox account to deploy it to enumerators' mobile devices.
+                The <strong>MASP IV Farmer Survey V2.0</strong> covers S6.1, S6.2, S2.1, and S2.5 in one interview.
+                Compatible with <strong>KoboToolbox</strong> and ODK Central. This version uses commodity-wise deployment:
+                one form covers all projects within a commodity — select the commodity first, then the
+                project code. Upload the .xlsx file to your KoboToolbox account to deploy it to
+                enumerators' mobile devices.
                 <div style={{ marginTop: '.5rem', padding: '.4rem .6rem', background: '#fff3e0', border: '1px solid #ffcc80', fontSize: '.62rem', color: '#6d4c00' }}>
                   <strong>Note:</strong> Separate forms for CSO (S6.3) and Company (S6.4/S6.5) respondents are under development (V1.2).
                 </div>
@@ -100,8 +102,9 @@ export default function UploadPage() {
             </div>
             <div style={{ padding: '.7rem .9rem' }}>
               {[
-                ['_project_code', 'Set the project code to exactly match the code in the Projects table (e.g. KE-ANK-001). Wrong codes will cause import failures.'],
+                ['_commodity + _project_code', 'Select the commodity first (e.g. Coffee). The project list will filter automatically. Then select the project code matching your project (e.g. KE-COF-001). Wrong codes will cause import failures — use only codes listed in the Targets & Achievements table.'],
                 ['_country', 'Confirm enumerators select the correct country value from the dropdown. Accepted: Kenya, Uganda, Tanzania, Ethiopia.'],
+                ['_survey_round', 'Select the data collection round: Baseline (2026), Midline, Endline, or Annual monitoring. This replaces the need for separate form versions per round.'],
                 ['GPS', 'Enable GPS on all enumerator devices before the first interview. The form records farm location automatically.'],
                 ['Pilot test', 'Run 3–5 pilot interviews before full deployment. Export the pilot CSV and check it imports cleanly before proceeding.'],
                 ['Sampling frame', 'Enter the target population in Targets & Achievements first (target_total and gender disaggregation) so the extrapolation formula has a denominator.'],

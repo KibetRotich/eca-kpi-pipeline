@@ -1,0 +1,85 @@
+name: Seedlings Dashboard Refresh
+
+# Keeps public/Seedlings_Dashboard.html (served at /Seedlings_Dashboard.html) in
+# sync with the live Kobo form. Re-pulls ALL submissions from KoBoToolbox and
+# rebuilds the self-contained dashboard, then commits it — which triggers a Vercel
+# deploy.
+#
+# Triggers:
+#   1. Nightly at 03:00 UTC (06:00 EAT) — picks up new submissions / new species
+#   2. On push to the pipeline source files (rebuild after a code change)
+#   3. Manual run from the Actions tab (Actions → Run workflow)
+#
+# Required secret:  KOBO_TOKEN  (Settings → Secrets and variables → Actions)
+#   KoBoToolbox API token for the form (UID a5rJdqQGuy2DtTXvEx3cpq).
+on:
+  schedule:
+    - cron: "0 3 * * *"      # 03:00 UTC daily
+  push:
+    paths:
+      - "pipeline/seedlings/**"
+      - ".github/workflows/seedlings.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: seedlings-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Fetch Kobo data → rebuild dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: pipeline/seedlings/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r pipeline/seedlings/requirements.txt
+
+      # 1. Pull every submission into pipeline/seedlings/seedlings_*.csv
+      #    (gitignored — rebuilt every run, never committed)
+      - name: Fetch Kobo submissions
+        env:
+          KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+        run: python pipeline/seedlings/fetch_seedlings_json.py
+
+      # 2. Rebuild the dashboard into public/. Species & district lists are
+      #    data-driven, so new species / districts flow through automatically.
+      #    Any district name that fails to match a boundary is printed here.
+      - name: Rebuild dashboard
+        run: python pipeline/seedlings/build_dashboard.py
+
+      # 3. Commit the regenerated dashboard. Only commits when the file actually
+      #    changed (quiet days → no commit/deploy). Rebase-and-retry on push so a
+      #    concurrent commit to main doesn't fail the run with a non-fast-forward.
+      #    The push triggers Vercel to redeploy the platform.
+      - name: Commit updated dashboard
+        run: |
+          if git diff --quiet -- public/Seedlings_Dashboard.html; then
+            echo "No dashboard changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/Seedlings_Dashboard.html
+          git commit -m "chore: seedlings dashboard refresh $(date -u '+%Y-%m-%d %H:%M UTC')"
+          n=0
+          until git push; do
+            n=$((n+1))
+            if [ "$n" -ge 5 ]; then echo "::error::push failed after $n attempts"; exit 1; fi
+            echo "push rejected (main moved); rebasing — attempt $n"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" \
+              || { echo "::error::rebase conflict on generated dashboard"; git rebase --abort; exit 1; }
+          done

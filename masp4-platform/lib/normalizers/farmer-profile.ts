@@ -32,7 +32,10 @@ export async function normalizeFarmerProfile(
       odk_submission_id:   submissionId,
       project_id:          projectId,
       country:             d._country                  ?? null,
-      commodity:           d.f_profile_primary_commodity ?? null,
+      // V1 carried commodity inside the FarmerProfile section (f_profile_primary_commodity),
+      // V2 moved it to the top-level _commodity metadata field driving the cascading
+      // project filter. Fall back V1 → V2 so both deployments populate this column.
+      commodity:           d.f_profile_primary_commodity ?? d._commodity ?? null,
       survey_year:         surveyYear,
       national_id:         d.f_profile_id_national     ?? null,
       farmer_uid:          d.f_profile_id_farmer        ?? null,

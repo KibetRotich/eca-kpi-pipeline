@@ -30,6 +30,10 @@ export interface ParsedSubmission {
   project_code: string       // maps to projects.project_code
   country: string
   submitted_at: string       // ISO timestamp — from ODK metadata col or TODAY()
+  // V2 form (Kobo deployment masp4_farmer_survey_v2) adds these two top-level
+  // metadata fields. V1 CSVs leave them null and the importer ignores them.
+  commodity: string | null
+  survey_round: string | null   // 'baseline' | 'midline' | 'endline' | 'annual'
   raw_data: Record<string, unknown>
 }
 
@@ -52,10 +56,27 @@ const FORM_SENTINELS: Record<FormId, string[]> = {
   S65:                   ['f_S65_story', 'f_S65_progress'],
 }
 
+// Kobo's CSV export can emit a column header in one of two styles:
+//   flat:           "f_profile_id_national"
+//   group-prefixed: "farmer_profile/farmer_profile_demographic/f_profile_id_national"
+// Build a Set of leaf names (segment after the last "/") so detection and field
+// lookups work for both. V1 deployments used flat export; V2 deployments under
+// newer KoboToolbox UI default to group-prefixed export, which is why V2 CSVs
+// otherwise produced "Cannot detect form type from column headers".
+function leafSet(headers: string[]): Set<string> {
+  const out = new Set<string>()
+  for (const h of headers) {
+    out.add(h)
+    const slash = h.lastIndexOf('/')
+    if (slash !== -1) out.add(h.slice(slash + 1))
+  }
+  return out
+}
+
 export function detectFormId(headers: string[]): FormId | null {
-  const headerSet = new Set(headers)
+  const set = leafSet(headers)
   for (const [formId, sentinels] of Object.entries(FORM_SENTINELS)) {
-    if (sentinels.some(s => headerSet.has(s))) {
+    if (sentinels.some(s => set.has(s))) {
       return formId as FormId
     }
   }
@@ -73,6 +94,20 @@ const META_UUID    = '_uuid'
 const META_PROJECT = '_project_code'
 const META_COUNTRY = '_country'
 const META_TIME    = '_submission_time'
+const META_COMMODITY    = '_commodity'      // V2 only
+const META_SURVEY_ROUND = '_survey_round'   // V2 only
+
+// Read a field by leaf name, falling back to any column whose path ends in "/leaf".
+// Handles both flat and group-prefixed Kobo exports without forcing the parser
+// to know which group a field lives in. Returns undefined if not present.
+function readLeaf(row: Record<string, string>, leaf: string): string | undefined {
+  if (row[leaf] !== undefined) return row[leaf]
+  const suffix = '/' + leaf
+  for (const k of Object.keys(row)) {
+    if (k.endsWith(suffix)) return row[k]
+  }
+  return undefined
+}
 
 // ── Main parse function ───────────────────────────────────────────────────────
 
@@ -88,9 +123,11 @@ export function parseOdkRows(
 
   return rows.map((row) => {
     // Accept both _uuid (ODK Central export) and uuid (Kobo calculate field export)
-    const uuid = row[META_UUID] || row['uuid'] || crypto.randomUUID()
+    const uuid = readLeaf(row, META_UUID) || readLeaf(row, 'uuid') || crypto.randomUUID()
 
-    // Coerce numeric and boolean strings
+    // Coerce numeric and boolean strings. We keep the original column key (which
+    // may be group-prefixed) so existing normalizers that read raw_data continue
+    // to find their fields; readLeaf is only used for cross-cutting metadata.
     const coerced: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(row)) {
       if (v === '' || v === null || v === undefined) {
@@ -112,12 +149,28 @@ export function parseOdkRows(
       }
     }
 
+    // Mirror leaf-named copies of group-prefixed keys into coerced so downstream
+    // normalizers (which read flat keys like d.f_profile_age) keep working when
+    // Kobo exports with group paths. Only writes if the leaf key is absent so V1
+    // CSVs are byte-for-byte unchanged.
+    for (const k of Object.keys(coerced)) {
+      const slash = k.lastIndexOf('/')
+      if (slash === -1) continue
+      const leaf = k.slice(slash + 1)
+      if (!(leaf in coerced)) coerced[leaf] = coerced[k]
+    }
+
+    const commodity = readLeaf(row, META_COMMODITY)
+    const surveyRound = readLeaf(row, META_SURVEY_ROUND)
+
     return {
       submission_uuid: uuid,
       form_id: formId,
-      project_code: (row[META_PROJECT] ?? '').trim(),
-      country: (row[META_COUNTRY] ?? '').trim(),
-      submitted_at: row[META_TIME] ?? new Date().toISOString(),
+      project_code: (readLeaf(row, META_PROJECT) ?? '').trim(),
+      country: (readLeaf(row, META_COUNTRY) ?? '').trim(),
+      submitted_at: readLeaf(row, META_TIME) ?? new Date().toISOString(),
+      commodity: commodity ? commodity.trim() : null,
+      survey_round: surveyRound ? surveyRound.trim() : null,
       raw_data: coerced,
     }
   })

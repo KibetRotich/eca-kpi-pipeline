@@ -1,0 +1,119 @@
+/* Output Insights — compact dashboard tile grid.
+   Scoped to this route (CSS Module); reuses the global design tokens from
+   app/globals.css (--green, --border, --white, Open Sans). No other page is affected. */
+
+.grid {
+  display: grid;
+  gap: .8rem;
+  grid-template-columns: repeat(5, 1fr);   /* desktop ≥1200px */
+  align-items: stretch;
+}
+@media (max-width: 1199px) { .grid { grid-template-columns: repeat(3, 1fr); } } /* tablet */
+@media (max-width: 767px)  { .grid { grid-template-columns: repeat(2, 1fr); } } /* small tablet */
+@media (max-width: 479px)  { .grid { grid-template-columns: 1fr; } }            /* mobile */
+
+/* Whole tile is a single link. Consistent 1:1 tile regardless of content length. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1 / 1;
+  min-height: 168px;
+  background: var(--white, #fff);
+  border: 1px solid var(--border, #d0d0d0);
+  border-top: 3px solid var(--green, #2e7d32);
+  border-radius: 6px;
+  padding: .7rem .75rem;
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .12);
+  border-color: var(--green, #2e7d32);
+  text-decoration: none;
+}
+.tile:focus-visible {
+  outline: 3px solid var(--green, #2e7d32);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile { transition: none; }
+  .tile:hover { transform: none; }
+}
+/* On a single-column mobile layout a strict square is needlessly tall. */
+@media (max-width: 479px) { .tile { aspect-ratio: auto; min-height: 128px; } }
+
+.title {
+  margin: 0 0 .3rem;
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--black, #111);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.summary {
+  margin: 0;
+  font-size: .68rem;
+  line-height: 1.4;
+  color: #555;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Only 3 tags + a "+N more" chip are rendered visibly (bounded to ~2 rows);
+   the complete tag list is preserved in a screen-reader-only element below. */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .22rem;
+  margin-top: .5rem;
+}
+.tag {
+  font-size: .54rem;
+  font-weight: 700;
+  color: #557;
+  background: #eef3ee;
+  padding: .1rem .4rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.more {
+  background: transparent;
+  color: var(--green, #2e7d32);
+  padding: .1rem .2rem;
+}
+
+.cta {
+  margin-top: auto;
+  padding-top: .5rem;
+  font-size: .58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--green, #2e7d32);
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+}
+
+/* Visually hidden but available to screen readers (full descriptions / all tags). */
+.srOnly {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
