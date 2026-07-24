@@ -1,0 +1,3 @@
+# Dependencies for the VSLA Performance Assessment dashboard pipeline
+# fetch_vsla_json.py -> transform.py -> load_supabase.py -> build_dashboard.py
+httpx

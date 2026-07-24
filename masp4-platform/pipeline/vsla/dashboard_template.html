@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VSLA Performance Assessment — Insights Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--g:#2e7d32;--g2:#1b5e20;--accent:#e65100;--blue:#1565c0;--bg:#eef0ee;--card:#fff;--ink:#222;--mut:#6b6b6b;--bd:#d8d8d8;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Open Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--g);color:#fff;padding:12px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:30;border-bottom:3px solid var(--g2)}
+  header h1{font-size:17px;margin:0;font-weight:800}
+  header .sub{font-size:12px;opacity:.85}
+  .wrap{display:flex;min-height:calc(100vh - 48px)}
+  nav{width:216px;background:#fff;border-right:1px solid var(--bd);padding:10px 0;position:sticky;top:48px;height:calc(100vh - 48px);overflow:auto;flex:none}
+  nav a{display:block;padding:10px 18px;color:var(--ink);text-decoration:none;font-size:13px;border-left:3px solid transparent;cursor:pointer}
+  nav a:hover{background:#f1f8f1}
+  nav a.active{border-left-color:var(--g);background:#f1f8f1;font-weight:700;color:var(--g2)}
+  main{flex:1;padding:16px 22px;max-width:1560px}
+  .sec-title{font-size:19px;font-weight:800;color:var(--g2);margin:2px 0 2px}
+  .sec-desc{color:var(--mut);font-size:13px;margin-bottom:12px;max-width:960px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .block{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .block.full{grid-column:1/-1}
+  .block h3{margin:0 0 8px;font-size:13.5px;font-weight:700}
+  .note{color:var(--mut);font-size:11.5px;margin-top:8px;line-height:1.5}
+  .chartbox{position:relative;height:290px}
+  .chartbox.tall{height:520px}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .kpi{flex:1;min-width:135px;background:#f4faf4;border:1px solid var(--bd);border-top:3px solid var(--g);border-radius:8px;padding:11px 13px}
+  .kpi .v{font-size:21px;font-weight:800;color:var(--g2)}
+  .kpi .l{font-size:11px;color:var(--mut);margin-top:3px}
+  .kpi .sub{font-size:10.5px;color:var(--mut);margin-top:4px;line-height:1.5}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left}
+  th{background:#f5f5f5;font-weight:650;position:sticky;top:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .tablebox{max-height:460px;overflow:auto}
+  .hm{overflow:auto}
+  .hm td{text-align:center;font-size:11px;border:1px solid #fff;min-width:42px}
+  .hm th{font-size:10.5px;font-weight:600}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:14px;position:sticky;top:48px;z-index:20}
+  .filters label{font-size:10.5px;color:var(--mut);display:block;margin-bottom:3px}
+  .filters select,.filters input{padding:5px 7px;border:1px solid var(--bd);border-radius:6px;font-size:12.5px;min-width:118px;max-width:190px}
+  .filters button{padding:6px 12px;border:0;background:var(--g);color:#fff;font-weight:600;border-radius:6px;cursor:pointer;font-size:12.5px}
+  .filters button:hover{background:var(--g2)}
+  .filters .fnote{font-size:10.5px;color:var(--mut);margin-left:auto;align-self:center;max-width:230px}
+  .pill{display:inline-block;background:#eafaea;border:1px solid #cbe8cb;border-radius:20px;padding:2px 9px;font-size:11px;margin:2px}
+  .footer{color:var(--mut);font-size:11px;margin-top:24px;padding-top:12px;border-top:1px solid var(--bd)}
+  .clickable{cursor:pointer}
+  .badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700}
+  .badge.p{background:#f8d7da;color:#a31515}
+  .badge.f{background:#fff3e0;color:#e65100}
+  /* qualitative panel */
+  .qbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+  .qbar input[type=text]{padding:6px 9px;border:1px solid var(--bd);border-radius:6px;font-size:12.5px;min-width:240px}
+  .qbar select{padding:6px 9px;border:1px solid var(--bd);border-radius:6px;font-size:12.5px}
+  .exlist{max-height:620px;overflow:auto;display:flex;flex-direction:column;gap:9px}
+  .excerpt{border:1px solid var(--bd);border-left:3px solid var(--g);border-radius:8px;padding:9px 12px;background:#fff}
+  .excerpt.sens{border-left-color:var(--accent);background:#fffaf5}
+  .excerpt .q{font-size:12px;font-weight:700;color:var(--g2)}
+  .excerpt .ctx{font-size:10.5px;color:var(--mut);margin-top:2px}
+  .excerpt .txt{font-size:12.5px;margin-top:6px;line-height:1.5;color:var(--ink)}
+  .excerpt .snote{font-size:10.5px;color:var(--accent);margin-top:4px;font-style:italic}
+  /* drill-down overlay */
+  #ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none}
+  #ov .panel{position:absolute;top:5%;left:50%;transform:translateX(-50%);width:min(1000px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  #ov h3{margin:0 0 8px;font-size:15px;color:var(--g2)}
+  #ov .close{position:sticky;top:0;float:right;border:0;background:var(--accent);color:#fff;border-radius:6px;padding:5px 11px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<header><h1>💰 VSLA Performance Assessment</h1><span class="sub" id="hdrsub"></span></header>
+<div class="wrap"><nav id="nav"></nav><main id="main">
+  <div class="filters" id="filters"></div>
+  <div id="secwrap"></div>
+</main></div>
+<div id="ov"><div class="panel"><button class="close" onclick="closeOverlay()">✕ Close</button><div id="ovbody"></div></div></div>
+<script>
+const DATA = /*__DATA__*/;
+const GROUPS = DATA.groups, META = DATA.meta, L = DATA.lookups;
+
+const PAL=["#2e7d32","#66bb6a","#1565c0","#e65100","#7b1fa2","#00838f","#c62828","#9e9d24","#ad1457","#4527a0","#0277bd","#5d4037"];
+const charts={};
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString();
+const fmt1=n=>n==null||isNaN(n)?"—":(Math.round(n*10)/10).toLocaleString();
+const ugx=n=>n==null||isNaN(n)?"—":"UGX "+Math.round(n).toLocaleString();
+const pct1=x=>x==null||isNaN(x)?"—":x.toFixed(1)+"%";
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// ── global filter state ──────────────────────────────────────
+const F={sc:null,pa:null,vi:null,from:null,to:null};
+function filtered(){
+  return GROUPS.filter(g=>
+    (F.sc==null||g.sub_county===F.sc)&&(F.pa==null||g.parish===F.pa)&&(F.vi==null||g.village===F.vi)&&
+    (F.from==null||(g.assessment_date&&g.assessment_date>=F.from))&&
+    (F.to==null||(g.assessment_date&&g.assessment_date<=F.to)));
+}
+
+// ── aggregation helpers ──────────────────────────────────────
+const mval=g=>g.metrics||{};
+function mean(arr){const v=arr.filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+function median(arr){const v=arr.filter(x=>x!=null&&!isNaN(x)).sort((a,b)=>a-b);if(!v.length)return null;const m=v.length>>1;return v.length%2?v[m]:(v[m-1]+v[m])/2;}
+function sumM(rows,k){let s=0,any=false;rows.forEach(g=>{const v=mval(g)[k];if(v!=null&&!isNaN(v)){s+=v;any=true;}});return any?s:null;}
+function meanM(rows,k){return mean(rows.map(g=>{const v=mval(g)[k];return v==null||isNaN(v)?null:v;}));}
+// boolean tri-state: {yes,no,unk,pct}
+function boolT(rows,k){let y=0,n=0,u=0;rows.forEach(g=>{const v=mval(g)[k];v===true?y++:v===false?n++:u++;});return {yes:y,no:n,unk:u,pct:(y+n)?100*y/(y+n):null};}
+function tally(rows,keyfn){const m=new Map();rows.forEach(r=>{const k=keyfn(r);if(k==null||k==="")return;m.set(k,(m.get(k)||0)+1);});return m;}
+function topEntries(map,n){return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n);}
+
+// meeting-frequency normaliser (free-text field is noisy)
+function normFreq(s){if(!s)return "Unknown";const t=String(s).toLowerCase();
+  if(t.includes("twice"))return "Biweekly";
+  if(t.includes("week")&&(t.includes("2")||t.includes("two")||t.includes("bi")||t.includes("fortnight")))return "Biweekly";
+  if(t.includes("month"))return "Monthly";
+  if(t.includes("week"))return "Weekly";
+  return "Other";}
+
+// ── chart factory (verbatim from CVA design system) ──────────
+function bar(id,labels,values,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"bar",
+    data:{labels,datasets:[{label:o.axis||"",data:values,
+      backgroundColor:o.colors||PAL[0],borderRadius:2}]},
+    options:{indexAxis:o.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{if(o.onClick&&els.length)o.onClick(els[0].index);},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${o.fmt?o.fmt(c.parsed[o.horizontal?'x':'y'],c.dataIndex):c.parsed[o.horizontal?'x':'y']}`}}},
+      scales:{[o.horizontal?'x':'y']:{beginAtZero:true,max:o.max,ticks:{font:{size:9},callback:o.pctAxis?(v=>v+"%"):(o.moneyAxis?(v=>v>=1e6?(v/1e6)+"M":v>=1e3?(v/1e3)+"k":v):undefined)}},
+              [o.horizontal?'y':'x']:{ticks:{font:{size:9},autoSkip:!o.horizontal,maxRotation:o.horizontal?0:55}}}}});
+}
+function stacked(id,labels,series,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"bar",
+    data:{labels,datasets:series.map((s,i)=>({label:s.label,data:s.data,backgroundColor:s.color||PAL[i%PAL.length]}))},
+    options:{indexAxis:o.horizontal===false?"x":"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10},boxWidth:12}},tooltip:{mode:"index"}},
+      scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9}}}}}});
+}
+function groupedBar(id,labels,series,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"bar",
+    data:{labels,datasets:series.map((s,i)=>({label:s.label,data:s.data,backgroundColor:s.color||PAL[i%PAL.length],borderRadius:2}))},
+    options:{indexAxis:o.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${o.moneyAxis?ugx(c.parsed[o.horizontal?'x':'y']):c.parsed[o.horizontal?'x':'y']}${o.pctAxis?"%":""}`}}},
+      scales:{[o.horizontal?'x':'y']:{beginAtZero:true,max:o.max,ticks:{font:{size:9},callback:o.pctAxis?(v=>v+"%"):(o.moneyAxis?(v=>v>=1e6?(v/1e6)+"M":v>=1e3?(v/1e3)+"k":v):undefined)}},
+              [o.horizontal?'y':'x']:{ticks:{font:{size:9},maxRotation:55}}}}});
+}
+function doughnut(id,labels,values){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:PAL}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{size:11},boxWidth:12}}}}});
+}
+function scatter(id,groups,o={}){
+  const cv=$("#"+id); if(!cv)return; if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(cv,{type:"scatter",data:{datasets:groups},
+    options:{responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{if(o.onClick&&els.length){const d=els[0];o.onClick(groups[d.datasetIndex].data[d.index]);}},
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>c.raw.t}}},
+      scales:{x:{title:{display:true,text:o.xt},min:0,max:o.xmax||100,ticks:{callback:v=>v+"%"}},
+              y:{title:{display:true,text:o.yt},min:0,max:o.ymax||100,ticks:{callback:v=>v+"%"}}}}});
+}
+function histBins(vals,step){const m={};vals.forEach(v=>{const b=Math.floor(v/step)*step;m[b]=(m[b]||0)+1;});
+  const keys=Object.keys(m).map(Number).sort((a,b)=>a-b);return {labels:keys.map(k=>k+"–"+(k+step)),values:keys.map(k=>m[k])};}
+
+// ── layout helpers ───────────────────────────────────────────
+function chartCard(id,title,note,tall){return `<div class="block${tall?' full':''}"><h3>${esc(title)}</h3><div class="chartbox${tall?' tall':''}"><canvas id="${id}"></canvas></div>${note?`<div class=note>${note}</div>`:""}</div>`;}
+function kpiRow(cards){return `<div class="kpis">${cards.map(c=>`<div class="kpi"><div class="v">${c[1]}</div><div class="l">${esc(c[0])}</div>${c[2]?`<div class="sub">${c[2]}</div>`:""}</div>`).join("")}</div>`;}
+
+// short group label for per-group charts
+function glab(g){const n=g.group_name||("#"+g.kobo_id);return n.length>22?n.slice(0,22)+"…":n;}
+
+// ── drill-down overlay: list underlying groups ───────────────
+function openGroups(rows,title){
+  const head="<tr><th>Group</th><th>Sub-county</th><th>Parish</th><th>Village</th><th class=num>Active</th><th class=num>Savings</th><th class=num>Repay%</th><th class=num>Gov%</th></tr>";
+  const body=rows.slice(0,500).map(g=>{const m=mval(g);return `<tr><td>${esc(g.group_name||"—")}</td><td>${esc(g.sub_county||"—")}</td><td>${esc(g.parish||"—")}</td><td>${esc(g.village||"—")}</td><td class=num>${fmt(m.members_active)}</td><td class=num>${ugx(m.total_savings)}</td><td class=num>${m.repayment_rate==null?"—":m.repayment_rate}</td><td class=num>${m.governance_score==null?"—":m.governance_score}</td></tr>`;}).join("");
+  $("#ovbody").innerHTML=`<h3>${esc(title)} — ${rows.length} group(s)</h3><div class="tablebox"><table>${head}${body}</table></div>`;
+  $("#ov").style.display="block";
+}
+function closeOverlay(){$("#ov").style.display="none";}
+
+// ═══════════════ TAB RENDERERS ═══════════════
+function rOverview(c){
+  const R=filtered();
+  const actM=sumM(R,"active_male"),actF=sumM(R,"active_female"),actY=sumM(R,"active_youth"),actP=sumM(R,"active_pwd");
+  const totActive=sumM(R,"members_active");
+  const welfareN=R.filter(g=>mval(g).has_welfare_fund===true).length;
+  const selfN=R.filter(g=>mval(g).self_sufficient===true).length;
+  const genderSub=`♀ ${fmt(actF)} · ♂ ${fmt(actM)} · youth ${fmt(actY)} · PWD ${fmt(actP)}`;
+  const cards=[
+    ["VSLA groups",fmt(R.length)],
+    ["Active members",fmt(totActive),genderSub],
+    ["Total savings",ugx(sumM(R,"total_savings"))],
+    ["Total loans disbursed",ugx(sumM(R,"total_loans_disbursed"))],
+    ["Avg repayment rate",pct1(meanM(R,"repayment_rate"))],
+    ["Avg retention rate",pct1(meanM(R,"retention_rate"))],
+    ["Avg governance score",pct1(meanM(R,"governance_score"))],
+    ["Groups w/ welfare fund",fmt(welfareN),pct1(R.length?100*welfareN/R.length:null)+" of groups"],
+    ["Self-sufficient groups",fmt(selfN),pct1(R.length?100*selfN/R.length:null)+" of groups"]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("ov_members","Active members by sub-county (gender split)")
+    +chartCard("ov_comp","Active membership composition")
+    +chartCard("ov_savloan","Savings vs loans disbursed by group (UGX) — click to inspect",null,true)
+    +'</div>';
+  // members by sub-county, stacked female/male
+  const scs=[...tally(R,g=>g.sub_county).keys()];
+  const rowsBy=sc=>R.filter(g=>g.sub_county===sc);
+  stacked("ov_members",scs,[
+    {label:"Female",color:PAL[0],data:scs.map(sc=>sumM(rowsBy(sc),"active_female")||0)},
+    {label:"Male",color:PAL[2],data:scs.map(sc=>sumM(rowsBy(sc),"active_male")||0)}]);
+  doughnut("ov_comp",["Female","Male","Youth","PWD"],[actF||0,actM||0,actY||0,actP||0]);
+  const gs=R.slice().sort((a,b)=>(mval(b).total_savings||0)-(mval(a).total_savings||0));
+  groupedBar("ov_savloan",gs.map(glab),[
+    {label:"Total savings",color:PAL[0],data:gs.map(g=>mval(g).total_savings||0)},
+    {label:"Loans disbursed",color:PAL[3],data:gs.map(g=>mval(g).total_loans_disbursed||0)}],
+    {horizontal:true,moneyAxis:true});
+}
+
+function rMembership(c){
+  const R=filtered();
+  const cards=[["Members at formation",fmt(sumM(R,"members_formation"))],
+    ["Active members",fmt(sumM(R,"members_active"))],
+    ["Members dropped",fmt(sumM(R,"members_dropped"))],
+    ["Avg retention rate",pct1(meanM(R,"retention_rate"))],
+    ["Avg member age",fmt1(meanM(R,"avg_member_age"))],
+    ["% received financial training",pct1(boolT(R,"received_fin_training").pct)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("mb_growth","Membership: formation vs active vs dropped (by group)",null,true)
+    +chartCard("mb_comp","Active composition — female / youth / PWD share (%)")
+    +chartCard("mb_freq","Meeting-frequency distribution","Free-text field normalised (weekly / biweekly / monthly / other).")
+    +chartCard("mb_train","Participation & training coverage (% of groups)")
+    +'</div>';
+  const gs=R.slice().sort((a,b)=>(mval(b).members_active||0)-(mval(a).members_active||0));
+  groupedBar("mb_growth",gs.map(glab),[
+    {label:"At formation",color:PAL[1],data:gs.map(g=>mval(g).members_formation||0)},
+    {label:"Active now",color:PAL[0],data:gs.map(g=>mval(g).members_active||0)},
+    {label:"Dropped",color:PAL[6],data:gs.map(g=>mval(g).members_dropped||0)}],{horizontal:true});
+  bar("mb_comp",["% female","% youth","% PWD"],
+    [meanM(R,"pct_female_active")||0,meanM(R,"pct_youth_active")||0,meanM(R,"pct_pwd_active")||0].map(v=>+v.toFixed(1)),
+    {pctAxis:true,max:100,colors:[PAL[0],PAL[4],PAL[5]],fmt:v=>v+"%"});
+  const fc=tally(R,g=>normFreq(mval(g).meeting_frequency));
+  const fk=["Weekly","Biweekly","Monthly","Other","Unknown"].filter(k=>fc.has(k));
+  bar("mb_freq",fk,fk.map(k=>fc.get(k)),{colors:PAL[2]});
+  const inds=[["active_participation","Active participation"],["received_fin_training","Received financial training"],["ongoing_training","Ongoing training"]];
+  bar("mb_train",inds.map(x=>x[1]),inds.map(x=>+(boolT(R,x[0]).pct||0).toFixed(1)),{horizontal:true,pctAxis:true,max:100,colors:PAL[0],fmt:v=>v+"%"});
+}
+
+function rGovernance(c){
+  const R=filtered();
+  const cards=[["Avg governance score",pct1(meanM(R,"governance_score"))],
+    ["Avg leadership completeness",pct1(meanM(R,"leadership_completeness"))],
+    ["% with constitution",pct1(boolT(R,"has_constitution").pct)],
+    ["% women in leadership",pct1(boolT(R,"women_in_leadership").pct)],
+    ["% youth in leadership",pct1(boolT(R,"youth_in_leadership").pct)],
+    ["Avg % women of leadership",pct1(meanM(R,"pct_women_leadership"))]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("gv_lead","Leadership completeness by group (%)",null,true)
+    +chartCard("gv_compliance","Governance & record-keeping compliance (% of groups)",null,true)
+    +chartCard("gv_gender","Gender & youth in leadership (% of groups)")
+    +chartCard("gv_scoredist","Governance-score distribution")
+    +'</div>';
+  const gs=R.slice().sort((a,b)=>(mval(b).leadership_completeness||0)-(mval(a).leadership_completeness||0));
+  bar("gv_lead",gs.map(glab),gs.map(g=>+(mval(g).leadership_completeness||0).toFixed(0)),{horizontal:true,pctAxis:true,max:100,colors:PAL[0],fmt:v=>v+"%"});
+  const comp=[["has_constitution","Has constitution"],["clear_roles","Clear roles"],["roles_defined","Roles defined"],
+    ["responsibilities_understood","Responsibilities understood"],["meetings_documented","Meetings documented"],
+    ["minutes_stored","Minutes stored properly"],["secret_ballot","Uses secret ballot"],["leadership_8_complete","Full 8-role leadership"]];
+  const compV=comp.map(x=>[x[1],boolT(R,x[0]).pct||0]).sort((a,b)=>a[1]-b[1]);
+  bar("gv_compliance",compV.map(x=>x[0]),compV.map(x=>+x[1].toFixed(1)),{horizontal:true,pctAxis:true,max:100,colors:PAL[1],fmt:v=>v+"%"});
+  bar("gv_gender",["Women in leadership","Youth in leadership"],
+    [boolT(R,"women_in_leadership").pct||0,boolT(R,"youth_in_leadership").pct||0].map(v=>+v.toFixed(1)),
+    {pctAxis:true,max:100,colors:[PAL[0],PAL[4]],fmt:v=>v+"%"});
+  const gh=histBins(R.map(g=>mval(g).governance_score).filter(v=>v!=null),20);
+  bar("gv_scoredist",gh.labels,gh.values,{colors:PAL[2]});
+}
+
+function rSavings(c){
+  const R=filtered();
+  const cards=[["Total savings",ugx(sumM(R,"total_savings"))],
+    ["Total loans disbursed",ugx(sumM(R,"total_loans_disbursed"))],
+    ["Avg savings / member",ugx(meanM(R,"avg_savings_per_member"))],
+    ["Avg repayment rate",pct1(meanM(R,"repayment_rate"))],
+    ["Avg default rate",pct1(meanM(R,"default_rate"))],
+    ["Avg interest rate",pct1(meanM(R,"interest_rate"))]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("sv_cohort","Savings & loans by formation cohort (year, UGX)","Groups bucketed by year of formation.")
+    +chartCard("sv_scatter","Repayment vs default rate per group (%)","x = repayment rate, y = default rate. Rates outside 0–100 were flagged & dropped by the pipeline.")
+    +chartCard("sv_int","Interest-rate distribution (cleaned, %)")
+    +chartCard("sv_ratio","Loan-to-savings ratio by group",null,true)
+    +'<div class="block full"><h3>Per-group benchmarking</h3><div class="tablebox" id="sv_tbl"></div>'
+      +'<div class=note>Cleaned rates shown; a flagged badge marks groups where the raw rate fell outside 0–100 (data-entry error) and was dropped — raw value noted in the cell.</div></div>'
+    +'</div>';
+  // by formation cohort (year)
+  const yr=g=>g.formation_date?g.formation_date.slice(0,4):"Unknown";
+  const years=[...new Set(R.map(yr))].sort();
+  const rowsY=y=>R.filter(g=>yr(g)===y);
+  groupedBar("sv_cohort",years,[
+    {label:"Total savings",color:PAL[0],data:years.map(y=>sumM(rowsY(y),"total_savings")||0)},
+    {label:"Loans disbursed",color:PAL[3],data:years.map(y=>sumM(rowsY(y),"total_loans_disbursed")||0)}],{moneyAxis:true});
+  // repayment vs default scatter
+  const pts=R.filter(g=>mval(g).repayment_rate!=null&&mval(g).default_rate!=null)
+    .map(g=>({x:mval(g).repayment_rate,y:mval(g).default_rate,g,t:`${g.group_name} · repay ${mval(g).repayment_rate}% / default ${mval(g).default_rate}%`}));
+  scatter("sv_scatter",[{label:"Group",data:pts,backgroundColor:"rgba(46,125,50,.55)",pointRadius:4}],
+    {xt:"Repayment rate (%)",yt:"Default rate (%)",onClick:pt=>openGroups([pt.g],pt.g.group_name)});
+  const ih=histBins(R.map(g=>mval(g).interest_rate).filter(v=>v!=null),5);
+  bar("sv_int",ih.labels,ih.values,{colors:PAL[5]});
+  const gr=R.filter(g=>mval(g).loan_to_savings_ratio!=null).sort((a,b)=>mval(b).loan_to_savings_ratio-mval(a).loan_to_savings_ratio);
+  bar("sv_ratio",gr.map(glab),gr.map(g=>+mval(g).loan_to_savings_ratio.toFixed(2)),{horizontal:true,colors:PAL[6],fmt:v=>v});
+  // benchmarking table
+  const head="<tr><th>Group</th><th class=num>Active</th><th class=num>Total savings</th><th class=num>Savings/member</th><th class=num>Loans disbursed</th><th class=num>Repay%</th><th class=num>Default%</th><th class=num>Interest%</th></tr>";
+  const rateCell=(g,c,rk)=>{const m=mval(g);const raw=m[rk];const clean=m[c];
+    if(clean!=null)return `<td class=num>${clean}</td>`;
+    if(raw!=null)return `<td class=num><span class="badge f">flagged</span> <span title="raw ${raw} out of range">raw ${fmt(raw)}</span></td>`;
+    return `<td class=num>—</td>`;};
+  const body=R.slice().sort((a,b)=>(mval(b).total_savings||0)-(mval(a).total_savings||0)).map(g=>{const m=mval(g);
+    return `<tr><td>${esc(g.group_name||"—")}</td><td class=num>${fmt(m.members_active)}</td><td class=num>${ugx(m.total_savings)}</td><td class=num>${ugx(m.avg_savings_per_member)}</td><td class=num>${ugx(m.total_loans_disbursed)}</td>`
+      +rateCell(g,"repayment_rate","repayment_rate_raw")+rateCell(g,"default_rate","default_rate_raw")+rateCell(g,"interest_rate","interest_rate_raw")+"</tr>";}).join("");
+  $("#sv_tbl").innerHTML=`<table>${head}${body}</table>`;
+}
+
+function rWelfare(c){
+  const R=filtered();
+  const withFund=R.filter(g=>mval(g).has_welfare_fund===true);
+  const cards=[["% groups w/ welfare fund",pct1(boolT(R,"has_welfare_fund").pct)],
+    ["Groups w/ fund",fmt(withFund.length)],
+    ["Total welfare funds",ugx(sumM(R,"welfare_fund_total"))],
+    ["Avg welfare % of savings",pct1(meanM(R,"welfare_pct"))],
+    ["Total beneficiaries",fmt(sumM(R,"welfare_beneficiaries"))],
+    ["Eligible households",fmt(sumM(R,"welfare_hh_eligible"))]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("wf_adopt","Welfare fund adoption (# of groups)")
+    +chartCard("wf_freq","Contribution frequency")
+    +chartCard("wf_size","Welfare fund size by group (UGX)",null,true)
+    +chartCard("wf_benef","Beneficiaries vs eligible households by group",null,true)
+    +chartCard("wf_use","Welfare use-case tag distribution","From qualitative theme 'welfare_use' — what needs the fund typically addresses.",true)
+    +'</div>';
+  const bt=boolT(R,"has_welfare_fund");
+  doughnut("wf_adopt",["Has fund","No fund","Unknown"],[bt.yes,bt.no,bt.unk]);
+  const fc=tally(R,g=>mval(g).welfare_frequency&&mval(g).welfare_frequency!=="None"?mval(g).welfare_frequency:null);
+  bar("wf_freq",[...fc.keys()],[...fc.values()],{colors:PAL[3]});
+  const gs=R.filter(g=>mval(g).welfare_fund_total!=null).sort((a,b)=>mval(b).welfare_fund_total-mval(a).welfare_fund_total);
+  bar("wf_size",gs.map(glab),gs.map(g=>mval(g).welfare_fund_total),{horizontal:true,moneyAxis:true,colors:PAL[0],fmt:v=>ugx(v)});
+  const gb=R.filter(g=>mval(g).welfare_beneficiaries!=null||mval(g).welfare_hh_eligible!=null);
+  groupedBar("wf_benef",gb.map(glab),[
+    {label:"Beneficiaries",color:PAL[0],data:gb.map(g=>mval(g).welfare_beneficiaries||0)},
+    {label:"Eligible HH",color:PAL[4],data:gb.map(g=>mval(g).welfare_hh_eligible||0)}],{horizontal:true});
+  // welfare use-case tags from qualitative
+  const tagCnt=new Map();
+  R.forEach(g=>(g.qualitative||[]).forEach(q=>{if(q.theme==="welfare_use"&&q.tags)q.tags.split(",").forEach(t=>tagCnt.set(t,(tagCnt.get(t)||0)+1));}));
+  const tt=topEntries(tagCnt,14);
+  if(tt.length)bar("wf_use",tt.map(x=>x[0]),tt.map(x=>x[1]),{horizontal:true,colors:PAL[7]});
+  else $("#wf_use").parentElement.innerHTML='<h3>Welfare use-case tag distribution</h3><div class=note>No tagged welfare-use responses under the current filters.</div>';
+}
+
+function rLinkage(c){
+  const R=filtered();
+  const cards=[["% linked to fin. institution",pct1(boolT(R,"linked_fin_institution").pct)],
+    ["% with bank account",pct1(boolT(R,"has_bank_account").pct)],
+    ["% formally registered",pct1(boolT(R,"formally_registered").pct)],
+    ["% govt collaboration",pct1(boolT(R,"govt_collaboration").pct)],
+    ["% benefits from PDM",pct1(boolT(R,"benefits_pdm").pct)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("lk_stack","Institutional linkage indicators (Yes / No / Unknown)",null,true)
+    +chartCard("lk_pct","Linkage indicators — % positive")
+    +'</div>';
+  const inds=[["linked_fin_institution","Linked to fin. institution"],["has_bank_account","Has bank account"],
+    ["formally_registered","Formally registered"],["govt_collaboration","Govt collaboration"],["benefits_pdm","Benefits from PDM"]];
+  stacked("lk_stack",inds.map(x=>x[1]),[
+    {label:"Yes",color:PAL[0],data:inds.map(x=>boolT(R,x[0]).yes)},
+    {label:"No",color:PAL[6],data:inds.map(x=>boolT(R,x[0]).no)},
+    {label:"Unknown",color:"#bdbdbd",data:inds.map(x=>boolT(R,x[0]).unk)}]);
+  const pv=inds.map(x=>[x[1],boolT(R,x[0]).pct||0]).sort((a,b)=>a[1]-b[1]);
+  bar("lk_pct",pv.map(x=>x[0]),pv.map(x=>+x[1].toFixed(1)),{horizontal:true,pctAxis:true,max:100,colors:PAL[2],fmt:v=>v+"%"});
+}
+
+function rOutcomes(c){
+  const R=filtered();
+  const cards=[["Members started business",fmt(sumM(R,"members_started_business"))],
+    ["% self-sufficient",pct1(boolT(R,"self_sufficient").pct)],
+    ["Spin-off VSLAs",fmt(sumM(R,"n_spinoff_vslas"))],
+    ["% with growth plan",pct1(boolT(R,"has_growth_plan").pct)],
+    ["% w/ sustainability strategy",pct1(boolT(R,"has_sustainability_strategy").pct)],
+    ["% w/ champions",pct1(boolT(R,"has_champions").pct)]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("oc_biz","Members starting businesses by group",null,true)
+    +chartCard("oc_sust","Sustainability & self-sufficiency indicators (% of groups)",null,true)
+    +chartCard("oc_outcomes","Reported outcomes (% of groups)")
+    +chartCard("oc_spin","Spin-off VSLAs by group")
+    +'</div>';
+  const gb=R.filter(g=>mval(g).members_started_business!=null).sort((a,b)=>mval(b).members_started_business-mval(a).members_started_business);
+  bar("oc_biz",gb.map(glab),gb.map(g=>mval(g).members_started_business),{horizontal:true,colors:PAL[0]});
+  const sust=[["self_sufficient","Self-sufficient"],["covers_operational_costs","Covers operational costs"],
+    ["can_operate_without_support","Can operate w/o support"],["has_growth_plan","Has growth plan"],
+    ["has_sustainability_strategy","Sustainability strategy"],["ongoing_training","Ongoing training"],["has_champions","Has champions"]];
+  const sv=sust.map(x=>[x[1],boolT(R,x[0]).pct||0]).sort((a,b)=>a[1]-b[1]);
+  bar("oc_sust",sv.map(x=>x[0]),sv.map(x=>+x[1].toFixed(1)),{horizontal:true,pctAxis:true,max:100,colors:PAL[1],fmt:v=>v+"%"});
+  const outc=[["helped_access_financial","Helped access finance"],["increased_member_savings","Increased member savings"],
+    ["increased_group_savings","Increased group savings"],["strengthened_social","Strengthened social cohesion"],["collective_assets","Own collective assets"]];
+  bar("oc_outcomes",outc.map(x=>x[1]),outc.map(x=>+(boolT(R,x[0]).pct||0).toFixed(1)),{horizontal:true,pctAxis:true,max:100,colors:PAL[0],fmt:v=>v+"%"});
+  const sp=R.filter(g=>mval(g).n_spinoff_vslas!=null&&mval(g).n_spinoff_vslas>0).sort((a,b)=>mval(b).n_spinoff_vslas-mval(a).n_spinoff_vslas);
+  if(sp.length)bar("oc_spin",sp.map(glab),sp.map(g=>mval(g).n_spinoff_vslas),{horizontal:true,colors:PAL[4]});
+  else $("#oc_spin").parentElement.innerHTML='<h3>Spin-off VSLAs by group</h3><div class=note>No spin-off VSLAs reported under the current filters.</div>';
+}
+
+function rQual(c){
+  const R=filtered();
+  // flatten qualitative from filtered groups (retain group context for non-sensitive only)
+  const rows=[];
+  R.forEach(g=>(g.qualitative||[]).forEach(q=>rows.push({q,g})));
+  const themes=[...new Set(rows.map(x=>x.q.theme))].sort();
+  const nSens=rows.filter(x=>x.q.sensitive).length;
+  c.innerHTML=kpiRow([["Excerpts (filtered)",fmt(rows.length)],["Themes",fmt(themes.length)],
+      ["Sensitive (non-attributable)",fmt(nSens)],["Groups",fmt(R.length)]])
+    +'<div class="block full"><h3>Excerpts by theme</h3><div class="chartbox"><canvas id="q_themebar"></canvas></div></div>'
+    +'<div class="block full" style="margin-top:14px"><h3>Theme-tagged excerpts</h3>'
+      +'<div class=note>Searchable, filterable insights — not raw dumps. Sensitive excerpts (GBV / welfare-attributable) are shown non-attributably: no group name or village is displayed.</div>'
+      +'<div class="qbar">'
+        +'<div><label>Theme</label><br><select id="q_theme"><option value="">All themes</option>'+themes.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")+'</select></div>'
+        +'<div><label>Keyword search</label><br><input type="text" id="q_search" placeholder="search response text…"></div>'
+        +'<div><label>&nbsp;</label><br><span class="fnote" id="q_count"></span></div>'
+      +'</div><div class="exlist" id="q_list"></div></div>';
+  // theme count bar
+  const tc=new Map();rows.forEach(x=>tc.set(x.q.theme,(tc.get(x.q.theme)||0)+1));
+  const te=[...tc.entries()].sort((a,b)=>b[1]-a[1]);
+  bar("q_themebar",te.map(x=>x[0]),te.map(x=>x[1]),{colors:PAL[0]});
+  function draw(){
+    const th=$("#q_theme").value, kw=$("#q_search").value.trim().toLowerCase();
+    const sel=rows.filter(x=>(!th||x.q.theme===th)&&(!kw||x.q.response_text.toLowerCase().includes(kw)));
+    $("#q_count").textContent=`${sel.length} excerpt(s)`;
+    $("#q_list").innerHTML=sel.slice(0,400).map(x=>{const q=x.q,g=x.g;
+      const chips=(q.tags?q.tags.split(","):[]).map(t=>`<span class="pill">${esc(t)}</span>`).join("")+`<span class="pill" style="background:#e3f0fb;border-color:#bcd">${esc(q.theme)}</span>`;
+      const ctx=q.sensitive?"":`<div class="ctx">${esc(g.group_name||"—")} · ${esc(g.village||g.parish||g.sub_county||"—")}</div>`;
+      const snote=q.sensitive?'<div class="snote">Sensitive — shown non-attributably.</div>':"";
+      return `<div class="excerpt${q.sensitive?" sens":""}"><div class="q">${esc(q.question_label)}</div>${ctx}<div>${chips}</div><div class="txt">${esc(q.response_text)}</div>${snote}</div>`;}).join("")
+      +(sel.length>400?'<div class=note>Showing first 400 excerpts.</div>':(sel.length?"":'<div class=note>No excerpts match.</div>'));
+  }
+  $("#q_theme").onchange=draw;$("#q_search").oninput=draw;draw();
+}
+
+function rGeography(c){
+  const R=filtered();
+  c.innerHTML=kpiRow([["Sub-counties",fmt(new Set(R.map(g=>g.sub_county).filter(Boolean)).size)],
+      ["Parishes",fmt(new Set(R.map(g=>g.parish).filter(Boolean)).size)],
+      ["Villages",fmt(new Set(R.map(g=>g.village).filter(Boolean)).size)],["Groups",fmt(R.length)]])
+    +'<div class="block full"><h3>Sub-county comparison</h3><div class="tablebox" id="geo_sc"></div></div>'
+    +'<div class="block full" style="margin-top:14px"><h3>Parish comparison</h3><div class="tablebox" id="geo_pa"></div></div>'
+    +'<div class="block full" style="margin-top:14px"><h3>Village comparison</h3><div class="tablebox" id="geo_vi"></div></div>';
+  const areaTable=(sel,keyfn)=>{
+    const keys=[...new Set(R.map(keyfn).filter(Boolean))].sort();
+    const head="<tr><th>Area</th><th class=num># groups</th><th class=num>Total members</th><th class=num>Total savings</th><th class=num>Avg savings/member</th><th class=num>Avg repay%</th><th class=num>Avg governance%</th></tr>";
+    const body=keys.map(k=>{const rs=R.filter(g=>keyfn(g)===k);
+      return `<tr><td>${esc(k)}</td><td class=num>${rs.length}</td><td class=num>${fmt(sumM(rs,"members_active"))}</td><td class=num>${ugx(sumM(rs,"total_savings"))}</td><td class=num>${ugx(meanM(rs,"avg_savings_per_member"))}</td><td class=num>${pct1(meanM(rs,"repayment_rate"))}</td><td class=num>${pct1(meanM(rs,"governance_score"))}</td></tr>`;}).join("");
+    $(sel).innerHTML=`<table>${head}${body}</table>`;
+  };
+  areaTable("#geo_sc",g=>g.sub_county);
+  areaTable("#geo_pa",g=>g.parish);
+  areaTable("#geo_vi",g=>g.village);
+}
+
+// ═══════════════ sections + nav ═══════════════
+const SECTIONS=[
+  {id:"overview",title:"Overview",desc:"Programme-wide performance at a glance: membership, savings, loans, repayment, retention, governance, welfare and self-sufficiency across all VSLAs.",render:rOverview},
+  {id:"membership",title:"Membership & Inclusion",desc:"Growth and attrition since formation, gender / youth / PWD composition, meeting attendance and financial-training coverage.",render:rMembership},
+  {id:"governance",title:"Governance",desc:"Leadership completeness, women & youth in leadership, and constitution / record-keeping compliance built from the governance indicators.",render:rGovernance},
+  {id:"savings",title:"Savings & Loans",desc:"Savings and loan volumes, repayment vs default, interest-rate spread and a per-group benchmarking table with data-quality flags on out-of-range rates.",render:rSavings},
+  {id:"welfare",title:"Social Welfare Fund",desc:"Welfare-fund adoption, size and share of savings, beneficiary reach, and the needs the fund typically addresses (from tagged qualitative responses).",render:rWelfare},
+  {id:"linkage",title:"Institutional Linkage",desc:"Links to financial institutions, bank accounts, formal registration, local-government collaboration and the Parish Development Model (PDM).",render:rLinkage},
+  {id:"outcomes",title:"Outcomes & Sustainability",desc:"Business creation, self-sufficiency, spin-off VSLAs, growth-plan adoption and reported member-level outcomes.",render:rOutcomes},
+  {id:"qualitative",title:"Qualitative Insights",desc:"Theme-tagged, searchable excerpts from the free-text responses. Sensitive (GBV / welfare-attributable) content is shown only in non-attributable form.",render:rQual},
+  {id:"geography",title:"Geography",desc:"Sub-county, parish and village comparison of group counts and key aggregate metrics. This form carries no GPS, so no map is shown.",render:rGeography},
+];
+let active=SECTIONS[0].id;
+function renderActive(){
+  const sec=SECTIONS.find(s=>s.id===active);
+  const R=filtered();
+  const wrap=$("#secwrap");
+  wrap.innerHTML=`<div class="sec-title">${sec.title}</div><div class="sec-desc">${sec.desc}</div><div id="secbody"></div>`
+    +`<div class="footer">Source: KoBoToolbox form <code>${META.form_uid}</code> · ${fmt(META.n)} VSLA groups (${fmt(R.length)} in current filter) · ${META.country} · ${META.date_min}→${META.date_max} · currency UGX · generated ${esc(META.generated)}. Global filters apply across every tab.</div>`;
+  $("#hdrsub").textContent=`${fmt(R.length)} / ${fmt(META.n)} groups · ${META.country} · ${META.date_min}→${META.date_max}`;
+  sec.render($("#secbody"));
+}
+function show(id){active=id;document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===id));window.scrollTo(0,0);
+  for(const k in charts){charts[k].destroy();delete charts[k];} renderActive();}
+
+// ── filters UI (sub-county → parish → village cascade + date range) ──
+function buildFilters(){
+  const fb=$("#filters");
+  fb.innerHTML=`
+    <div><label>Sub-county</label><br><select id="flt_sc"></select></div>
+    <div><label>Parish</label><br><select id="flt_pa"></select></div>
+    <div><label>Village</label><br><select id="flt_vi"></select></div>
+    <div><label>Assessment from</label><br><input type="date" id="flt_from"></div>
+    <div><label>Assessment to</label><br><input type="date" id="flt_to"></div>
+    <div><label>&nbsp;</label><br><button id="flt_clear">Clear filters</button></div>
+    <div class="fnote">Global filters — apply across every tab.</div>`;
+  function fillSelect(sel,vals,cur){sel.innerHTML='<option value="">All</option>'+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");if(cur&&vals.includes(cur))sel.value=cur;}
+  function rebuild(){
+    const scs=[...new Set(GROUPS.map(g=>g.sub_county).filter(Boolean))].sort();
+    fillSelect($("#flt_sc"),scs,F.sc);
+    const paPool=GROUPS.filter(g=>!F.sc||g.sub_county===F.sc);
+    const pas=[...new Set(paPool.map(g=>g.parish).filter(Boolean))].sort();
+    if(F.pa&&!pas.includes(F.pa))F.pa=null;
+    fillSelect($("#flt_pa"),pas,F.pa);
+    const viPool=paPool.filter(g=>!F.pa||g.parish===F.pa);
+    const vis=[...new Set(viPool.map(g=>g.village).filter(Boolean))].sort();
+    if(F.vi&&!vis.includes(F.vi))F.vi=null;
+    fillSelect($("#flt_vi"),vis,F.vi);
+  }
+  rebuild();
+  $("#flt_sc").onchange=e=>{F.sc=e.target.value||null;F.pa=null;F.vi=null;rebuild();renderActive();};
+  $("#flt_pa").onchange=e=>{F.pa=e.target.value||null;F.vi=null;rebuild();renderActive();};
+  $("#flt_vi").onchange=e=>{F.vi=e.target.value||null;renderActive();};
+  $("#flt_from").onchange=e=>{F.from=e.target.value||null;renderActive();};
+  $("#flt_to").onchange=e=>{F.to=e.target.value||null;renderActive();};
+  $("#flt_clear").onclick=()=>{Object.keys(F).forEach(k=>F[k]=null);$("#flt_from").value="";$("#flt_to").value="";rebuild();renderActive();};
+}
+
+// ── boot ─────────────────────────────────────────────────────
+function boot(){
+  const nav=$("#nav");
+  SECTIONS.forEach(s=>{const a=el("a",s.id===active?"active":"",s.title);a.dataset.id=s.id;a.onclick=()=>show(s.id);nav.appendChild(a);});
+  buildFilters();
+  renderActive();
+}
+boot();
+</script>
+</body>
+</html>

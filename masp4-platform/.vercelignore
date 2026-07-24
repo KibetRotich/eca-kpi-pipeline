@@ -1,0 +1,11 @@
+# Vercel's CLI does NOT honor .gitignore, so data/secrets must be excluded here
+# explicitly or they get uploaded and (for non-framework/static serving) exposed.
+#
+# The pipeline/ directory is a standalone Python ETL toolchain — it is NOT part of
+# the Next.js app and must never ship to Vercel. It contains raw Kobo submissions
+# (farmer PII + GPS) under pipeline/**/data/.
+pipeline/
+
+# Secrets — never upload local env files (Vercel injects env via the dashboard).
+.env
+.env.*

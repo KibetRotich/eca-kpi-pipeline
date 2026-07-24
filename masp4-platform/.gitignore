@@ -44,5 +44,12 @@ next-env.d.ts
 pipeline/seedlings/seedlings_*.csv
 __pycache__/
 
-# hc_survival pipeline working data (re-fetched/rebuilt from Kobo every run, never committed)
+# hc_survival pipeline working data (re-fetched/rebuilt every run)
 pipeline/hc_survival/data/
+pipeline/hc_survival/analysis/data/
+
+# cva pipeline working data (re-fetched/rebuilt from Kobo every run; geo/ IS committed)
+pipeline/cva/data/
+
+# vsla pipeline working data (re-fetched/rebuilt from Kobo every run; raw submissions never committed)
+pipeline/vsla/data/
