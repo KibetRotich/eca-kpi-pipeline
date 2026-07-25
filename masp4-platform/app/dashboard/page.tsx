@@ -5,6 +5,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import DashboardClient from './DashboardClient'
+import AnalyticsPanel from './components/AnalyticsPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -281,6 +282,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     ]))
 
   return (
+    <>
     <DashboardClient
       kpis={kpis}
       byCountry={byCountry}
@@ -296,5 +298,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       countries={COUNTRIES}
       commodities={COMMODITIES}
     />
+    <AnalyticsPanel />
+    </>
   )
 }
