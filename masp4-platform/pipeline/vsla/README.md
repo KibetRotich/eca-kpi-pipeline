@@ -7,9 +7,58 @@ KoboToolbox form **"VSLA PERFORMANCE ASSESSMENT TOOL"**
 ```
 fetch_vsla_json.py   Kobo JSON API  -> data/vsla_raw.json + data/vsla_formdef.json
 transform.py         defensive clean -> data/clean_{groups,metrics,qualitative}.json
+ratios.py            metrics        -> 10 performance ratios per group
 load_supabase.py     PostgREST upsert -> vsla_* tables (idempotent) + vsla_sync_meta
 build_dashboard.py   transform.run() -> public/VSLA_Performance_Dashboard.html
-                                      + data/vsla_group_metrics.csv (per-group index)
+                     + ratios.build()  + data/vsla_group_metrics.csv (per-group index)
+```
+
+## Performance ratios & parity with the platform
+
+`ratios.py` is a Python port of **`lib/analytics/ratios.ts`**, which feeds
+`/api/analytics` and the Next.js `AnalyticsPanel`. Both produce the same ten
+ratios, so the static **Performance Ratios** tab and the platform dashboard can
+never quote different numbers for the same group.
+
+The port consumes `transform.run()`'s cleaned metrics rather than re-implementing
+Kobo's fuzzy column lookup — that keeps `transform.py` the single source of
+cleaning logic. Only the field-access layer differs; the arithmetic mirrors the TS,
+including JS-style half-up rounding (Python's `round()` is half-to-even, which
+would disagree in the last decimal on the signed `maturityScore`).
+
+**Verify parity after touching either file** — this must print 0 mismatches:
+
+```bash
+node node_modules/typescript/bin/tsc lib/analytics/ratios.ts \
+  --target es2020 --module commonjs --outDir "$TEMP/vsla_parity" --skipLibCheck
+# then run ratios.build() over the same data and diff the two outputs per group
+```
+
+### The `_10b` skip trap (fixed 2026-07-26)
+
+The form asks *"\_10b If not, how many positions are filled"* **only when** a group
+answers NO to having all 8 leadership roles staffed. A fully-staffed group leaves
+it blank or `0`. Reading `_10b` alone therefore scored **25 of 26 groups at 0/8**
+leadership completeness and returned `null` gender-leadership ratios — and since
+`leadershipCompleteness` is one of the four `maturityScore` z-score components, it
+skewed the composite too. `resolve_leadership_filled()` (and
+`resolveLeadershipFilled()` in the TS) reads the completeness gate first and only
+falls back to `_10b`. **Any new skip-dependent follow-up field needs the same
+treatment** — a blank in Kobo means "not asked", not "zero".
+
+Note that with all 26 groups now complete, `leadershipCompleteness` has zero
+variance, so its z-score is 0 for everyone and `maturityScore` is effectively
+driven by the other three components. That is correct behaviour (no variance = no
+signal), not a bug.
+
+### Render check
+
+`_render_check.js` stubs enough DOM + Chart.js to execute the generated
+dashboard's inline script headlessly, render all ten tabs, and assert on the
+ratios tab's chart configs. Run it after editing `dashboard_template.html`:
+
+```bash
+node pipeline/vsla/_render_check.js
 ```
 
 `transform.run()` is the single source of cleaning logic, shared by the Supabase

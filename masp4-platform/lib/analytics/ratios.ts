@@ -109,7 +109,16 @@ const F = {
   // only the numeric "_10b …how many positions are filled" count — deliberately
   // NOT the looser "positions_are_filled", which also matches the "_10c which
   // positions are filled" free-text field and would poison the number.
+  //
+  // NOTE: _10b is a SKIP-DEPENDENT follow-up — the form asks it only when
+  // leadership is NOT complete ("_10b If not, how many positions are filled").
+  // For a fully-staffed group it is blank or 0, so this field alone CANNOT be
+  // read as the filled-seat count. Pair it with `leadership_complete` below and
+  // resolve via `resolveLeadershipFilled()`.
   leadership_filled: ['how_man_positions_are_filled', 'how many positions are filled'],
+  // "_Is_the_VSLA_leadership … 3 key holders" — the 8-role completeness gate that
+  // governs the _10b skip. Mirrors transform.py's `leadership_8_complete`.
+  leadership_complete: ['leader_s_and_3_key_holders', 'and 3 key holders'],
   women_leadership: ['If_yes_How_many_', 'women in leadership', '18a'],
   total_savings: ['total_group_savings', 'total group savings'],
   share_value: ['share_of_the_VSLA_group', 'share of the VSLA group'],
@@ -131,6 +140,30 @@ const F = {
 
 const LEADERSHIP_SIZE = 8
 
+/**
+ * Filled leadership seats, resolving the _10b skip pattern.
+ *
+ * The form only asks "_10b If not, how many positions are filled" when the group
+ * answered NO to having all 8 roles staffed, so a complete group leaves it blank
+ * or 0. Reading _10b alone scored 25 of 26 groups at 0/8 and, because
+ * leadershipCompleteness feeds the maturity z-score, dragged the composite too.
+ *
+ * Resolution (identical to transform.py's `leadership_completeness`):
+ *   complete === true  -> all LEADERSHIP_SIZE seats filled
+ *   complete === false -> the _10b count as answered
+ *   complete === null  -> fall back to _10b, but treat a bare 0 as unknown,
+ *                         since "0 of 8 seats filled" is not a real VSLA state
+ *                         and is far more likely to be an unanswered skip.
+ */
+export function resolveLeadershipFilled(
+  complete: boolean | null,
+  filled: number | null,
+): number | null {
+  if (complete === true) return LEADERSHIP_SIZE
+  if (complete === false) return filled
+  return filled === null || filled === 0 ? null : filled
+}
+
 // ── extracted per-group fields (raw + booleans, pre-ratio) ───────────────────
 
 export interface GroupFields {
@@ -143,6 +176,7 @@ export interface GroupFields {
   female_active: number | null
   youth_active: number | null
   leadership_filled: number | null
+  leadership_complete: boolean | null
   women_leadership: number | null
   total_savings: number | null
   share_value: number | null
@@ -162,6 +196,7 @@ export interface GroupFields {
 
 export function extractFields(row: Record<string, any>): GroupFields {
   const groupId = String(row['_id'] ?? row['_uuid'] ?? row['meta__rootUuid'] ?? '')
+  const leadershipComplete = getBool(row, [...F.leadership_complete])
   return {
     groupId,
     groupName: getText(row, [...F.group_name]) ?? `Group ${groupId || '?'}`,
@@ -171,7 +206,11 @@ export function extractFields(row: Record<string, any>): GroupFields {
     male_active: getField(row, [...F.male_active]),
     female_active: getField(row, [...F.female_active]),
     youth_active: getField(row, [...F.youth_active]),
-    leadership_filled: getField(row, [...F.leadership_filled]),
+    leadership_filled: resolveLeadershipFilled(
+      leadershipComplete,
+      getField(row, [...F.leadership_filled]),
+    ),
+    leadership_complete: leadershipComplete,
     women_leadership: getField(row, [...F.women_leadership]),
     total_savings: getField(row, [...F.total_savings]),
     share_value: getField(row, [...F.share_value]),

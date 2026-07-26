@@ -108,6 +108,11 @@ function sumM(rows,k){let s=0,any=false;rows.forEach(g=>{const v=mval(g)[k];if(v
 function meanM(rows,k){return mean(rows.map(g=>{const v=mval(g)[k];return v==null||isNaN(v)?null:v;}));}
 // boolean tri-state: {yes,no,unk,pct}
 function boolT(rows,k){let y=0,n=0,u=0;rows.forEach(g=>{const v=mval(g)[k];v===true?y++:v===false?n++:u++;});return {yes:y,no:n,unk:u,pct:(y+n)?100*y/(y+n):null};}
+// performance ratios (ratios.py / lib/analytics/ratios.ts) live alongside .metrics
+const rval=g=>g.ratios||{};
+function ratioVals(rows,k){return rows.map(g=>{const v=rval(g)[k];return v==null||isNaN(v)?null:v;});}
+function medR(rows,k){return median(ratioVals(rows,k));}
+function ratioRanked(rows,k){return rows.filter(g=>rval(g)[k]!=null).sort((a,b)=>rval(b)[k]-rval(a)[k]);}
 function tally(rows,keyfn){const m=new Map();rows.forEach(r=>{const k=keyfn(r);if(k==null||k==="")return;m.set(k,(m.get(k)||0)+1);});return m;}
 function topEntries(map,n){return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n);}
 
@@ -459,9 +464,83 @@ function rGeography(c){
   areaTable("#geo_vi",g=>g.village);
 }
 
+// ── Performance Ratios ───────────────────────────────────────
+// Diverging sign colours: blue = above zero, orange = below, grey = ~zero.
+// Blue/orange (not green/red) because green↔red separate by only ΔE 4.2 under
+// deuteranopia; this pair clears 25.4. Sign is also carried by position about the
+// zero baseline and by the tooltip, so colour is never the only cue.
+const DIV_POS=PAL[2], DIV_NEG=PAL[3], DIV_ZERO="#bdbdbd";
+const signCols=vals=>vals.map(v=>v==null?DIV_ZERO:v>0.0005?DIV_POS:v<-0.0005?DIV_NEG:DIV_ZERO);
+const r2=v=>v==null||isNaN(v)?"—":(Math.round(v*100)/100).toLocaleString();
+const rpc=v=>v==null||isNaN(v)?"—":(v*100).toFixed(1)+"%";
+const rsign=v=>v==null||isNaN(v)?"—":(v>0?"+":"")+(v*100).toFixed(1)+"%";
+
+function rRatios(c){
+  const R=filtered();
+  const nComplete=R.filter(g=>rval(g).leadershipCompleteness===1).length;
+  const cards=[
+    ["Median maturity score",(medR(R,"maturityScore")==null?"—":(medR(R,"maturityScore")>0?"+":"")+medR(R,"maturityScore").toFixed(2)),"z-score composite"],
+    ["Median savings mobilisation",r2(medR(R,"savingsMobilizationRatio")),"× one share per member"],
+    ["Median loan-to-savings",r2(medR(R,"loanToSavingsRatio")),"1.0 = loans equal savings"],
+    ["Median retention",rpc(medR(R,"retentionRate")),"1 − dropped ÷ at formation"],
+    ["Median membership growth",rsign(medR(R,"growthRate")),"vs size at formation"],
+    ["Leadership complete",`${fmt(nComplete)} / ${fmt(R.length)}`,"all 8 roles staffed"]];
+  c.innerHTML=kpiRow(cards)+'<div class="grid">'
+    +chartCard("rt_mat","Group maturity score (z-score composite)","Mean of each group's available z-scores across savings mobilisation, leadership completeness, retention and welfare-fund ratio. Blue = above the cohort average, orange = below. Click a bar for the group.",true)
+    +chartCard("rt_growth","Membership growth since formation (%)","(active − at formation) ÷ at formation. Blue = grew, orange = shrank. Retention is reported separately, so shrinkage here is net of both dropout and recruitment.",true)
+    +chartCard("rt_savmob","Savings mobilisation ratio by group","Total savings ÷ (active members × share value) — how many times over the group has saved one share per member. Unbounded above; a low value can mean a high share price rather than weak saving.",true)
+    +chartCard("rt_swf","Welfare fund as a share of total savings","Welfare-fund balance ÷ total savings. Values above 1.0 are flagged below — the fund cannot exceed total savings, so those are data-entry errors.",true)
+    +chartCard("rt_incl","Inclusion ratios by group","Women among filled leadership seats, and youth among active members.",true)
+    +'<div class="block full"><h3>Per-group ratio table</h3><div class="tablebox" id="rt_tbl"></div>'
+      +'<div class=note>All ten ratios as served by <code>/api/analytics</code>. A guarded denominator (zero or missing) yields “—”, never a spurious zero.</div></div>'
+    +'</div>';
+
+  // maturity score — diverging about the cohort mean
+  const gm=ratioRanked(R,"maturityScore");
+  bar("rt_mat",gm.map(glab),gm.map(g=>+rval(g).maturityScore.toFixed(3)),
+    {horizontal:true,colors:signCols(gm.map(g=>rval(g).maturityScore)),
+     fmt:v=>(v>0?"+":"")+v.toFixed(3),onClick:i=>openGroups([gm[i]],gm[i].group_name)});
+  // membership growth — diverging about zero
+  const gg=ratioRanked(R,"growthRate");
+  bar("rt_growth",gg.map(glab),gg.map(g=>+(rval(g).growthRate*100).toFixed(1)),
+    {horizontal:true,pctAxis:true,colors:signCols(gg.map(g=>rval(g).growthRate)),
+     fmt:v=>(v>0?"+":"")+v+"%",onClick:i=>openGroups([gg[i]],gg[i].group_name)});
+  // savings mobilisation — magnitude, single hue
+  const gs=ratioRanked(R,"savingsMobilizationRatio");
+  bar("rt_savmob",gs.map(glab),gs.map(g=>+rval(g).savingsMobilizationRatio.toFixed(2)),
+    {horizontal:true,colors:PAL[0],fmt:v=>v+"×",onClick:i=>openGroups([gs[i]],gs[i].group_name)});
+  // welfare-fund share — magnitude, single hue; >1.0 impossible
+  const gw=ratioRanked(R,"swfRatio");
+  bar("rt_swf",gw.map(glab),gw.map(g=>+(rval(g).swfRatio*100).toFixed(1)),
+    {horizontal:true,pctAxis:true,colors:PAL[0],fmt:v=>v+"%",onClick:i=>openGroups([gw[i]],gw[i].group_name)});
+  const impossible=gw.filter(g=>rval(g).swfRatio>1);
+  if(impossible.length)$("#rt_swf").closest(".block").querySelector(".note").innerHTML+=
+    ` <strong>${fmt(impossible.length)} group(s) above 1.0:</strong> ${impossible.map(g=>esc(g.group_name||"#"+g.kobo_id)).join(", ")}.`;
+  // inclusion — two series, legend shown by groupedBar
+  const gi=R.filter(g=>rval(g).genderLeadershipRatio!=null||rval(g).youthInclusionRatio!=null)
+    .sort((a,b)=>(rval(b).genderLeadershipRatio||0)-(rval(a).genderLeadershipRatio||0));
+  groupedBar("rt_incl",gi.map(glab),[
+    {label:"Women in leadership",color:PAL[0],data:gi.map(g=>rval(g).genderLeadershipRatio==null?null:+(rval(g).genderLeadershipRatio*100).toFixed(1))},
+    {label:"Youth among active",color:PAL[2],data:gi.map(g=>rval(g).youthInclusionRatio==null?null:+(rval(g).youthInclusionRatio*100).toFixed(1))}],
+    {horizontal:true,pctAxis:true,max:100});
+  // table view — every ratio, guarded nulls as em dashes
+  const head="<tr><th>Group</th><th class=num>Maturity</th><th class=num>Sav. mobil.</th><th class=num>Loan/sav.</th><th class=num>PAR proxy</th><th class=num>Welfare/sav.</th><th class=num>Leadership</th><th class=num>Women lead.</th><th class=num>Youth</th><th class=num>Retention</th><th class=num>Growth</th></tr>";
+  const body=ratioRanked(R,"maturityScore").concat(R.filter(g=>rval(g).maturityScore==null))
+    .map(g=>{const r=rval(g);
+      return `<tr><td>${esc(g.group_name||"—")}</td>`
+        +`<td class=num>${r.maturityScore==null?"—":(r.maturityScore>0?"+":"")+r.maturityScore.toFixed(3)}</td>`
+        +`<td class=num>${r2(r.savingsMobilizationRatio)}</td><td class=num>${r2(r.loanToSavingsRatio)}</td>`
+        +`<td class=num>${r.portfolioAtRiskProxy==null?"—":r.portfolioAtRiskProxy.toFixed(4)}</td>`
+        +`<td class=num>${rpc(r.swfRatio)}</td><td class=num>${rpc(r.leadershipCompleteness)}</td>`
+        +`<td class=num>${rpc(r.genderLeadershipRatio)}</td><td class=num>${rpc(r.youthInclusionRatio)}</td>`
+        +`<td class=num>${rpc(r.retentionRate)}</td><td class=num>${rsign(r.growthRate)}</td></tr>`;}).join("");
+  $("#rt_tbl").innerHTML=`<table>${head}${body}</table>`;
+}
+
 // ═══════════════ sections + nav ═══════════════
 const SECTIONS=[
   {id:"overview",title:"Overview",desc:"Programme-wide performance at a glance: membership, savings, loans, repayment, retention, governance, welfare and self-sufficiency across all VSLAs.",render:rOverview},
+  {id:"ratios",title:"Performance Ratios",desc:"The ten derived performance ratios — savings mobilisation, loan-to-savings, portfolio-at-risk proxy, welfare-fund share, leadership completeness, women in leadership, youth inclusion, retention, membership growth and a maturity z-score composite. Identical to the values /api/analytics serves the platform dashboard; every denominator is guarded, so a missing or zero divisor shows as “—” rather than a misleading zero.",render:rRatios},
   {id:"membership",title:"Membership & Inclusion",desc:"Growth and attrition since formation, gender / youth / PWD composition, meeting attendance and financial-training coverage.",render:rMembership},
   {id:"governance",title:"Governance",desc:"Leadership completeness, women & youth in leadership, and constitution / record-keeping compliance built from the governance indicators.",render:rGovernance},
   {id:"savings",title:"Savings & Loans",desc:"Savings and loan volumes, repayment vs default, interest-rate spread and a per-group benchmarking table with data-quality flags on out-of-range rates.",render:rSavings},

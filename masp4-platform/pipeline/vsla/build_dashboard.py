@@ -9,15 +9,20 @@ global filters, entirely client-side (Chart.js, no runtime backend). transform.r
 is the single source of cleaning logic, shared with the Supabase loader, so the
 dashboard and the database never diverge. Currency is UGX (Ugandan Shillings).
 
-Tabs: Overview · Membership & Inclusion · Governance · Savings & Loans ·
-      Social Welfare Fund · Institutional Linkage · Outcomes & Sustainability ·
-      Qualitative Insights · Geography.
+Tabs: Overview · Performance Ratios · Membership & Inclusion · Governance ·
+      Savings & Loans · Social Welfare Fund · Institutional Linkage ·
+      Outcomes & Sustainability · Qualitative Insights · Geography.
+
+The Performance Ratios tab is fed by ratios.py — the Python port of
+lib/analytics/ratios.ts — so those ten ratios read identically here and in the
+platform's AnalyticsPanel (/api/analytics).
 
 Also writes pipeline/vsla/data/vsla_group_metrics.csv (one row per group, key
 metrics + dq_flags) — written to a file, never echoed row-by-row.
 """
 import os, csv, json
 import transform
+import ratios as vsla_ratios
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -42,22 +47,28 @@ CSV_METRICS = ["members_formation", "members_active", "members_dropped",
                "n_spinoff_vslas", "formally_registered", "has_bank_account"]
 
 
-def write_group_csv(groups, metrics_by):
-    """One row per group: identity + key metrics + dq_flags. Written to file, never
-    echoed — mirrors how the CVA builder persists its per-farmer index table."""
-    cols = ["kobo_id", "group_name", "sub_county", "parish", "village",
-            "assessment_date", "group_age_months"] + CSV_METRICS + ["dq_flags"]
+def write_group_csv(groups, metrics_by, ratios_by):
+    """One row per group: identity + key metrics + performance ratios + dq_flags.
+    Written to file, never echoed — mirrors how the CVA builder persists its
+    per-farmer index table."""
+    cols = (["kobo_id", "group_name", "sub_county", "parish", "village",
+             "assessment_date", "group_age_months"] + CSV_METRICS
+            + list(vsla_ratios.RATIO_KEYS) + ["dq_flags"])
     os.makedirs(os.path.dirname(CSVFILE), exist_ok=True)
     with open(CSVFILE, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(cols)
         for g in groups:
             m = metrics_by.get(g["kobo_id"], {})
+            r = ratios_by.get(g["kobo_id"], {})
             row = [g["kobo_id"], g["group_name"] or "", g["sub_county"] or "",
                    g["parish"] or "", g["village"] or "", g["assessment_date"] or "",
                    g["group_age_months"] if g["group_age_months"] is not None else ""]
             for k in CSV_METRICS:
                 v = m.get(k)
+                row.append("" if v is None else v)
+            for k in vsla_ratios.RATIO_KEYS:
+                v = r.get(k)
                 row.append("" if v is None else v)
             row.append(g["dq_flags"] or "")
             w.writerow(row)
@@ -68,11 +79,14 @@ def build():
     data = transform.run()
     groups, metrics, qualitative = data["groups"], data["metrics"], data["qualitative"]
     metrics_by = {m["group_kobo_id"]: m for m in metrics}
+    # performance ratios — same ten values /api/analytics serves, computed from the
+    # same cleaned metrics so the static HTML and the platform can't disagree
+    ratios_by = vsla_ratios.build(metrics)
     qual_by = {}
     for q in qualitative:
         qual_by.setdefault(q["group_kobo_id"], []).append(q)
 
-    n_csv = write_group_csv(groups, metrics_by)
+    n_csv = write_group_csv(groups, metrics_by, ratios_by)
 
     # assemble one self-contained object per group: identity + metrics + qualitative
     out_groups = []
@@ -83,7 +97,8 @@ def build():
         qs = [dict(field_name=q["field_name"], question_label=q["question_label"],
                    theme=q["theme"], tags=q["tags"], sensitive=q["sensitive"],
                    response_text=q["response_text"]) for q in qual_by.get(kid, [])]
-        out_groups.append({**{k: g[k] for k in GROUP_FIELDS}, "metrics": m, "qualitative": qs})
+        out_groups.append({**{k: g[k] for k in GROUP_FIELDS}, "metrics": m,
+                           "ratios": ratios_by.get(kid, {}), "qualitative": qs})
 
     # lookups (arrays; the template derives the cascade from the group rows themselves)
     sub_counties = sorted({g["sub_county"] for g in groups if g["sub_county"]})
