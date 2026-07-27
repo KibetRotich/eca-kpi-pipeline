@@ -63,6 +63,13 @@
   .excerpt .ctx{font-size:10.5px;color:var(--mut);margin-top:2px}
   .excerpt .txt{font-size:12.5px;margin-top:6px;line-height:1.5;color:var(--ink)}
   .excerpt .snote{font-size:10.5px;color:var(--accent);margin-top:4px;font-style:italic}
+  /* exploratory-insight cards (Performance Ratios tab) */
+  .insights{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:10px}
+  .insight{border:1px solid #ececec;border-radius:8px;padding:9px 11px;background:#f7fbff}
+  .insight.skip{background:#fafafa}
+  .insight .il{font-size:12px;font-weight:700;color:var(--g2);margin-bottom:4px}
+  .insight .is{font-size:12px;color:var(--ink);margin-bottom:6px;line-height:1.45}
+  .insight .ic{font-size:11px;color:#8a5a00;background:#fff7e6;border:1px solid #ffe2a8;border-radius:5px;padding:4px 6px}
   /* drill-down overlay */
   #ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none}
   #ov .panel{position:absolute;top:5%;left:50%;transform:translateX(-50%);width:min(1000px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
@@ -464,6 +471,101 @@ function rGeography(c){
   areaTable("#geo_vi",g=>g.village);
 }
 
+// ── inferential statistics (port of lib/analytics/stats.ts) ──
+// Verbatim ports so the numbers match /api/analytics. Unlike the React panel
+// this recomputes under the ACTIVE FILTER, so a sub-county view reports its own
+// statistics rather than cohort-wide ones — hence the n on every card.
+function erf(x){const s=x<0?-1:1,ax=Math.abs(x),t=1/(1+0.3275911*ax);
+  const y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax);
+  return s*y;}
+const normalCdf=z=>0.5*(1+erf(z/Math.SQRT2));
+const twoSidedP=z=>2*(1-normalCdf(Math.abs(z)));
+function rankAverage(values){
+  const idx=values.map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
+  const ranks=new Array(values.length);
+  let i=0;
+  while(i<idx.length){let j=i;
+    while(j+1<idx.length&&idx[j+1].v===idx[i].v)j++;
+    const avg=(i+j)/2+1;
+    for(let k=i;k<=j;k++)ranks[idx[k].i]=avg;
+    i=j+1;}
+  return ranks;}
+function spearman(x,y){
+  const n=Math.min(x.length,y.length); if(n<2)return NaN;
+  const rx=rankAverage(x.slice(0,n)),ry=rankAverage(y.slice(0,n));
+  const mx=rx.reduce((a,b)=>a+b,0)/n,my=ry.reduce((a,b)=>a+b,0)/n;
+  let sxy=0,sxx=0,syy=0;
+  for(let i=0;i<n;i++){const dx=rx[i]-mx,dy=ry[i]-my;sxy+=dx*dy;sxx+=dx*dx;syy+=dy*dy;}
+  const d=Math.sqrt(sxx*syy); return d===0?NaN:sxy/d;}
+function mannWhitney(A,B){
+  const nA=A.length,nB=B.length; if(!nA||!nB)return{u:NaN,p:NaN};
+  const ranks=rankAverage([...A,...B]);
+  let rs=0; for(let i=0;i<nA;i++)rs+=ranks[i];
+  const uA=rs-(nA*(nA+1))/2, u=Math.min(uA,nA*nB-uA);
+  const mu=(nA*nB)/2, sigma=Math.sqrt((nA*nB*(nA+nB+1))/12);
+  if(sigma===0)return{u,p:NaN};
+  return {u,p:twoSidedP((u-mu+0.5)/sigma)};}
+const LANCZOS=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,
+  -176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+function logGamma(z){
+  if(z<0.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-logGamma(1-z);
+  z-=1; let x=LANCZOS[0];
+  for(let i=1;i<LANCZOS.length;i++)x+=LANCZOS[i]/(z+i);
+  const t=z+LANCZOS.length-1.5;
+  return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);}
+const logFact=n=>logGamma(n+1);
+function fisherExact(a,b,c,d){
+  a=Math.max(0,Math.round(a));b=Math.max(0,Math.round(b));c=Math.max(0,Math.round(c));d=Math.max(0,Math.round(d));
+  const n=a+b+c+d; if(n===0)return NaN;
+  const rowA=a+b,colA=a+c,rowB=c+d,colB=b+d;
+  const K=logFact(rowA)+logFact(rowB)+logFact(colA)+logFact(colB)-logFact(n);
+  const pl=x=>{const xb=rowA-x,xc=colA-x,xd=rowB-xc;
+    return (x<0||xb<0||xc<0||xd<0)?-Infinity:K-(logFact(x)+logFact(xb)+logFact(xc)+logFact(xd));};
+  const obs=pl(a),lo=Math.max(0,colA-rowB),hi=Math.min(rowA,colA);
+  let p=0; for(let x=lo;x<=hi;x++){const lp=pl(x); if(lp<=obs+1e-9)p+=Math.exp(lp);}
+  return Math.min(1,p);}
+
+// the 5 tests from app/api/analytics/route.ts, same MIN_N and skip rules
+const MIN_N=5;
+const smallNote=n=>`n=${n} — treat as directional, not confirmatory`;
+function paired(xs,ys){const x=[],y=[];
+  for(let i=0;i<xs.length;i++)if(xs[i]!=null&&ys[i]!=null){x.push(xs[i]);y.push(ys[i]);}
+  return {x,y};}
+function spearmanCard(label,xs,ys){
+  const {x,y}=paired(xs,ys), n=x.length;
+  if(n<MIN_N)return{label,skipped:true,note:`Skipped — only ${n} paired non-null observations (need ≥${MIN_N}).`};
+  const rho=spearman(x,y);
+  return {label,stat:`Spearman ρ = <strong>${isNaN(rho)?"—":(Math.round(rho*1000)/1000)}</strong> (n=${n})`,note:smallNote(n)};}
+function buildInferences(R){
+  const gAge=R.map(g=>g.group_age_months==null?null:+g.group_age_months);
+  const savPM=R.map(g=>mval(g).avg_savings_per_member??null);
+  const out=[
+    spearmanCard("Group age vs average savings per member",gAge,savPM),
+    spearmanCard("Leadership completeness vs repayment rate",
+      R.map(g=>rval(g).leadershipCompleteness??null),R.map(g=>mval(g).repayment_rate??null)),
+    spearmanCard("Gender leadership ratio vs social-welfare-fund ratio",
+      R.map(g=>rval(g).genderLeadershipRatio??null),R.map(g=>rval(g).swfRatio??null))];
+  // Mann–Whitney: savings per member split by institutional linkage
+  const lk=[],nlk=[];
+  R.forEach(g=>{const v=mval(g).avg_savings_per_member,l=mval(g).linked_fin_institution;
+    if(v==null)return; if(l===true)lk.push(v); else if(l===false)nlk.push(v);});
+  const mwN=lk.length+nlk.length;
+  const mwLabel="Average savings per member — linked vs not linked to a financial institution";
+  if(lk.length<3||nlk.length<3||mwN<MIN_N)
+    out.push({label:mwLabel,skipped:true,note:`Skipped — group sizes (linked=${lk.length}, not-linked=${nlk.length}) too small.`});
+  else{const {u,p}=mannWhitney(lk,nlk);
+    out.push({label:mwLabel,stat:`Mann–Whitney U = <strong>${u}</strong>, p ≈ <strong>${isNaN(p)?"—":(Math.round(p*1000)/1000)}</strong><br>(linked=${lk.length}, not-linked=${nlk.length})`,note:smallNote(mwN)});}
+  // Fisher's exact: fair interest rates × formally registered
+  let a=0,b=0,c=0,d=0,fn=0;
+  R.forEach(g=>{const f=mval(g).interest_fair,r=mval(g).formally_registered;
+    if(f==null||r==null)return; fn++;
+    if(f&&r)a++; else if(f&&!r)b++; else if(!f&&r)c++; else d++;});
+  const fLabel="Fair interest rates × formally registered";
+  if(fn<MIN_N)out.push({label:fLabel,skipped:true,note:`Skipped — only ${fn} groups answered both questions (need ≥${MIN_N}).`});
+  else{const p=fisherExact(a,b,c,d);
+    out.push({label:fLabel,stat:`Fisher's exact p = <strong>${isNaN(p)?"—":(Math.round(p*1000)/1000)}</strong> (n=${fn})`,note:smallNote(fn)});}
+  return out;}
+
 // ── Performance Ratios ───────────────────────────────────────
 // Diverging sign colours: blue = above zero, orange = below, grey = ~zero.
 // Blue/orange (not green/red) because green↔red separate by only ΔE 4.2 under
@@ -491,9 +593,16 @@ function rRatios(c){
     +chartCard("rt_savmob","Savings mobilisation ratio by group","Total savings ÷ (active members × share value) — how many times over the group has saved one share per member. Unbounded above; a low value can mean a high share price rather than weak saving.",true)
     +chartCard("rt_swf","Welfare fund as a share of total savings","Welfare-fund balance ÷ total savings. Values above 1.0 are flagged below — the fund cannot exceed total savings, so those are data-entry errors.",true)
     +chartCard("rt_incl","Inclusion ratios by group","Women among filled leadership seats, and youth among active members.",true)
+    +'<div class="block full"><h3>Exploratory Insights</h3><div class="insights" id="rt_inf"></div>'
+      +'<div class=note>Small-sample exploratory statistics — <strong>directional only</strong>, never confirmatory. Unlike the old platform panel these recompute under the filters above, so each card states its own n; narrowing the filter can push a test below its minimum and skip it.</div></div>'
     +'<div class="block full"><h3>Per-group ratio table</h3><div class="tablebox" id="rt_tbl"></div>'
       +'<div class=note>All ten ratios as served by <code>/api/analytics</code>. A guarded denominator (zero or missing) yields “—”, never a spurious zero.</div></div>'
     +'</div>';
+  // exploratory insights (recomputed for the current filter)
+  $("#rt_inf").innerHTML=buildInferences(R).map(inf=>
+    `<div class="insight${inf.skipped?" skip":""}"><div class="il">${esc(inf.label)}</div>`
+    +`<div class="is">${inf.skipped?"Not computed.":inf.stat}</div>`
+    +`<div class="ic">⚠ ${esc(inf.note)}</div></div>`).join("");
 
   // maturity score — diverging about the cohort mean
   const gm=ratioRanked(R,"maturityScore");
@@ -540,7 +649,7 @@ function rRatios(c){
 // ═══════════════ sections + nav ═══════════════
 const SECTIONS=[
   {id:"overview",title:"Overview",desc:"Programme-wide performance at a glance: membership, savings, loans, repayment, retention, governance, welfare and self-sufficiency across all VSLAs.",render:rOverview},
-  {id:"ratios",title:"Performance Ratios",desc:"The ten derived performance ratios — savings mobilisation, loan-to-savings, portfolio-at-risk proxy, welfare-fund share, leadership completeness, women in leadership, youth inclusion, retention, membership growth and a maturity z-score composite. Identical to the values /api/analytics serves the platform dashboard; every denominator is guarded, so a missing or zero divisor shows as “—” rather than a misleading zero.",render:rRatios},
+  {id:"ratios",title:"Performance Ratios",desc:"The ten derived performance ratios — savings mobilisation, loan-to-savings, portfolio-at-risk proxy, welfare-fund share, leadership completeness, women in leadership, youth inclusion, retention, membership growth and a maturity z-score composite. Identical to the values /api/analytics serves; every denominator is guarded, so a missing or zero divisor shows as “—” rather than a misleading zero. Also hosts the Exploratory Insights (Spearman / Mann–Whitney / Fisher's exact) that previously sat on the platform /dashboard page — here they recompute under the filters above.",render:rRatios},
   {id:"membership",title:"Membership & Inclusion",desc:"Growth and attrition since formation, gender / youth / PWD composition, meeting attendance and financial-training coverage.",render:rMembership},
   {id:"governance",title:"Governance",desc:"Leadership completeness, women & youth in leadership, and constitution / record-keeping compliance built from the governance indicators.",render:rGovernance},
   {id:"savings",title:"Savings & Loans",desc:"Savings and loan volumes, repayment vs default, interest-rate spread and a per-group benchmarking table with data-quality flags on out-of-range rates.",render:rSavings},
