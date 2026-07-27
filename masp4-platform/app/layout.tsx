@@ -101,7 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
             }}
           >
-            Output Insights <span aria-hidden="true">↗</span>
+            Learning Insights <span aria-hidden="true">↗</span>
           </a>
 
           {/* MASP III Dashboard — opens the standalone legacy dashboard in a new browser page */}
