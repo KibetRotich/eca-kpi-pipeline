@@ -63,6 +63,15 @@ const DASHBOARDS: Dashboard[] = [
       'Adaptation uptake', 'Vulnerability matrix'],
   },
   {
+    href: '/Cool_Farm_Dashboard.html',
+    external: true,
+    title: 'Cool Farm Crop Assessment',
+    blurb: 'Cool Farm Tool–style carbon-assessment analytics for coffee & cocoa smallholdings (Uganda) — residue management and burning (81.8% of farms burn end-of-life residue), farmer & farm profile, production and yield intensity, fertiliser nitrogen parsed from product labels, crop protection, agroforestry & shade cover, land-use transition matrix, transport tonne-km, and a grid-aggregated geography view. Reports practice adoption and derived input intensities — deliberately not CO2e, as the form carries no emission factors. Refreshed nightly from KoboToolbox.',
+    chips: ['Residues & Burning', 'Farmer Profile', 'Crop & Farm', 'Production',
+      'Fertiliser & Nutrients', 'Crop Protection', 'Agroforestry', 'Land Use & Forest',
+      'Transport', 'Geography', 'Data Quality'],
+  },
+  {
     href: '/VSLA_Performance_Dashboard.html',
     external: true,
     title: 'VSLA Performance',

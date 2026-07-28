@@ -1,0 +1,8 @@
+# Raw Kobo exports contain farmer PII (names, phone numbers, GPS) — NEVER commit.
+data/raw/
+data/*.csv
+*.csv
+.env
+.env.local
+node_modules/
+.next/

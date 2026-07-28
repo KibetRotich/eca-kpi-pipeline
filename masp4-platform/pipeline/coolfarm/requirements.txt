@@ -1,0 +1,2 @@
+# Cool Farm pipeline uses only the Python standard library.
+# Listed for parity with the sibling pipelines; nothing to install.
