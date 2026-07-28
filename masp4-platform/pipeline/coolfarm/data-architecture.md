@@ -227,8 +227,31 @@ Both migrations are applied. To adopt the in-platform convention these copy to `
 
 ---
 
-## 10. Open item for Phase 3
+## 10. Phase 3 — how the dashboard consumes this (resolved)
 
-**Where should the dashboard live?** The brief asks for a standalone Next.js app + new repo + Vercel project. But the design reference (`/output-insights`) *is* `masp4-platform`, and all three sibling Kobo dashboards are pages inside it. A standalone app means a second Vercel project, a second set of Supabase env vars, and a second auth setup — for a dashboard whose data already lives in this platform's database behind this platform's role system.
+Decided: **inside `masp4-platform`**, as a **static HTML dashboard** (Pattern A), matching VSLA / CVA / HC rather than the route-based `eca-events`.
 
-Recommendation: **build it as a route inside `masp4-platform`**. Confirm before Phase 3 starts.
+That choice interacts with §5 in a way worth recording. The route-based dashboard reads anon-granted views through the **anon** client — which cannot see `cfp_` at all, since every policy requires `auth.uid() is not null`. Pattern A sidesteps this entirely: `build_dashboard.py` reads the store with the **service-role key at build time** and embeds the result, so nothing queries Supabase at runtime and the strict RLS stands untouched.
+
+The cost is that filters operate on embedded data. Resolved by embedding a **dictionary-encoded farm-level fact table** (one row per farm, coordinates excluded) and doing the aggregation in the browser — the same filter-then-aggregate approach `lib/eca-events/queries.ts` uses server-side. Cards backed by build-time cubes are tagged `unfiltered` in the UI rather than silently ignoring the filter.
+
+### Additional disclosure control at this layer
+`public/*.html` is matched by `proxy.ts`, but that is a **deny-only, signature-unverified** cookie pre-filter — not `requireOrgSession()` — and the deploy repo is currently public. So beyond §5 the built file also:
+- carries **no coordinates on any farm row** (district is the finest per-row geography);
+- **pseudonymises enumerators** to `E01…E56`. The between-enumerator variance in burn share is one of the most important findings here, but it is a measurement-quality signal, not a staff-performance league table;
+- exposes location only as **~2.2 km grid cells** with cells of fewer than 3 farms suppressed (168 farms fell into suppressed cells).
+
+`build_dashboard.py` asserts all of this and aborts the build if an identifying token reaches the payload.
+
+### Interpretation guards built into the UI
+Three things the data cannot support are stated in the dashboard itself rather than left for a reader to discover:
+1. **Enumerator variance** — mean burn share ranges 2.3%→77.5% across the 38 enumerators with 20+ assessments (sd of means 18.6), while `area_ha` shows no comparable spread. The burn headline is captioned as indicative.
+2. **Yield contamination** — 322 rows exceed 5 t/ha and the maximum is 2,965 t/ha against a ~3–5 ceiling. Charts are bounded to plausible rows and report medians only.
+3. **No yield-trend chart ships at all**, because the curves are generic lifecycle templates.
+
+### Palette
+The platform's existing series palette fails as a categorical scale (5 of 8 slots are chroma-0 grey) — adequate for two series, unreadable for the six-fate residue stack. Replaced with a validated set whose **order is fixed by the validation**, not by semantics; the semantically preferable ordering re-introduces a blue↔purple CVD failure (ΔE 2.6).
+
+### Still open
+- **The ETL is not scheduled.** Follow the siblings: GitHub Actions cron, not Vercel cron, so the service-role key stays out of the web runtime. Monthly suffices.
+- A true choropleth needs Uganda admin boundaries, which this dataset lacks.
