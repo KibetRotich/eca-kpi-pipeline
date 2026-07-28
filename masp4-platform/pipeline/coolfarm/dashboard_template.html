@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cool Farm Crop Assessment — Insights Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  /* Categorical palette: validated with the dataviz validator (light mode,
+     surface #fcfcfb) — passes lightness band, chroma floor, CVD separation and
+     the normal-vision floor. The ORDER is fixed by that validation, not by
+     semantics: reordering it re-introduces a blue/purple CVD failure. `burn`
+     deliberately lands on the red slot. The gold slot carries a sub-3:1
+     contrast WARN, relieved by the value labels + table views below. */
+  :root{
+    --c1:#3E9B45; --c2:#3A7CC4; --c3:#C89600; --c4:#8E5BB5; --c5:#C62828; --c6:#E2711D;
+    --brand:#FFC800; --ink:#1d1d1b; --mut:#6b6b6b; --bd:#d8d8d8;
+    --bg:#eef0ee; --card:#fff; --hd:#1a3557; --hd2:#122542;
+    --warn:#e65100; --bad:#c62828; --good:#2e7d32;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Open Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--hd);color:#fff;padding:11px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:30;border-bottom:3px solid var(--brand)}
+  header h1{font-size:17px;margin:0;font-weight:800}
+  header .sub{font-size:12px;opacity:.85}
+  header .stamp{margin-left:auto;font-size:11px;opacity:.8}
+  .wrap{display:flex;min-height:calc(100vh - 47px)}
+  nav{width:224px;background:#fff;border-right:1px solid var(--bd);padding:10px 0;position:sticky;top:47px;height:calc(100vh - 47px);overflow:auto;flex:none}
+  nav a{display:block;padding:9px 18px;color:var(--ink);text-decoration:none;font-size:13px;border-left:3px solid transparent;cursor:pointer}
+  nav a:hover{background:#f3f6fa}
+  nav a.active{border-left-color:var(--brand);background:#f3f6fa;font-weight:700;color:var(--hd)}
+  main{flex:1;padding:16px 22px;max-width:1600px;min-width:0}
+  .sec-title{font-size:19px;font-weight:800;color:var(--hd);margin:2px 0}
+  .sec-desc{color:var(--mut);font-size:13px;margin-bottom:12px;max-width:1000px;line-height:1.55}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .block{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);min-width:0}
+  .block.full{grid-column:1/-1}
+  .block h3{margin:0 0 8px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .note{color:var(--mut);font-size:11.5px;margin-top:8px;line-height:1.55}
+  .chartbox{position:relative;height:300px}
+  .chartbox.tall{height:520px}
+  .chartbox.xtall{height:640px}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .kpi{flex:1;min-width:140px;background:#f6f8fb;border:1px solid var(--bd);border-top:3px solid var(--brand);border-radius:8px;padding:11px 13px}
+  .kpi .v{font-size:21px;font-weight:800;color:var(--hd);font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:11px;color:var(--mut);margin-top:3px}
+  .kpi .sub{font-size:10.5px;color:var(--mut);margin-top:4px;line-height:1.5}
+  .kpi.alert{background:#fdf2f2;border-top-color:var(--bad)}
+  .kpi.alert .v{color:var(--bad)}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left}
+  th{background:#f5f5f5;font-weight:650;position:sticky;top:0;z-index:1}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .tablebox{max-height:440px;overflow:auto}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:14px;position:sticky;top:47px;z-index:20}
+  .filters label{font-size:10.5px;color:var(--mut);display:block;margin-bottom:3px}
+  .filters select{padding:5px 7px;border:1px solid var(--bd);border-radius:6px;font-size:12.5px;min-width:132px;max-width:200px}
+  .filters button{padding:6px 12px;border:0;background:var(--hd);color:#fff;font-weight:600;border-radius:6px;cursor:pointer;font-size:12.5px}
+  .filters button:hover{background:var(--hd2)}
+  .filters .fnote{font-size:10.5px;color:var(--mut);margin-left:auto;align-self:center;max-width:280px;line-height:1.45}
+  .tag{display:inline-block;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:.02em}
+  .tag.unf{background:#eef1f5;color:#5a6b80;border:1px solid #d5dde7}
+  .tag.caveat{background:#fff3e0;color:#a5490a;border:1px solid #f2d3ae}
+  .callout{border-left:3px solid var(--warn);background:#fffaf4;padding:9px 12px;border-radius:6px;font-size:11.5px;color:#6d4413;line-height:1.6;margin-top:8px}
+  .callout.bad{border-left-color:var(--bad);background:#fdf3f3;color:#7d1f1f}
+  .footer{color:var(--mut);font-size:11px;margin-top:26px;padding-top:12px;border-top:1px solid var(--bd);line-height:1.6}
+  .hm td{text-align:center;font-variant-numeric:tabular-nums;border:2px solid #fff}
+  .hm th{font-size:10.5px;font-weight:600}
+  .swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:baseline}
+  .legend{font-size:11px;color:var(--mut);display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  section{display:none}
+  section.active{display:block}
+  @media print{
+    nav,.filters{display:none} section{display:block!important;page-break-after:always}
+    header{position:static} .chartbox{height:280px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cool Farm Crop Assessment</h1>
+  <span class="sub">Coffee &amp; cocoa carbon-footprint assessment — Uganda</span>
+  <span class="stamp">Built __GENERATED_AT__</span>
+</header>
+
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main>
+    <div class="filters" id="filters"></div>
+    <div id="sections"></div>
+    <div class="footer" id="footer"></div>
+  </main>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+
+/* ───────── palette + chart defaults ───────── */
+const CAT = ['#3E9B45','#3A7CC4','#C89600','#8E5BB5','#C62828','#E2711D'];
+const INK='#1d1d1b', MUT='#6b6b6b', GRIDC='#eeeeee';
+// Sequential ramp for magnitude (one hue, light -> dark).
+const RAMP = ['#fbe9e7','#f3bfb5','#e8907f','#d8604f','#c62828'];
+const FONT = {family:"'Open Sans',sans-serif", size:10};
+Chart.defaults.font = FONT;
+Chart.defaults.color = MUT;
+Chart.defaults.maintainAspectRatio = false;
+Chart.defaults.animation = false;
+
+const charts = {};
+function draw(id, cfg){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el, cfg);
+}
+const fmt = (v,d=0)=> v==null||isNaN(v) ? '—' : Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct = (v,d=1)=> v==null||isNaN(v) ? '—' : Number(v).toFixed(d)+'%';
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const titleCase = s => String(s||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+
+/* Recessive axes; 2px surface gaps and 4px rounded data-ends on bars. */
+const axes = (opts={}) => ({
+  x:{grid:{display:false}, ticks:{font:FONT,color:MUT,autoSkip:opts.autoSkip!==false,maxRotation:opts.rot??0}, stacked:!!opts.stacked},
+  y:{beginAtZero:true, stacked:!!opts.stacked, grid:{color:GRIDC,drawBorder:false},
+     ticks:{font:FONT,color:MUT,maxTicksLimit:6,callback:v=>opts.pct?v+'%':(v>=1000?(v/1000).toFixed(v>=10000?0:1)+'k':v)},
+     max:opts.max, title:opts.yTitle?{display:true,text:opts.yTitle,font:FONT,color:MUT}:undefined}
+});
+const legendOn = (show=true)=>({display:show, position:'bottom',
+  labels:{font:FONT,color:MUT,boxWidth:9,boxHeight:9,padding:9,usePointStyle:true,pointStyle:'rectRounded'}});
+const bar = (extra={}) => ({borderRadius:4, borderSkipped:false, borderWidth:2, borderColor:'#fff', ...extra});
+
+/* ───────── fact-table access ───────── */
+const F = D.fact;
+const cat = (col,i) => F.cats[col][F.codes[col][i]] || null;
+const num = (col,i) => F.nums[col][i];
+const bool = (col,i) => F.bools[col][i];
+
+const FILTERS = [
+  {key:'project',  label:'Project'},
+  {key:'region',   label:'Region'},
+  {key:'district', label:'District'},
+  {key:'crop_type',label:'Crop type'},
+  {key:'crop_system',label:'System'},
+  {key:'gender',   label:'Gender'},
+];
+const state = {};
+FILTERS.forEach(f=>state[f.key]='');
+
+let IDX = [];
+function recompute(){
+  IDX = [];
+  outer: for(let i=0;i<F.n;i++){
+    for(const f of FILTERS){ if(state[f.key] && cat(f.key,i)!==state[f.key]) continue outer; }
+    IDX.push(i);
+  }
+}
+
+/* ───────── stats helpers (operate on the active selection) ───────── */
+function vals(col, idx=IDX){ const o=[]; for(const i of idx){ const v=num(col,i); if(v!=null&&!isNaN(v)) o.push(v);} return o; }
+function mean(col, idx=IDX){ const v=vals(col,idx); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; }
+function median(col, idx=IDX){ const v=vals(col,idx).sort((a,b)=>a-b); return v.length? v[Math.floor(v.length/2)] : null; }
+function sum(col, idx=IDX){ const v=vals(col,idx); return v.length? v.reduce((a,b)=>a+b,0) : null; }
+function shareTrue(col, idx=IDX){
+  let n=0,d=0; for(const i of idx){ const v=bool(col,i); if(v!=null){d++; if(v) n++;} }
+  return d? 100*n/d : null;
+}
+function countBy(col, idx=IDX){
+  const m = new Map();
+  for(const i of idx){ const k=cat(col,i); if(k==null||k==='') continue; m.set(k,(m.get(k)||0)+1); }
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+}
+/* Weighted mean of a metric grouped by a categorical, for the active selection. */
+function meanBy(catCol, numCol, idx=IDX, minN=1){
+  const m = new Map();
+  for(const i of idx){
+    const k=cat(catCol,i), v=num(numCol,i);
+    if(k==null||k===''||v==null||isNaN(v)) continue;
+    const e=m.get(k)||{s:0,n:0}; e.s+=v; e.n++; m.set(k,e);
+  }
+  return [...m.entries()].filter(([,e])=>e.n>=minN)
+    .map(([k,e])=>[k, e.s/e.n, e.n]).sort((a,b)=>b[1]-a[1]);
+}
+function medianBy(catCol, numCol, idx=IDX, minN=1){
+  const m = new Map();
+  for(const i of idx){
+    const k=cat(catCol,i), v=num(numCol,i);
+    if(k==null||k===''||v==null||isNaN(v)) continue;
+    if(!m.has(k)) m.set(k,[]);
+    m.get(k).push(v);
+  }
+  return [...m.entries()].filter(([,a])=>a.length>=minN)
+    .map(([k,a])=>{a.sort((x,y)=>x-y);return [k,a[Math.floor(a.length/2)],a.length];})
+    .sort((a,b)=>b[1]-a[1]);
+}
+/* Histogram into fixed edges; returns [labels, counts]. */
+function hist(col, edges, idx=IDX){
+  const c = new Array(edges.length).fill(0);
+  for(const v of vals(col,idx)){
+    let k=edges.length-1;
+    for(let j=0;j<edges.length;j++){ if(v<=edges[j]){k=j;break;} }
+    c[k]++;
+  }
+  const labels = edges.map((e,j)=> j===0?`≤${e}`: (j===edges.length-1?`>${edges[j-1]}`:`${edges[j-1]}–${e}`));
+  return [labels,c];
+}
+
+/* ───────── residue cube (per-farm, so it responds to filters) ───────── */
+function residueMix(idx=IDX){
+  const out = {};
+  for(const s of D.streams){
+    out[s] = D.fates.map(ft=>{
+      const arr = D.residue_cube[s][ft]; let t=0,n=0;
+      for(const i of idx){ const v=arr[i]; if(v!=null){t+=v;n++;} }
+      return n? t/n : null;
+    });
+  }
+  return out;
+}
+function burnStats(idx=IDX){
+  const out = [];
+  for(const s of D.streams){
+    const arr = D.residue_cube[s]['burn']; let t=0,n=0,any=0,all=0;
+    for(const i of idx){ const v=arr[i]; if(v!=null){t+=v;n++; if(v>0)any++; if(v>=100)all++;} }
+    if(n) out.push({stream:s, mean:t/n, n, any, all, pctAny:100*any/n});
+  }
+  return out.sort((a,b)=>b.pctAny-a.pctAny);
+}
+
+/* ───────── sections ───────── */
+const SECTIONS = [
+  ['overview',    'Overview',                    renderOverview],
+  ['residues',    'Residues &amp; Burning',      renderResidues],
+  ['profile',     'Farmer Profile',              renderProfile],
+  ['farm',        'Crop &amp; Farm',             renderFarm],
+  ['production',  'Production',                  renderProduction],
+  ['fertiliser',  'Fertiliser &amp; Nutrients',  renderFertiliser],
+  ['protection',  'Crop Protection',             renderProtection],
+  ['agroforestry','Agroforestry',                renderAgroforestry],
+  ['landuse',     'Land Use &amp; Forest',       renderLandUse],
+  ['transport',   'Transport',                   renderTransport],
+  ['geography',   'Geography',                   renderGeography],
+  ['rare',        'Rare Inputs',                 renderRare],
+  ['quality',     'Data Quality',                renderQuality],
+];
+
+function kpi(v,l,sub,cls){return `<div class="kpi ${cls||''}"><div class="v">${v}</div><div class="l">${l}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;}
+function block(title,body,opts={}){
+  const tags = (opts.tags||[]).map(t=>`<span class="tag ${t.k}">${t.t}</span>`).join('');
+  return `<div class="block ${opts.full?'full':''}"><h3>${title}${tags}</h3>${body}</div>`;
+}
+const UNF = {k:'unf', t:'unfiltered'};
+const box = (id,cls='') => `<div class="chartbox ${cls}"><canvas id="${id}"></canvas></div>`;
+function tbl(head, rows, opts={}){
+  return `<div class="tablebox"><table><thead><tr>${head.map((h,i)=>`<th class="${i>0?'num':''}">${h}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i>0?'num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+/* ── Overview ── */
+function renderOverview(el){
+  const n=IDX.length, ov=D.overview;
+  const burn = mean('residue_burn_share');
+  const eol = burnStats().find(b=>b.stream==='end_of_life_cycle');
+  el.innerHTML = `
+  <div class="sec-title">Overview</div>
+  <div class="sec-desc">Cool Farm Tool–style crop assessments of coffee and cocoa smallholdings in Uganda.
+  This dashboard reports <strong>practice adoption and derived input intensities</strong>. It deliberately does
+  <strong>not</strong> report CO₂e: the source form carries no emission factors, and energy, irrigation and
+  fertiliser-nitrogen inputs are too sparsely recorded to support a defensible footprint.</div>
+  <div class="kpis">
+    ${kpi(fmt(n),'Farms assessed', n!==F.n?`of ${fmt(F.n)} total (filtered)`:'complete cohort')}
+    ${kpi(fmt(sum('area_ha'),1)+' ha','Area assessed','median '+fmt(median('area_ha'),2)+' ha')}
+    ${kpi(fmt(sum('household_size')),'People in households','mean '+fmt(mean('household_size'),1)+' per household')}
+    ${kpi(pct(shareTrue('is_shaded')),'Shaded systems','agroforestry-based coffee/cocoa')}
+    ${kpi(pct(shareTrue('cooperative_member')),'Co-operative members','organised-producer reach')}
+    ${kpi(pct(shareTrue('is_youth')),'Youth (under 35)','')}
+    ${eol?kpi(pct(eol.pctAny),'Burn end-of-life residue',`${fmt(eol.all)} farms burn 100% of it`,'alert'):''}
+    ${kpi(fmt(burn,1)+'%','Mean residue burned','across burn-capable streams','alert')}
+  </div>
+  <div class="grid">
+    ${block('Practice adoption', box('ov_adopt'), {full:true})}
+    ${block('Residue fate — all streams combined', box('ov_res'))}
+    ${block('Derived input intensities (medians)', `
+      ${tbl(['Metric','Median','Farms'],[
+        ['Yield intensity (t/ha)', fmt(median('yield_t_per_ha'),2), fmt(vals('yield_t_per_ha').length)],
+        ['Nitrogen applied (kg N/ha)', fmt(median('n_kg_per_ha'),1), fmt(vals('n_kg_per_ha').length)],
+        ['Active ingredient (kg/ha)', fmt(median('ai_kg_per_ha'),3), fmt(vals('ai_kg_per_ha').length)],
+        ['Transport (tonne-km)', fmt(median('tonne_km'),2), fmt(vals('tonne_km').length)],
+        ['Shade cover (%)', fmt(median('shade_cover_perc'),1), fmt(vals('shade_cover_perc').length)],
+        ['Residue burned (%)', fmt(median('residue_burn_share'),1), fmt(vals('residue_burn_share').length)],
+      ])}
+      <div class="note">Medians, not means: every one of these has a long right tail, and
+      <strong>yield intensity is contaminated</strong> — see Production.</div>`)}
+  </div>`;
+
+  const ad = [
+    ['Shade trees','shade_trees_exist'],['Intercrops','intercrop_exists'],
+    ['Fertiliser','fertilizer_applied'],['Pesticide','pesticide_applied'],
+    ['Land-use change','land_use_change_exists'],['Hedges','hedges_exist'],
+    ['Fuel / energy','fuel_energy_used'],['Irrigation','irrigation_used'],
+  ].map(([l,k])=>[l, shareTrue(k)]).sort((a,b)=>b[1]-a[1]);
+  draw('ov_adopt',{type:'bar',data:{labels:ad.map(a=>a[0]),
+    datasets:[{label:'% of farms',data:ad.map(a=>a[1]),backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false),tooltip:{callbacks:{label:c=>' '+pct(c.raw)}}},
+      scales:axes({pct:true,max:100})}});
+
+  const mix = residueMix();
+  const combined = D.fates.map((ft,j)=>{
+    const xs = D.streams.map(s=>mix[s][j]).filter(v=>v!=null);
+    return xs.length? xs.reduce((a,b)=>a+b,0)/xs.length : 0;
+  });
+  draw('ov_res',{type:'doughnut',data:{labels:D.fates.map(titleCase),
+    datasets:[{data:combined,backgroundColor:CAT,borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'52%',plugins:{legend:legendOn(),tooltip:{callbacks:{label:c=>` ${c.label}: ${pct(c.raw)}`}}}}});
+}
+
+/* ── Residues (flagship) ── */
+function renderResidues(el){
+  const mix = residueMix(), bs = burnStats();
+  const dist = meanBy('district','residue_burn_share',IDX,10).slice(0,25);
+  el.innerHTML = `
+  <div class="sec-title">Residue Management &amp; Burning</div>
+  <div class="sec-desc">How crop residue is disposed of, across nine residue streams. This is the
+  best-populated section in the dataset — every farm answered, and 99.8% of stream splits sum to
+  exactly 100% — and it is the clearest greenhouse-gas-relevant practice signal available.</div>
+  <div class="kpis">
+    ${bs.slice(0,4).map(b=>kpi(pct(b.pctAny),'Burn '+titleCase(b.stream).toLowerCase(),
+      `mean ${fmt(b.mean,1)}% · ${fmt(b.all)} burn all of it`,'alert')).join('')}
+    ${kpi(pct(mean('residue_burn_share')),'Mean burn share','across burn-capable streams','alert')}
+  </div>
+  <div class="grid">
+    ${block('Disposal mix by residue stream', box('rs_stack','tall')+
+      `<div class="note">100% stacked. Streams differ in which fates the form offers — fruit, pulp/husk
+       and seed have no burn option at all, which is why their bars carry none.</div>`, {full:true})}
+    ${block('Burning by stream', box('rs_burn'))}
+    ${block('Disposal mix — table view',
+      tbl(['Stream',...D.fates.map(titleCase)], D.streams.map(s=>
+        [titleCase(s), ...mix[s].map(v=>v==null?'—':fmt(v,1)+'%')])) +
+      `<div class="note">Table view of the stacked chart above — the accessible equivalent, and the
+       relief for the gold series' sub-3:1 contrast against the card surface.</div>`)}
+    ${block('Mean burn share by district', box('rs_dist','tall')+
+      `<div class="note">Districts with at least 10 assessed farms in the current selection.</div>`,{full:true})}
+  </div>
+  <div class="callout bad"><strong>Read this alongside Data Quality.</strong> Mean burn share differs
+  enormously between enumerators — from 2.3% to 77.5% across the 38 who recorded 20+ assessments
+  (standard deviation of enumerator means: 18.6 points). Enumerators worked in distinct regions, so
+  this is confounded with genuine geography, but the spread is far too large to attribute to
+  geography alone. Treat the headline burn rates as indicative of a real and widespread practice,
+  not as precise measurements.</div>`;
+
+  draw('rs_stack',{type:'bar',data:{labels:D.streams.map(titleCase),
+    datasets:D.fates.map((ft,j)=>({label:titleCase(ft),
+      data:D.streams.map(s=>mix[s][j]??0), backgroundColor:CAT[j], ...bar()}))},
+    options:{plugins:{legend:legendOn(),tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${pct(c.raw)}`}}},
+      scales:axes({stacked:true,pct:true,max:100,rot:34,autoSkip:false})}});
+
+  draw('rs_burn',{type:'bar',data:{labels:bs.map(b=>titleCase(b.stream)),
+    datasets:[{label:'% of farms burning any',data:bs.map(b=>b.pctAny),backgroundColor:CAT[4],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),
+      tooltip:{callbacks:{label:c=>` ${pct(c.raw)} of ${fmt(bs[c.dataIndex].n)} farms`}}},
+      scales:{x:{beginAtZero:true,max:100,grid:{color:GRIDC},ticks:{font:FONT,color:MUT,callback:v=>v+'%'}},
+              y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+
+  draw('rs_dist',{type:'bar',data:{labels:dist.map(d=>d[0]),
+    datasets:[{label:'Mean burn share',data:dist.map(d=>d[1]),backgroundColor:CAT[4],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),
+      tooltip:{callbacks:{label:c=>` ${fmt(c.raw,1)}% · n=${fmt(dist[c.dataIndex][2])}`}}},
+      scales:{x:{beginAtZero:true,max:100,grid:{color:GRIDC},ticks:{font:FONT,color:MUT,callback:v=>v+'%'}},
+              y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+}
+
+/* ── Farmer profile ── */
+function renderProfile(el){
+  const g=countBy('gender'), a=countBy('age_band'), l=countBy('literacy_level');
+  const AGE=['<25','25-34','35-44','45-54','55-64','65+'];
+  const ab = AGE.map(k=>[k,(a.find(x=>x[0]===k)||[0,0])[1]]);
+  el.innerHTML = `
+  <div class="sec-title">Farmer &amp; Household Profile</div>
+  <div class="sec-desc">Demographics of the assessed farmers. Names, phone numbers and villages are
+  excluded from this dashboard by design.</div>
+  <div class="kpis">
+    ${kpi(pct(100*(g.find(x=>x[0]==='female')?.[1]||0)/IDX.length),'Female','')}
+    ${kpi(pct(shareTrue('is_youth')),'Under 35','')}
+    ${kpi(fmt(median('household_size'),0),'Median household size','')}
+    ${kpi(pct(shareTrue('cooperative_member')),'Co-op members','')}
+    ${kpi(pct(shareTrue('disability')),'Report a disability','')}
+    ${kpi(pct(shareTrue('access_to_mobile_device')),'Have a mobile device','')}
+    ${kpi(pct(shareTrue('access_to_internet')),'Used internet (3 mo)','of device owners')}
+  </div>
+  <div class="grid">
+    ${block('Age distribution', box('pr_age'))}
+    ${block('Gender', box('pr_gender'))}
+    ${block('Literacy level', box('pr_lit','tall')+
+      `<div class="note">${pct(100*l.filter(x=>['no_formal_education','primary_incomplete','primary_complete']
+        .includes(x[0])).reduce((s,x)=>s+x[1],0)/IDX.length)} have primary education or less — the single
+        most important design constraint on any advisory material built from this dashboard.</div>`,{full:true})}
+    ${block('Household size', box('pr_hh'))}
+    ${block('Digital access', box('pr_dig'))}
+  </div>`;
+  draw('pr_age',{type:'bar',data:{labels:ab.map(x=>x[0]),
+    datasets:[{label:'Farmers',data:ab.map(x=>x[1]),backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+  draw('pr_gender',{type:'doughnut',data:{labels:g.map(x=>titleCase(x[0])),
+    datasets:[{data:g.map(x=>x[1]),backgroundColor:[CAT[1],CAT[3],CAT[2]],borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'55%',plugins:{legend:legendOn(),
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)} (${pct(100*c.raw/IDX.length)})`}}}}});
+  draw('pr_lit',{type:'bar',data:{labels:l.map(x=>titleCase(x[0])),
+    datasets:[{label:'Farmers',data:l.map(x=>x[1]),backgroundColor:CAT[0],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false)},
+      scales:{x:{beginAtZero:true,grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+  const [hl,hc]=hist('household_size',[2,4,6,8,10,12,15]);
+  draw('pr_hh',{type:'bar',data:{labels:hl,datasets:[{label:'Farms',data:hc,backgroundColor:CAT[2],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+  const dig=[['Mobile device','access_to_mobile_device'],['Internet (3 mo)','access_to_internet']].map(([l,k])=>[l,shareTrue(k)]);
+  draw('pr_dig',{type:'bar',data:{labels:dig.map(d=>d[0]),
+    datasets:[{label:'% of farmers',data:dig.map(d=>d[1]),backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false),tooltip:{callbacks:{label:c=>' '+pct(c.raw)}}},scales:axes({pct:true,max:100})}});
+}
+
+/* ── Crop & farm ── */
+function renderFarm(el){
+  const ct=countBy('crop_type'), st=countBy('soil_type'), cab=countBy('crop_age_band');
+  const ORD=['0-3','4-10','11-20','21-30','31+'];
+  const cb=ORD.map(k=>[k,(cab.find(x=>x[0]===k)||[0,0])[1]]);
+  el.innerHTML = `
+  <div class="sec-title">Crop &amp; Farm Characteristics</div>
+  <div class="sec-desc">What is grown, on how much land, at what density and age. Areas are normalised
+  to hectares — 92% of farms reported in acres.</div>
+  <div class="kpis">
+    ${kpi(fmt(median('area_ha'),2)+' ha','Median farm area','mean '+fmt(mean('area_ha'),2)+' ha')}
+    ${kpi(fmt(median('plants_per_ha'),0),'Median plants/ha','')}
+    ${kpi(fmt(median('crop_age'),0)+' yrs','Median crop age','')}
+    ${kpi(pct(shareTrue('is_shaded')),'Shaded','')}
+    ${kpi(fmt(median('dead_plants_perc'),1)+'%','Median dead plants','mean '+fmt(mean('dead_plants_perc'),1)+'%')}
+  </div>
+  <div class="grid">
+    ${block('Crop type', box('fm_crop'))}
+    ${block('Farm area (ha)', box('fm_area')+`<div class="note">Normalised from acres where reported that way.</div>`)}
+    ${block('Crop age', box('fm_age'))}
+    ${block('Soil type', box('fm_soil'))}
+    ${block('Plant density (plants/ha)', box('fm_dens'))}
+    ${block('Dead plants (%)', box('fm_dead')+
+      `<div class="note">Orchard health / replanting need. Farms reporting 100% dead are a data-quality
+       concern, not a real orchard state — see Data Quality.</div>`)}
+  </div>`;
+  draw('fm_crop',{type:'doughnut',data:{labels:ct.map(x=>titleCase(x[0])),
+    datasets:[{data:ct.map(x=>x[1]),backgroundColor:CAT,borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'52%',plugins:{legend:legendOn(),
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)} (${pct(100*c.raw/IDX.length)})`}}}}});
+  const [al,ac]=hist('area_ha',[0.2,0.4,0.8,1.2,2,4,8]);
+  draw('fm_area',{type:'bar',data:{labels:al,datasets:[{label:'Farms',data:ac,backgroundColor:CAT[0],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+  draw('fm_age',{type:'bar',data:{labels:cb.map(x=>x[0]),
+    datasets:[{label:'Farms',data:cb.map(x=>x[1]),backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+  draw('fm_soil',{type:'bar',data:{labels:st.map(x=>titleCase(x[0])),
+    datasets:[{label:'Farms',data:st.map(x=>x[1]),backgroundColor:CAT[2],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+  const [dl,dc]=hist('plants_per_ha',[500,1000,1500,2000,3000,5000]);
+  draw('fm_dens',{type:'bar',data:{labels:dl,datasets:[{label:'Farms',data:dc,backgroundColor:CAT[3],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+  const [pl,pc]=hist('dead_plants_perc',[1,2,5,10,25,50]);
+  draw('fm_dead',{type:'bar',data:{labels:pl,datasets:[{label:'Farms',data:pc,backgroundColor:CAT[5],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+}
+
+/* ── Production ── */
+function renderProduction(el){
+  const PLAUS = 5; // t/ha agronomic ceiling for coffee/cocoa
+  const yv = vals('yield_t_per_ha');
+  const over = yv.filter(v=>v>PLAUS).length;
+  const plaus = IDX.filter(i=>{const v=num('yield_t_per_ha',i); return v!=null&&v<=PLAUS;});
+  const byCrop = medianBy('crop_type','yield_t_per_ha',plaus,10);
+  const byReg  = medianBy('region','yield_t_per_ha',plaus,10);
+  el.innerHTML = `
+  <div class="sec-title">Production &amp; Yield</div>
+  <div class="sec-desc">Reported production for the assessment year, and yield intensity derived from it.</div>
+  <div class="kpis">
+    ${kpi(fmt(sum('total_yield_t'),0)+' t','Total reported yield','all farms in selection')}
+    ${kpi(fmt(median('total_yield_t'),2)+' t','Median farm yield','')}
+    ${kpi(fmt(median('yield_t_per_ha'),2),'Median t/ha','all rows')}
+    ${kpi(fmt(over),'Implausible t/ha rows',`> ${PLAUS} t/ha — excluded from the charts below`,'alert')}
+  </div>
+  <div class="callout bad"><strong>Yield intensity is contaminated and must not be averaged.</strong>
+  ${fmt(over)} of ${fmt(yv.length)} rows exceed ${PLAUS} t/ha, ${fmt(yv.filter(v=>v>50).length)} exceed
+  50 t/ha, and the maximum is ${fmt(Math.max(...yv),0)} t/ha — against an agronomic ceiling of roughly
+  3–5 t/ha for coffee and cocoa. The most likely cause is kilograms entered where tonnes were asked
+  for. The median (${fmt(median('yield_t_per_ha'),2)} t/ha) is sound; every chart below is restricted
+  to rows at or under ${PLAUS} t/ha and reports medians.</div>
+  <div class="grid">
+    ${block('Median yield intensity by crop type', box('pd_crop')+
+      `<div class="note">Plausible rows only (≤${PLAUS} t/ha), minimum 10 farms per group.</div>`)}
+    ${block('Median yield intensity by region', box('pd_reg')+
+      `<div class="note">Plausible rows only, minimum 10 farms per group.</div>`)}
+    ${block('Yield intensity distribution', box('pd_hist')+
+      `<div class="note">Plausible rows only. n=${fmt(plaus.length)}.</div>`)}
+    ${block('Median yield by fertiliser use', box('pd_fert')+
+      `<div class="note">A descriptive split, <strong>not</strong> a causal claim: fertiliser users
+       differ systematically from non-users in farm size, region and crop.</div>`)}
+  </div>`;
+  const hbar=(id,rows,color,d=2)=>draw(id,{type:'bar',data:{labels:rows.map(r=>titleCase(r[0])),
+    datasets:[{label:'Median t/ha',data:rows.map(r=>r[1]),backgroundColor:color,...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),
+      tooltip:{callbacks:{label:c=>` ${fmt(c.raw,d)} t/ha · n=${fmt(rows[c.dataIndex][2])}`}}},
+      scales:{x:{beginAtZero:true,grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+  hbar('pd_crop',byCrop,CAT[0]); hbar('pd_reg',byReg,CAT[1]);
+  const [yl,yc]=hist('yield_t_per_ha',[0.25,0.5,1,1.5,2,3,5],plaus);
+  draw('pd_hist',{type:'bar',data:{labels:yl,datasets:[{label:'Farms',data:yc,backgroundColor:CAT[2],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+  const grp=k=>{const s=plaus.filter(i=>bool('fertilizer_applied',i)===k).map(i=>num('yield_t_per_ha',i))
+    .filter(v=>v!=null).sort((a,b)=>a-b); return s.length?[s[Math.floor(s.length/2)],s.length]:[null,0];};
+  const [my,ny]=grp(1),[mn,nn]=grp(0);
+  draw('pd_fert',{type:'bar',data:{labels:['Applied fertiliser','Did not'],
+    datasets:[{label:'Median t/ha',data:[my,mn],backgroundColor:[CAT[0],CAT[3]],...bar()}]},
+    options:{plugins:{legend:legendOn(false),tooltip:{callbacks:{label:c=>
+      ` ${fmt(c.raw,2)} t/ha · n=${fmt(c.dataIndex===0?ny:nn)}`}}},scales:axes()}});
+}
+
+/* ── Fertiliser ── */
+function renderFertiliser(el){
+  const o=D.fert_organic;
+  const types=Object.entries(D.fert_types).sort((a,b)=>b[1].n-a[1].n).slice(0,14);
+  const uoms=Object.entries(D.fert_uoms).sort((a,b)=>b[1].n-a[1].n);
+  const regs=Object.entries(D.fert_regions).sort((a,b)=>b[1].n-a[1].n);
+  el.innerHTML = `
+  <div class="sec-title">Fertiliser &amp; Nutrient Inputs</div>
+  <div class="sec-desc">Nitrogen is the single largest greenhouse-gas driver in Cool Farm methodology,
+  so nutrient inputs get priority treatment here — but not in the way the source form intended.</div>
+  <div class="kpis">
+    ${kpi(pct(shareTrue('fertilizer_applied')),'Applied fertiliser','')}
+    ${kpi(fmt(median('n_kg_per_ha'),1),'Median kg N/ha','among appliers')}
+    ${kpi(fmt(median('p2o5_kg_per_ha'),1),'Median kg P₂O₅/ha','')}
+    ${kpi(fmt(median('k2o_kg_per_ha'),1),'Median kg K₂O/ha','')}
+    ${kpi(pct(100*o.organic/(o.organic+o.synthetic||1)),'Organic applications',`${fmt(o.organic)} of ${fmt(o.organic+o.synthetic)} classified`)}
+  </div>
+  <div class="callout"><strong>How nitrogen was obtained.</strong> The form's dedicated
+  nitrogen-composition fields are filled in only <strong>11 of ${fmt(o.total)}</strong> applications —
+  they unlock exclusively when a farmer composes a custom blend. Nitrogen here is instead parsed from
+  the fertiliser <em>product name</em> (e.g. “Cattle manure – 0.6% N”, “Compound NPK – 15% N / 15% K2O
+  / 15% P2O5”), which yields a usable figure for <strong>${fmt(o.n_with_n_pct)} applications
+  (${pct(100*o.n_with_n_pct/o.total)})</strong>.</div>
+  <div class="grid">
+    ${block('Most-used fertiliser products', box('ft_types','tall'),{tags:[UNF],full:true})}
+    ${block('Organic vs synthetic', box('ft_org'),{tags:[UNF]})}
+    ${block('Nitrogen applied (kg N/ha)', box('ft_n')+
+      `<div class="note">Derived: application rate × parsed N%. Unit-normalised to per-hectare.</div>`)}
+    ${block('Production region', box('ft_reg')+
+      `<div class="note">Relevant to embedded manufacturing emissions if a footprint is added later.</div>`,{tags:[UNF]})}
+    ${block('Reported rate units', tbl(['Unit','Applications'],uoms.map(([k,v])=>[esc(k),fmt(v.n)]))+
+      `<div class="callout">Six different units were used. All are normalised to kg/ha on load, but
+       <strong>${fmt((D.fert_uoms['tonnes per acre']||{n:0}).n)} applications were recorded as
+       “tonnes per acre”</strong>, which is physically implausible at the observed median and is
+       flagged rather than silently trusted. Litres are carried 1:1 as kilograms because product
+       density is unknown.</div>`,{tags:[UNF]})}
+  </div>`;
+  draw('ft_types',{type:'bar',data:{labels:types.map(t=>t[0].length>46?t[0].slice(0,44)+'…':t[0]),
+    datasets:[{label:'Applications',data:types.map(t=>t[1].n),backgroundColor:CAT[0],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),
+      tooltip:{callbacks:{title:c=>types[c[0].dataIndex][0],
+        label:c=>` ${fmt(c.raw)} applications · median ${fmt(types[c.dataIndex][1]?.rate?.med,1)} kg/ha`}}},
+      scales:{x:{beginAtZero:true,grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},y:{grid:{display:false},ticks:{font:FONT,color:MUT,font:{...FONT,size:9}}}}}});
+  draw('ft_org',{type:'doughnut',data:{labels:['Organic','Synthetic','Unclassified'],
+    datasets:[{data:[o.organic,o.synthetic,o.unknown],backgroundColor:[CAT[0],CAT[3],CAT[2]],borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'55%',plugins:{legend:legendOn(),tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}});
+  const [nl,nc]=hist('n_kg_per_ha',[5,10,20,40,80,160]);
+  draw('ft_n',{type:'bar',data:{labels:nl,datasets:[{label:'Farms',data:nc,backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+  draw('ft_reg',{type:'bar',data:{labels:regs.map(r=>r[0]),
+    datasets:[{label:'Applications',data:regs.map(r=>r[1].n),backgroundColor:CAT[3],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+}
+
+/* ── Crop protection ── */
+function renderProtection(el){
+  const t=Object.entries(D.pest_types).sort((a,b)=>b[1].n-a[1].n);
+  const c=Object.entries(D.pest_cats).sort((a,b)=>b[1].n-a[1].n);
+  el.innerHTML = `
+  <div class="sec-title">Crop Protection Inputs</div>
+  <div class="sec-desc">Pesticide adoption and application intensity. Active-ingredient load combines
+  application rate, active-ingredient percentage and the share of the field treated.</div>
+  <div class="kpis">
+    ${kpi(pct(shareTrue('pesticide_applied')),'Applied pesticide','')}
+    ${kpi(fmt(median('ai_kg_per_ha'),3),'Median AI kg/ha','among appliers')}
+    ${kpi(fmt(t.reduce((s,x)=>s+x[1].n,0)),'Applications recorded','',)}
+  </div>
+  <div class="grid">
+    ${block('Product type', box('pt_type'),{tags:[UNF]})}
+    ${block('Application category', box('pt_cat'),{tags:[UNF]})}
+    ${block('Active-ingredient load (kg/ha)', box('pt_ai'))}
+    ${block('Application detail', tbl(['Type','Applications','Median rate /ha','Median AI %','Median field %'],
+      t.map(([k,v])=>[titleCase(k),fmt(v.n),fmt(v.rate?.med,2),fmt(v.ai?.med,3),fmt(v.field?.med,0)]))+
+      `<div class="callout">Five different rate units appear in the source and are normalised on load.
+       Some rows report over 100% active ingredient, which is impossible and is flagged.</div>`,{tags:[UNF]})}
+  </div>`;
+  draw('pt_type',{type:'bar',data:{labels:t.map(x=>titleCase(x[0])),
+    datasets:[{label:'Applications',data:t.map(x=>x[1].n),backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+  draw('pt_cat',{type:'doughnut',data:{labels:c.map(x=>titleCase(x[0])),
+    datasets:[{data:c.map(x=>x[1].n),backgroundColor:CAT,borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'55%',plugins:{legend:legendOn()}}});
+  const [ail,aic]=hist('ai_kg_per_ha',[0.05,0.1,0.5,1,2,5]);
+  draw('pt_ai',{type:'bar',data:{labels:ail,datasets:[{label:'Farms',data:aic,backgroundColor:CAT[2],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+}
+
+/* ── Agroforestry ── */
+function renderAgroforestry(el){
+  const kinds=D.agro_kinds, sp=Object.entries(D.agro).sort((a,b)=>b[1].n-a[1].n).slice(0,14);
+  el.innerHTML = `
+  <div class="sec-title">Agroforestry &amp; Non-Crop Vegetation</div>
+  <div class="sec-desc">Shade trees, intercrops and hedges — the carbon-sequestration-relevant
+  practices, and the counterweight to the burning story. Nearly nine in ten of these farms are
+  shaded systems.</div>
+  <div class="kpis">
+    ${kpi(pct(shareTrue('shade_trees_exist')),'Have shade trees','')}
+    ${kpi(fmt(median('shade_cover_perc'),1)+'%','Median shade cover','among farms with shade')}
+    ${kpi(pct(shareTrue('intercrop_exists')),'Have intercrops','')}
+    ${kpi(fmt(median('intercrop_cover_perc'),1)+'%','Median intercrop cover','')}
+    ${kpi(pct(shareTrue('hedges_exist')),'Have hedges','')}
+    ${kpi(fmt(median('hedge_area_m2'),0)+' m²','Median hedge area','width × length')}
+  </div>
+  <div class="grid">
+    ${block('Adoption by vegetation type', box('ag_kind'))}
+    ${block('Shade cover (%)', box('ag_shade')+
+      `<div class="note">Cover is self-reported as a share of the farm.</div>`)}
+    ${block('Species and varieties recorded', box('ag_sp','tall')+
+      `<div class="note">Shade-tree labels are cleaned on load: a form typo (“Torpical”) affected 413
+       entries and would otherwise split the largest category three ways.</div>`,{tags:[UNF],full:true})}
+  </div>`;
+  const ks=Object.entries(kinds).sort((a,b)=>b[1].n-a[1].n);
+  draw('ag_kind',{type:'bar',data:{labels:ks.map(k=>titleCase(k[0])),
+    datasets:[{label:'Records',data:ks.map(k=>k[1].n),backgroundColor:CAT[0],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+  const [sl,sc]=hist('shade_cover_perc',[2,5,10,20,35,60]);
+  draw('ag_shade',{type:'bar',data:{labels:sl,datasets:[{label:'Farms',data:sc,backgroundColor:CAT[0],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+  draw('ag_sp',{type:'bar',data:{labels:sp.map(s=>s[0].length>44?s[0].slice(0,42)+'…':s[0]),
+    datasets:[{label:'Records',data:sp.map(s=>s[1].n),backgroundColor:CAT[1],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),tooltip:{callbacks:{title:c=>sp[c[0].dataIndex][0]}}},
+      scales:{x:{beginAtZero:true,grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},y:{grid:{display:false},ticks:{font:{...FONT,size:9},color:MUT}}}}});
+}
+
+/* ── Land use ── */
+function renderLandUse(el){
+  const tr=D.transitions.slice().sort((a,b)=>b.n_transitions-a.n_transitions);
+  const uses=[...new Set([...tr.map(t=>t.previous_use),...tr.map(t=>t.new_use)])].sort();
+  const maxN=Math.max(...tr.map(t=>t.n_transitions),1);
+  const fc=countBy('forest_change');
+  const cell=(p,n)=>{const t=tr.find(x=>x.previous_use===p&&x.new_use===n);
+    if(!t) return `<td style="background:#fafafa;color:#ccc">·</td>`;
+    const k=Math.min(4,Math.floor(4*t.n_transitions/maxN));
+    return `<td style="background:${RAMP[k]};color:${k>=3?'#fff':INK}" title="${esc(p)} → ${esc(n)}: ${t.n_transitions} transitions, ≈${t.approx_area_ha} ha">${t.n_transitions}</td>`;};
+  el.innerHTML = `
+  <div class="sec-title">Land Use Change &amp; Forest</div>
+  <div class="sec-desc">Reported land-use transitions over the last 20 years, and forest change on the
+  assessed parcels. Both are high-sensitivity indicators for a carbon programme.</div>
+  <div class="kpis">
+    ${kpi(pct(shareTrue('land_use_change_exists')),'Report land-use change','')}
+    ${kpi(fmt(tr.reduce((s,t)=>s+t.n_transitions,0)),'Transitions recorded','',)}
+    ${kpi(fmt((fc.find(x=>x[0]==='Reforestation')||[0,0])[1]),'Reforestation','')}
+    ${kpi(fmt((fc.find(x=>x[0]==='Deforestation')||[0,0])[1]),'Deforestation','','alert')}
+    ${kpi(fmt(sum('net_forest_area_ha'),1)+' ha','Net forest area change','reforested minus deforested')}
+  </div>
+  <div class="grid">
+    ${block('Transition matrix — previous → new land use',
+      `<div class="hm"><table><thead><tr><th>From ↓ / To →</th>${uses.map(u=>`<th class="num">${titleCase(u)}</th>`).join('')}</tr></thead>
+       <tbody>${uses.map(p=>`<tr><th>${titleCase(p)}</th>${uses.map(n=>cell(p,n)).join('')}</tr>`).join('')}</tbody></table></div>
+       <div class="legend">${RAMP.map((c,i)=>`<span><span class="swatch" style="background:${c}"></span>${i===0?'fewer':(i===4?'more':'')}</span>`).join('')}
+       <span>· cell = number of reported transitions</span></div>`,{tags:[UNF],full:true})}
+    ${block('Forest change', box('lu_forest'))}
+    ${block('Largest transitions', tbl(['Transition','Farms','Approx. ha','Latest year'],
+      tr.slice(0,10).map(t=>[`${titleCase(t.previous_use)} → ${titleCase(t.new_use)}`,
+        fmt(t.n_farms),fmt(t.approx_area_ha,1),t.latest_year??'—']))+
+      `<div class="note">Approximate hectares apply each farm's reported field percentage to its total
+       area — indicative only. “Cultivated → perennial” dominates, which is a soil-carbon
+       <em>gain</em>; the ${fmt((tr.find(t=>t.previous_use==='native')||{n_transitions:0}).n_transitions)}
+       conversions out of native land are the ones that warrant scrutiny.</div>`,{tags:[UNF]})}
+  </div>`;
+  draw('lu_forest',{type:'doughnut',data:{labels:fc.map(x=>x[0]),
+    datasets:[{data:fc.map(x=>x[1]),backgroundColor:[CAT[2],CAT[0],CAT[4]],borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'55%',plugins:{legend:legendOn(),
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)} (${pct(100*c.raw/IDX.length)})`}}}}});
+}
+
+/* ── Transport ── */
+function renderTransport(el){
+  const t=Object.entries(D.transport_types).sort((a,b)=>b[1].n-a[1].n);
+  const b=Object.entries(D.transport_boundary).sort((a,b)=>b[1].n-a[1].n);
+  el.innerHTML = `
+  <div class="sec-title">Transport &amp; Logistics</div>
+  <div class="sec-desc">Every assessed farm recorded at least one transport movement, making this the
+  most completely populated input section. Tonne-kilometres combine normalised weight with distance.</div>
+  <div class="kpis">
+    ${kpi(fmt(median('tonne_km'),2),'Median tonne-km','per farm')}
+    ${kpi(fmt(sum('tonne_km'),0),'Total tonne-km','current selection')}
+    ${kpi(fmt(t.reduce((s,x)=>s+x[1].n,0)),'Movements recorded','')}
+    ${kpi(titleCase(t[0]?.[0]||'—'),'Dominant mode',`${pct(100*(t[0]?.[1].n||0)/t.reduce((s,x)=>s+x[1].n,0))} of movements`)}
+  </div>
+  <div class="grid">
+    ${block('Transport mode', box('tr_mode'),{tags:[UNF]})}
+    ${block('Movement boundary', box('tr_bound'),{tags:[UNF]})}
+    ${block('Tonne-km per farm', box('tr_tkm'))}
+    ${block('Mode detail', tbl(['Mode','Movements','Median km','Median kg','Median tonne-km'],
+      t.map(([k,v])=>[titleCase(k),fmt(v.n),fmt(v.km?.med,0),fmt(v.kg?.med,0),fmt(v.tkm?.med,2)]))+
+      `<div class="note">Weights normalised to kilograms — 16% of movements were reported in tonnes.</div>`,{tags:[UNF]})}
+  </div>`;
+  draw('tr_mode',{type:'bar',data:{labels:t.map(x=>titleCase(x[0])),
+    datasets:[{label:'Movements',data:t.map(x=>x[1].n),backgroundColor:CAT[1],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false)},
+      scales:{x:{beginAtZero:true,grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+  draw('tr_bound',{type:'doughnut',data:{labels:b.map(x=>x[0]),
+    datasets:[{data:b.map(x=>x[1].n),backgroundColor:CAT,borderColor:'#fff',borderWidth:2}]},
+    options:{cutout:'55%',plugins:{legend:legendOn()}}});
+  const [tl,tc]=hist('tonne_km',[0.1,0.3,1,3,10,30]);
+  draw('tr_tkm',{type:'bar',data:{labels:tl,datasets:[{label:'Farms',data:tc,backgroundColor:CAT[2],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+}
+
+/* ── Geography ── */
+function renderGeography(el){
+  const g=D.grid, gm=D.grid_meta, o=D.geo_outliers;
+  const metricSel = document.getElementById('geoMetric')?.value || 'burn';
+  const dg=D.district_geo.slice().sort((a,b)=>b.n_farms-a.n_farms);
+  const rg=D.region_geo.slice().sort((a,b)=>b.n_farms-a.n_farms);
+  el.innerHTML = `
+  <div class="sec-title">Geographic Distribution</div>
+  <div class="sec-desc">Every one of the ${fmt(F.n)} assessments carries a valid GPS fix inside East
+  Africa — the cleanest field in the dataset. Locations are shown as
+  <strong>${fmt(gm.cell_deg*111,1)} km aggregated grid cells</strong>, never as individual farms.</div>
+  <div class="kpis">
+    ${kpi(fmt(dg.length),'Districts covered','')}
+    ${kpi(fmt(rg.length),'Regions covered','')}
+    ${kpi(fmt(gm.cells),'Grid cells shown',`cells with fewer than ${gm.min_cell} farms are suppressed`)}
+    ${kpi(fmt(o.gt50km),'Farms >50 km from their district centroid',`worst ${fmt(o.max_km,0)} km`,'alert')}
+  </div>
+  <div class="grid">
+    ${block(`Spatial distribution <select id="geoMetric" style="font-size:11px;padding:3px 6px;border:1px solid var(--bd);border-radius:5px">
+        <option value="burn">colour: residue burned %</option>
+        <option value="shade">colour: shade cover %</option>
+        <option value="n_kg">colour: kg N/ha</option>
+      </select>`,
+      box('geo_map','xtall')+
+      `<div class="legend">${RAMP.map((c,i)=>`<span><span class="swatch" style="background:${c}"></span>${i===0?'low':(i===4?'high':'')}</span>`).join('')}
+        <span>· bubble size = farms in cell</span></div>
+       <div class="note">Longitude × latitude scatter of aggregated cells — <strong>not a projected
+       basemap</strong>. A true choropleth would need Uganda administrative boundaries, which this
+       dataset does not include; adding a tile-based map would also send farm coordinates to a
+       third-party tile server, so it was deliberately avoided.</div>`,{tags:[UNF],full:true})}
+    ${block('District comparison', tbl(['District','Region','Farms','Burn %','Shade %','kg N/ha','Median t/ha','Deforest.'],
+      dg.map(d=>[esc(d.district),esc(titleCase(d.region)),fmt(d.n_farms),fmt(d.mean_burn_share,1),
+        fmt(d.mean_shade_cover_perc,1),fmt(d.mean_n_kg_per_ha,1),fmt(d.median_yield_t_per_ha,2),fmt(d.n_deforestation)])),
+      {tags:[UNF],full:true})}
+    ${block('Region rollup', box('geo_reg'),{tags:[UNF]})}
+    ${block('Probable district mis-selection',
+      tbl(['District','Farms >50 km from centroid'],
+        Object.entries(o.by_district).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>[esc(k),fmt(v.n)]))+
+      `<div class="callout">Distance from each farm to the centroid of its own stated district.
+       ${fmt(o.gt50km)} farms sit more than 50 km away and ${fmt(o.gt100km)} more than 100 km, the
+       worst at ${fmt(o.max_km,0)} km. That is almost certainly a mis-selected district rather than a
+       real journey, and it is worth correcting at source.</div>`,{tags:[UNF]})}
+  </div>`;
+
+  const sel=document.getElementById('geoMetric');
+  if(sel){ sel.value=metricSel; sel.onchange=()=>renderGeography(el); }
+  const key=metricSel;
+  const mv=g.map(c=>c[key]).filter(v=>v!=null);
+  const lo=Math.min(...mv), hi=Math.max(...mv);
+  const colr=v=>v==null?'#cccccc':RAMP[Math.min(4,Math.floor(4*(v-lo)/((hi-lo)||1)))];
+  const maxN=Math.max(...g.map(c=>c.n));
+  draw('geo_map',{type:'bubble',data:{datasets:[{
+      label:'Grid cell',
+      data:g.map(c=>({x:c.lon,y:c.lat,r:4+10*Math.sqrt(c.n/maxN),_c:c})),
+      backgroundColor:g.map(c=>colr(c[key])),
+      borderColor:'rgba(255,255,255,.85)', borderWidth:2}]},
+    options:{plugins:{legend:legendOn(false),tooltip:{callbacks:{label:c=>{
+        const d=c.raw._c; return [` ${fmt(d.n)} farms`,` burn ${fmt(d.burn,1)}%`,
+          ` shade ${fmt(d.shade,1)}%`,` ${fmt(d.n_kg,1)} kg N/ha`,` ${d.lat}°, ${d.lon}°`];}}}},
+      scales:{x:{title:{display:true,text:'Longitude',font:FONT,color:MUT},grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},
+              y:{title:{display:true,text:'Latitude',font:FONT,color:MUT},grid:{color:GRIDC},ticks:{font:FONT,color:MUT}}}}});
+  draw('geo_reg',{type:'bar',data:{labels:rg.map(r=>titleCase(r.region)),
+    datasets:[{label:'Farms',data:rg.map(r=>r.n_farms),backgroundColor:CAT[1],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false)},
+      scales:{x:{beginAtZero:true,grid:{color:GRIDC},ticks:{font:FONT,color:MUT}},y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+}
+
+/* ── Rare inputs ── */
+function renderRare(el){
+  const k=D.rare_kinds, d=Object.entries(D.rare).sort((a,b)=>b[1].n-a[1].n);
+  el.innerHTML = `
+  <div class="sec-title">Rare Inputs — Energy, Irrigation &amp; Wastewater</div>
+  <div class="sec-desc">These three sections were each envisaged as a full panel. In practice they are
+  almost unpopulated, so they are reported together, at their true weight, rather than dressed up as
+  three charts built on a handful of rows.</div>
+  <div class="kpis">
+    ${kpi(pct(shareTrue('fuel_energy_used')),'Report fuel / energy use',`${fmt(k.energy?.n||0)} records`)}
+    ${kpi(pct(shareTrue('irrigation_used')),'Report irrigation',`${fmt(k.irrigation?.n||0)} records`)}
+    ${kpi(pct(100-(shareTrue('irrigation_used')||0)),'Rain-fed','no irrigation reported','')}
+    ${kpi(fmt(k.wastewater?.n||0),'Wastewater treatment records','of 12 farms answering “yes”','alert')}
+  </div>
+  <div class="grid">
+    ${block('Records by input type', box('ra_kind'),{tags:[UNF]})}
+    ${block('Detail', tbl(['Input','Records','Median amount'],
+      d.map(([kk,v])=>[esc(titleCase(kk)),fmt(v.n),fmt(v.amount?.med,1)]))+
+      `<div class="callout">Sample sizes here are far too small to generalise from. The genuinely
+       useful finding is the negative one: <strong>${pct(100-(shareTrue('irrigation_used')||0))} of
+       assessed farms report no irrigation at all</strong>, so these are rain-fed systems whose
+       climate exposure is unbuffered.</div>`,{tags:[UNF]})}
+  </div>`;
+  const ks=Object.entries(k).sort((a,b)=>b[1].n-a[1].n);
+  draw('ra_kind',{type:'bar',data:{labels:ks.map(x=>titleCase(x[0])),
+    datasets:[{label:'Records',data:ks.map(x=>x[1].n),backgroundColor:CAT[3],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes()}});
+}
+
+/* ── Data quality ── */
+function renderQuality(el){
+  const byCode={};
+  for(const f of D.dq){ const e=byCode[f.code]||(byCode[f.code]={code:f.code,severity:f.severity,n_flags:0,fields:new Set()});
+    e.n_flags+=f.n_flags; e.fields.add(f.field); if(f.severity==='error') e.severity='error'; }
+  const codes=Object.values(byCode).sort((a,b)=>b.n_flags-a.n_flags);
+  const enumBurn=meanBy('enumerator','residue_burn_share',IDX,20);
+  const months=countBy('submission_month').sort((a,b)=>a[0]<b[0]?-1:1);
+  const flagged=IDX.filter(i=>(num('dq_flag_count',i)||0)>0).length;
+  const errs=IDX.filter(i=>(num('dq_error_count',i)||0)>0).length;
+  el.innerHTML = `
+  <div class="sec-title">Data Quality &amp; Field Activity</div>
+  <div class="sec-desc">Every issue found during processing is recorded against the submission that
+  caused it, rather than quietly corrected. This panel is the honest counterweight to the rest of the
+  dashboard.</div>
+  <div class="kpis">
+    ${kpi(pct(100*flagged/IDX.length),'Submissions with ≥1 flag',`${fmt(flagged)} of ${fmt(IDX.length)}`)}
+    ${kpi(fmt(errs),'With an error-level flag','','alert')}
+    ${kpi(fmt(D.dq.reduce((s,f)=>s+f.n_flags,0)),'Flags in total','across the full cohort')}
+    ${kpi(fmt(enumBurn.length),'Enumerators (20+ assessments)','')}
+    ${kpi(fmt(months.length),'Months of fieldwork',`${months[0]?.[0]||''} → ${months[months.length-1]?.[0]||''}`)}
+  </div>
+  <div class="callout bad"><strong>The most important caveat in this dashboard.</strong> Mean residue
+  burn share by enumerator ranges from ${fmt(enumBurn[enumBurn.length-1]?.[1],1)}% to
+  ${fmt(enumBurn[0]?.[1],1)}% among those with 20 or more assessments. Enumerators were deployed to
+  distinct regions, so part of this is real geography — but farm area, which no enumerator can
+  influence, shows no comparable spread. That points to genuine differences in how the residue
+  question was asked or interpreted. Any target set from the burn headline should be validated by an
+  independent spot-check first.</div>
+  <div class="grid">
+    ${block('Issues found', tbl(['Code','Severity','Flags','Fields affected'],
+      codes.map(c=>[`<strong>${esc(c.code)}</strong>`,
+        `<span class="tag ${c.severity==='error'?'caveat':'unf'}">${c.severity}</span>`,
+        fmt(c.n_flags), esc([...c.fields].filter(Boolean).slice(0,3).join(', ')||'—')])),
+      {tags:[UNF],full:true})}
+    ${block('Mean burn share by enumerator', box('dq_enum','tall')+
+      `<div class="note">Enumerators with 20+ assessments in the current selection. The spread, not
+       the ranking, is the finding.</div>`,{full:true})}
+    ${block('Fieldwork over time', box('dq_time'))}
+    ${block('What the flags mean', `
+      <div class="note" style="font-size:11.5px">
+      <p style="margin:.2rem 0"><strong>yes_but_empty</strong> — a farmer reported a practice, then no
+      detail rows were entered. 733 cases, and never the reverse, so this is under-entry rather than
+      random noise.</p>
+      <p style="margin:.5rem 0 .2rem"><strong>yield_curve_template</strong> — a mature crop with a
+      year-zero yield of zero. The 31-year yield columns are a generic lifecycle template, not
+      farm-specific measurements, which is why no yield-trend chart appears in this dashboard.</p>
+      <p style="margin:.5rem 0 .2rem"><strong>calendar_in_offset</strong> — a calendar year typed into
+      a field expecting a year offset. Reinterpreted where unambiguous, discarded otherwise.</p>
+      <p style="margin:.5rem 0 .2rem"><strong>unit_suspect</strong> — chiefly “tonnes per acre”
+      fertiliser rates, and litres treated as kilograms where density is unknown.</p>
+      <p style="margin:.5rem 0 .2rem"><strong>out_of_range</strong> — physically impossible values:
+      active ingredient above 100%, crop lifecycles of 504 or 2006 years.</p>
+      </div>`)}
+  </div>`;
+  draw('dq_enum',{type:'bar',data:{labels:enumBurn.map(e=>e[0]),
+    datasets:[{label:'Mean burn share',data:enumBurn.map(e=>e[1]),backgroundColor:CAT[4],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),
+      tooltip:{callbacks:{label:c=>` ${fmt(c.raw,1)}% · n=${fmt(enumBurn[c.dataIndex][2])}`}}},
+      scales:{x:{beginAtZero:true,max:100,grid:{color:GRIDC},ticks:{font:FONT,color:MUT,callback:v=>v+'%'}},
+              y:{grid:{display:false},ticks:{font:{...FONT,size:9},color:MUT}}}}});
+  draw('dq_time',{type:'bar',data:{labels:months.map(m=>m[0]?.slice(0,7)),
+    datasets:[{label:'Submissions',data:months.map(m=>m[1]),backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:34})}});
+}
+
+/* ───────── shell ───────── */
+let current = 'overview';
+function buildNav(){
+  document.getElementById('nav').innerHTML = SECTIONS.map(([id,label])=>
+    `<a data-id="${id}" class="${id===current?'active':''}">${label}</a>`).join('');
+  document.querySelectorAll('#nav a').forEach(a=>a.onclick=()=>{current=a.dataset.id; buildNav(); render();});
+}
+function buildFilters(){
+  const opts = k => {
+    const seen = new Map();
+    for(let i=0;i<F.n;i++){
+      let ok=true;
+      for(const f of FILTERS){ if(f.key!==k && state[f.key] && cat(f.key,i)!==state[f.key]){ ok=false; break; } }
+      if(!ok) continue;
+      const v=cat(k,i); if(v==null||v==='') continue;
+      seen.set(v,(seen.get(v)||0)+1);
+    }
+    return [...seen.entries()].sort((a,b)=>a[0]<b[0]?-1:1);
+  };
+  document.getElementById('filters').innerHTML =
+    FILTERS.map(f=>`<div><label>${f.label}</label><select data-k="${f.key}">
+      <option value="">All</option>
+      ${opts(f.key).map(([v,n])=>`<option value="${esc(v)}" ${state[f.key]===v?'selected':''}>${esc(titleCase(v))} (${fmt(n)})</option>`).join('')}
+    </select></div>`).join('') +
+    `<div><button id="reset">Reset</button></div>
+     <div class="fnote">Filters apply to farm-level charts. Cards marked
+     <span class="tag unf">unfiltered</span> are pre-aggregated at build time and always show the full cohort.</div>`;
+  document.querySelectorAll('#filters select').forEach(s=>s.onchange=()=>{
+    state[s.dataset.k]=s.value; recompute(); buildFilters(); render();});
+  document.getElementById('reset').onclick=()=>{
+    FILTERS.forEach(f=>state[f.key]=''); recompute(); buildFilters(); render();};
+}
+function render(){
+  const host=document.getElementById('sections');
+  const [id,,fn]=SECTIONS.find(s=>s[0]===current);
+  Object.keys(charts).forEach(k=>{charts[k].destroy(); delete charts[k];});
+  host.innerHTML=`<section id="sec_${id}" class="active"></section>`;
+  if(IDX.length===0){
+    host.firstChild.innerHTML=`<div class="block"><h3>No farms match these filters</h3>
+      <div class="note">Reset one or more filters to see data again.</div></div>`;
+    return;
+  }
+  fn(host.firstChild);
+}
+function footer(){
+  const s=D.sync||{};
+  document.getElementById('footer').innerHTML =
+    `Source: KoboToolbox form <code>a4AC6PCXs4QFs3KBym8KKS</code> — “ECA CFP Crops Assessments”.
+     ${fmt(F.n)} assessments, last submission ${String(s.last_submitted_at||'').slice(0,10)||'—'},
+     store last synced ${String(s.last_synced_at||'').slice(0,16).replace('T',' ')||'—'}. Built __GENERATED_AT__.
+     <br>Scope: practice adoption and derived input intensities. <strong>No CO₂e is reported</strong> —
+     the form carries no emission factors and the energy, irrigation and nitrogen inputs are too sparse
+     to support a defensible footprint.
+     <br>Farmer names, phone numbers, villages and precise coordinates are excluded from this file by
+     design; locations appear only as suppressed ${fmt((D.grid_meta.cell_deg*111),1)} km grid cells
+     (${fmt(D.grid_meta.suppressed_farms)} farms fell in cells too small to show).
+     Categorical palette validated for colour-vision deficiency; every chart has a table or label
+     equivalent. Print this page to save it as a PDF.`;
+}
+recompute(); buildNav(); buildFilters(); render(); footer();
+</script>
+</body>
+</html>
