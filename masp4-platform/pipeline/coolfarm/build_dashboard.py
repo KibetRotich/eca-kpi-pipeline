@@ -148,22 +148,43 @@ def main():
     overview = sb("v_cfp_overview?select=*")
     meta = sb("cfp_sync_meta?select=*&id=eq.1")
 
+    # --- Phase 1B Tier 1 -------------------------------------------------
+    # Only the two ratios that cannot be derived in-browser from the fact
+    # table are fetched per farm; residue circularity is computed client-side
+    # from the residue cube, and the rest are simple column arithmetic.
+    tier1 = sb("v_cfp_tier1_ratios?select=submission_id,agroforestry_ratio,"
+               "yield_kg_per_plant,nue_t_per_kg_n,n_kg_per_tonne")
+    circularity = sb("v_cfp_residue_circularity?select=*")
+    tier1_summary = sb("v_cfp_tier1_summary?select=*")
+    print(f"  tier1 rows: {len(tier1)}  circularity streams: {len(circularity)}")
+
     # --- farm fact table: dictionary-encoded, coordinates EXCLUDED -----
     CATS = ["project", "region", "district", "crop_type", "crop_species",
             "crop_system", "gender", "age_band", "literacy_level", "soil_type",
             "crop_age_band", "submission_month", "forest_change", "enumerator"]
+    t1_by_sub = {t["submission_id"]: t for t in tier1}
+    for f in farms:
+        t = t1_by_sub.get(f["submission_id"], {})
+        f["agroforestry_ratio"] = t.get("agroforestry_ratio")
+        f["yield_kg_per_plant"] = t.get("yield_kg_per_plant")
+        f["nue_t_per_kg_n"] = t.get("nue_t_per_kg_n")
+        f["n_kg_per_tonne"] = t.get("n_kg_per_tonne")
+
     NUMS = ["area_ha", "household_size", "plants_per_ha", "crop_age", "total_yield_t",
             "yield_t_per_ha", "n_kg_per_ha", "p2o5_kg_per_ha", "k2o_kg_per_ha",
             "organic_fert_share", "ai_kg_per_ha", "tonne_km", "energy_litres",
             "irrigation_water_m3", "shade_cover_perc", "intercrop_cover_perc",
             "hedge_area_m2", "residue_burn_share", "dead_plants_perc",
             "waste_fruit_perc", "de_area_ha", "net_forest_area_ha",
-            "dq_flag_count", "dq_error_count"]
+            "dq_flag_count", "dq_error_count",
+            # Phase 1B Tier 1
+            "agroforestry_ratio", "yield_kg_per_plant", "nue_t_per_kg_n",
+            "n_kg_per_tonne"]
     BOOLS = ["is_shaded", "is_youth", "fertilizer_applied", "pesticide_applied",
              "fuel_energy_used", "irrigation_used", "intercrop_exists",
              "shade_trees_exist", "hedges_exist", "land_use_change_exists",
              "cooperative_member", "disability", "access_to_mobile_device",
-             "access_to_internet"]
+             "access_to_internet", "dead_plants_replaced"]
 
     # Enumerators are pseudonymised before encoding. The between-enumerator
     # variance in residue burn share is one of this dashboard's most important
@@ -263,6 +284,8 @@ def main():
         "grid_meta": {"cell_deg": GRID, "min_cell": MIN_CELL,
                       "suppressed_farms": suppressed, "cells": len(grid)},
         "dq": dq,
+        "circularity": circularity,
+        "tier1_summary": (tier1_summary or [{}])[0],
         "fert_types": tally(fert, "fertiliser_type",
                             [("rate", "rate_kg_per_ha"), ("nkg", "n_kg_per_ha")]),
         "fert_regions": tally(fert, "prod_region"),

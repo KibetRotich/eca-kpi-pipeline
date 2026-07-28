@@ -100,6 +100,8 @@ for (const [id] of scope.SECTIONS) {
   } catch (e) {
     failures++
     console.log(`  [FAIL] ${id.padEnd(13)} ${e.message}`)
+    console.log(e.stack.split(String.fromCharCode(10)).slice(1, 4)
+      .map((l) => '           ' + l.trim()).join(String.fromCharCode(10)))
   }
 }
 

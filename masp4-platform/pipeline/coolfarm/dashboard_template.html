@@ -240,6 +240,7 @@ const SECTIONS = [
   ['transport',   'Transport',                   renderTransport],
   ['geography',   'Geography',                   renderGeography],
   ['rare',        'Rare Inputs',                 renderRare],
+  ['advanced',    'Advanced Analytics',          renderAdvanced],
   ['quality',     'Data Quality',                renderQuality],
 ];
 
@@ -809,6 +810,160 @@ function renderRare(el){
   draw('ra_kind',{type:'bar',data:{labels:ks.map(x=>titleCase(x[0])),
     datasets:[{label:'Records',data:ks.map(x=>x[1].n),backgroundColor:CAT[3],...bar()}]},
     options:{plugins:{legend:legendOn(false)},scales:axes()}});
+}
+
+/* ── Advanced Analytics (Phase 1B, Tier 1) ── */
+const YIELD_CEILING = 5;   // t/ha agronomic ceiling for coffee/cocoa
+
+/* Residue circularity per farm: share of residue retained or composted rather
+   than burned or exported. Computed from the residue cube so it responds to
+   filters, matching v_cfp_residue_circularity in Supabase. */
+const CIRC_FATES = ['left_on_soil','aerobic_compost','anaerobic_compost','heaps_pits'];
+function circularityByStream(idx=IDX){
+  return D.streams.map(s=>{
+    let tot=0,n=0,zero=0;
+    for(const i of idx){
+      let c=0, present=false;
+      for(const ft of CIRC_FATES){
+        const v=D.residue_cube[s][ft]?.[i];
+        if(v!=null){ c+=v; present=true; }
+      }
+      // a stream with only burn/export fates recorded still counts as 0% circular
+      if(!present){ for(const ft of ['burn','export']){ if(D.residue_cube[s][ft]?.[i]!=null) present=true; } }
+      if(present){ tot+=c; n++; if(c===0) zero++; }
+    }
+    return {stream:s, circ:n?tot/n:null, n, zero, pctZero:n?100*zero/n:null};
+  }).sort((a,b)=>b.circ-a.circ);
+}
+function farmCircularity(idx=IDX){
+  const out=[];
+  for(const i of idx){
+    let tot=0,n=0;
+    for(const s of D.streams){
+      let c=0,present=false;
+      for(const ft of CIRC_FATES){ const v=D.residue_cube[s][ft]?.[i]; if(v!=null){c+=v;present=true;} }
+      if(!present){ for(const ft of ['burn','export']){ if(D.residue_cube[s][ft]?.[i]!=null) present=true; } }
+      if(present){ tot+=c; n++; }
+    }
+    if(n) out.push(tot/n);
+  }
+  return out;
+}
+
+function renderAdvanced(el){
+  const cs = circularityByStream();
+  const fc = farmCircularity().sort((a,b)=>a-b);
+  const medCirc = fc.length? fc[Math.floor(fc.length/2)] : null;
+  const bounded = IDX.filter(i=>{const v=num('yield_t_per_ha',i); return v!=null && v<=YIELD_CEILING;});
+  const medOf = (col,ix)=>{const v=vals(col,ix).sort((a,b)=>a-b); return v.length?v[Math.floor(v.length/2)]:null;};
+  const nOf = (col,ix)=>vals(col,ix).length;
+  // energy / irrigation intensity are derived on the fly from the fact table
+  const perHa = (col)=>{
+    const o=[]; for(const i of IDX){ const v=num(col,i), a=num('area_ha',i);
+      if(v!=null && a) o.push(v/a); } return o.sort((x,y)=>x-y);
+  };
+  const eph=perHa('energy_litres'), iph=perHa('irrigation_water_m3');
+  const med=a=>a.length?a[Math.floor(a.length/2)]:null;
+
+  el.innerHTML = `
+  <div class="sec-title">Advanced Analytics — Tier 1 ratios</div>
+  <div class="sec-desc">Normalised indicators derived from the assessment data. These are the
+  quantities a Cool Farm emission-factor layer would consume, so they are the bridge to a footprint
+  without asserting one. <strong>All are computed from unit-normalised columns</strong> — on raw form
+  fields these ratios would be wrong by a factor of 2.47 (acres), 1,000 (tonnes) or entirely absent.</div>
+  <div class="kpis">
+    ${kpi(fmt(medOf('yield_t_per_ha',bounded),2),'Yield t/ha',`median, plausible rows only (n=${fmt(bounded.length)})`)}
+    ${kpi(fmt(medOf('yield_kg_per_plant',bounded),2),'Yield kg/plant',`median (n=${fmt(nOf('yield_kg_per_plant',bounded))})`)}
+    ${kpi(fmt(medOf('nue_t_per_kg_n',bounded),3),'t per kg N',`nitrogen-use efficiency (n=${fmt(nOf('nue_t_per_kg_n',bounded))})`)}
+    ${kpi(fmt(medOf('n_kg_per_tonne',bounded),1),'kg N per tonne',`nitrogen balance (n=${fmt(nOf('n_kg_per_tonne',bounded))})`)}
+    ${kpi(fmt(medCirc,1)+'%','Residue circularity','median share retained or composted')}
+    ${kpi(fmt(medOf('agroforestry_ratio',IDX),4),'Agroforestry ratio',`shade : crop density (n=${fmt(nOf('agroforestry_ratio',IDX))})`)}
+    ${kpi(fmt(medOf('tonne_km',IDX),2),'Tonne-km','transport intensity')}
+    ${kpi(fmt(medOf('dead_plants_perc',IDX),1)+'%','Mortality',`${pct(shareTrue('dead_plants_replaced'))} replaced`)}
+  </div>
+
+  <div class="grid">
+    ${block('Residue circularity by stream ' +
+      '<span class="tag caveat">strongest new indicator</span>', box('ad_circ','tall')+
+      `<div class="note">Share of each residue stream retained on the soil or composted, rather than
+       burned or exported. 100% populated. The pattern is agronomically coherent and actionable:
+       <strong>leafy residue is retained, woody residue is burned</strong> — and woody material is
+       exactly where the biomass is.</div>`,{full:true})}
+
+    ${block('Circularity vs. burning', box('ad_cb')+
+      `<div class="note">The two are near-mirror images by construction; shown together because the
+       gap is the export share, which leaves the farm system entirely.</div>`)}
+
+    ${block('Farms with zero circularity, by stream',
+      tbl(['Stream','Farms','Mean circular %','Zero-circular farms','%'],
+        cs.map(c=>[titleCase(c.stream),fmt(c.n),fmt(c.circ,1),fmt(c.zero),pct(c.pctZero)]))+
+      `<div class="note">A zero-circular farm burns or exports 100% of that stream. Table view is the
+       accessible equivalent of the chart above.</div>`)}
+
+    ${block('Nitrogen-use efficiency (t per kg N)', box('ad_nue')+
+      `<div class="note">Plausible-yield rows only. <strong>Nitrogen shows essentially no relationship
+       with yield in this cohort</strong> (r = −0.01 across ${fmt(nOf('nue_t_per_kg_n',bounded))} farms),
+       so read this as an input-accounting ratio, not an agronomic response.</div>`)}
+
+    ${block('Yield per plant (kg)', box('ad_kgplant')+
+      `<div class="note">Plausible rows only. Median ${fmt(medOf('yield_kg_per_plant',bounded),2)} kg/plant
+       is agronomically sensible for smallholder coffee.</div>`)}
+
+    ${block('Input intensity — the sparse ones',
+      tbl(['Indicator','Farms','Median'],[
+        ['Energy litres per ha', fmt(eph.length), fmt(med(eph),1)],
+        ['Irrigation m³ per ha', fmt(iph.length), fmt(med(iph),2)],
+        ['Pesticide AI kg per ha', fmt(nOf('ai_kg_per_ha',IDX)), fmt(medOf('ai_kg_per_ha',IDX),3)],
+      ])+
+      `<div class="callout">Energy and irrigation intensity are computable but rest on
+       ${fmt(eph.length)} and ${fmt(iph.length)} farms respectively. Reported as a table, not a chart,
+       because at that n a chart would imply a distribution that isn't there.</div>`)}
+
+    ${block('Phase 1B tier status', `
+      ${tbl(['Tier','Scope','Status'],[
+        ['<strong>1</strong> Ratios','yield/ha & /plant, NUE, N balance, circularity, agroforestry ratio, transport & input intensity, mortality, demographic ratios','<span class="tag unf">shipped — this section</span>'],
+        ['<strong>2</strong> Composite indices','Sustainable Practice Adoption Index, Nitrogen Balance Index, GHG proxy score','<span class="tag caveat">awaiting approval of weights</span>'],
+        ['<strong>3</strong> Regression','yield drivers, adoption logistic, land-use Markov','<span class="tag caveat">proposed v2</span>'],
+        ['<strong>3</strong> Regression — dropped','fertiliser response curve, yield time-trend','<span class="tag caveat">no signal to fit</span>'],
+        ['<strong>4</strong> Clustering','farmer typology (k-means)','<span class="tag caveat">proposed v2</span>'],
+        ['<strong>5</strong> Data quality','outliers, enumerator effect, completeness','<span class="tag unf">shipped — Data Quality</span>'],
+        ['<strong>6</strong> Geospatial','choropleth, grid density, spatial outliers','<span class="tag unf">shipped — Geography</span>'],
+      ])}
+      <div class="callout"><strong>Why two Tier 3 models were dropped rather than built.</strong> The
+      fertiliser response curve has nothing to fit: nitrogen and yield correlate at r = −0.01, so a
+      fitted curve would manufacture a relationship that isn't in the data. The yield time-trend would
+      measure the shared lifecycle template rather than any farm — 85% of farms report a mature crop
+      with a year-zero yield of zero.</div>
+      <div class="callout"><strong>No CO₂e, and why.</strong> This form supplies activity data, not
+      emission factors. <code>gwp</code> is a single constant across all ${fmt(F.n)} rows — a
+      methodology label, not a per-crop factor. Converting these ratios into CO₂e needs N₂O factors by
+      fertiliser type, residue-burning factors, fuel combustion factors and soil-carbon flux curves,
+      none of which are in this dataset.</div>`,{full:true})}
+  </div>`;
+
+  draw('ad_circ',{type:'bar',data:{labels:cs.map(c=>titleCase(c.stream)),
+    datasets:[{label:'Circular (retained / composted)',data:cs.map(c=>c.circ),backgroundColor:CAT[0],...bar()}]},
+    options:{indexAxis:'y',plugins:{legend:legendOn(false),
+      tooltip:{callbacks:{label:c=>` ${fmt(c.raw,1)}% circular · ${fmt(cs[c.dataIndex].zero)} farms at 0%`}}},
+      scales:{x:{beginAtZero:true,max:100,grid:{color:GRIDC},ticks:{font:FONT,color:MUT,callback:v=>v+'%'}},
+              y:{grid:{display:false},ticks:{font:FONT,color:MUT}}}}});
+
+  const bs = burnStats();
+  const order = cs.map(c=>c.stream);
+  draw('ad_cb',{type:'bar',data:{labels:order.map(titleCase),
+    datasets:[
+      {label:'Circular',data:order.map(s=>cs.find(c=>c.stream===s)?.circ??0),backgroundColor:CAT[0],...bar()},
+      {label:'Burned',data:order.map(s=>bs.find(b=>b.stream===s)?.mean??0),backgroundColor:CAT[4],...bar()}]},
+    options:{plugins:{legend:legendOn(),tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw,1)}%`}}},
+      scales:axes({pct:true,max:100,rot:38,autoSkip:false})}});
+
+  const [nl,nc]=hist('nue_t_per_kg_n',[0.02,0.05,0.1,0.25,0.5,1],bounded);
+  draw('ad_nue',{type:'bar',data:{labels:nl,datasets:[{label:'Farms',data:nc,backgroundColor:CAT[1],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
+
+  const [kl,kc]=hist('yield_kg_per_plant',[0.5,1,2,3,5,10],bounded);
+  draw('ad_kgplant',{type:'bar',data:{labels:kl,datasets:[{label:'Farms',data:kc,backgroundColor:CAT[2],...bar()}]},
+    options:{plugins:{legend:legendOn(false)},scales:axes({rot:20})}});
 }
 
 /* ── Data quality ── */
