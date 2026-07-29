@@ -90,5 +90,12 @@ FROM auth.users
 WHERE email = 'carolyne.mbithe@solidaridadnetwork.org'
 ON CONFLICT (id) DO UPDATE SET role = 'me_officer', email = EXCLUDED.email;
 
--- 5. Verify - should show 5 rows with correct roles
+-- Julius Ndhala -> M&E Officer
+INSERT INTO user_roles (id, role, email, display_name)
+SELECT id, 'me_officer', email, raw_user_meta_data->>'full_name'
+FROM auth.users
+WHERE email = 'julius.ndhala@solidaridadnetwork.org'
+ON CONFLICT (id) DO UPDATE SET role = 'me_officer', email = EXCLUDED.email;
+
+-- 5. Verify - should show 6 rows with correct roles
 SELECT email, role, display_name FROM user_roles ORDER BY role;
