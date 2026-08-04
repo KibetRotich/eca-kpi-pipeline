@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>P2P Project Dashboard — Pathways to Prosperity</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-left">
+    <div>
+      <div class="hdr-title">P2P Project Dashboard</div>
+      <div class="hdr-sub">KPI Trends &amp; Performance Monitoring &middot; 2023&ndash;2026</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <button class="rbtn ghost" onclick="window.print()">&#128424; Print</button>
+    <button class="rbtn ghost" onclick="exportCSV()">&#8595; CSV</button>
+    <div class="sol-logo-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 172 42" width="172" height="42" aria-label="Solidaridad">
+        <text x="0" y="26" font-family="Open Sans,sans-serif" font-weight="800" font-size="23" fill="#000000" letter-spacing="-0.4">Solidaridad</text>
+        <path d="M2,36 C45,27 125,29 170,34" stroke="#FFC800" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="fbar" id="fbar">
+  <!-- multi-selects injected by app.js -->
+  <div class="fbar-sep"></div>
+  <button class="rbtn" onclick="applyFilters()">&#8635; Refresh</button>
+  <button class="rbtn ghost" onclick="resetFilters()">Reset</button>
+  <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
+  <button class="rbtn ghost" onclick="document.getElementById('file-input').click()">Load workbook</button>
+  <div class="fbar-sep"></div>
+  <div class="live-pill"><div class="live-dot"></div>Live</div>
+  <span class="rec-count" id="rec-count"></span>
+</div>
+
+<main>
+  <div id="notice" class="notice"><div id="notice-msg"></div></div>
+  <div class="print-only" id="print-context"></div>
+  <div class="chips" id="chips"></div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar" id="tab-bar"></div>
+
+  <!-- PILLAR / SECTION PANELS (built by app.js) -->
+  <div id="panels"></div>
+</main>
+
+<footer>
+  <span class="fl2">&copy; Solidaridad East &amp; Central Africa &middot; <span id="src-note"></span></span>
+  <span class="fp">Change That Matters</span>
+</footer>
+
+<div id="loader">
+  <div class="spin"></div>
+  <div class="load-txt">Loading Dashboard&hellip;</div>
+</div>
+
+<!-- Offline copy of the workbook, used when fetch() is blocked (file://) -->
+<script src="data-embedded.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
