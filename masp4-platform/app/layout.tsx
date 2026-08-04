@@ -104,12 +104,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Learning Insights <span aria-hidden="true">↗</span>
           </a>
 
-          {/* P2P Project Dashboard — standalone Pathways to Prosperity dashboard
-              (static HTML + workbook under /public/p2p), new browser page */}
+          {/* P2P Project Dashboard — Pathways to Prosperity, embedded in the
+              platform chrome at /p2p-dashboard (iframe over /public/p2p) */}
           <a
-            href="/p2p/dashboard.html"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/p2p-dashboard"
             style={{
               marginRight: '.5rem',
               display: 'inline-flex',
@@ -128,7 +126,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
             }}
           >
-            P2P Project Dashboard <span aria-hidden="true">↗</span>
+            P2P Project Dashboard
           </a>
 
           {/* MASP III Dashboard — opens the standalone legacy dashboard in a new browser page */}
