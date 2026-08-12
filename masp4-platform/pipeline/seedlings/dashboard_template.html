@@ -68,7 +68,12 @@
   <main id="main"></main>
 </div>
 <script>
-const DATA = /*__DATA__*/;
+// The payload lives in object storage, not in this file, so a nightly data
+// refresh never needs a redeploy (this shell is ~5 KB and changes almost never).
+// Building with SEEDLINGS_INLINE=1 embeds it here instead, for offline use —
+// DATA is then non-null on load and boot() skips the fetch.
+const DATA_URL = "/*__DATA_URL__*/";
+let DATA = /*__DATA__*/;
 const PAL = ["#FFC800","#2e7d32","#1565c0","#e65100","#7b1fa2","#888888","#00838f","#c62828","#4527a0","#ad1457","#9e9d24","#0277bd"];
 const fmt = n => (n==null?"–":n.toLocaleString());
 const charts = [];
@@ -236,8 +241,10 @@ function build(){
 }
 
 // ── Executive interactive section ─────────────────────────────────────────
-const EX=DATA.exec; const F={region:"region",district:"district",project:"project",ym:"ym",seedlings:"seedlings",cost:"cost",coop:"coop_type"};
-const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
+// EX/IDX derive from DATA, which may arrive asynchronously — boot() fills them
+// in before build() runs.
+let EX=null; const F={region:"region",district:"district",project:"project",ym:"ym",seedlings:"seedlings",cost:"cost",coop:"coop_type"};
+const IDX={};
 
 function buildExec(){
   const sd=el("div","section"); sd.id="exec";
@@ -313,7 +320,34 @@ function applyExec(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:12,font:{size:9}}}}}}));
 }
 
-build();
+// ── boot ──────────────────────────────────────────────────────────────────
+// Fetch the payload unless it was inlined at build time, then render. Any
+// failure is surfaced in the page rather than left as a blank dashboard.
+async function boot(){
+  const sub=document.getElementById("hdr-sub");
+  if(!DATA){
+    if(!DATA_URL){ sub.textContent="No data source configured."; return; }
+    sub.textContent="Loading data…";
+    try{
+      const r=await fetch(DATA_URL,{cache:"no-cache"});
+      if(!r.ok) throw new Error("HTTP "+r.status+" "+r.statusText);
+      DATA=await r.json();
+    }catch(err){
+      sub.textContent="";
+      const b=el("div","block full");
+      b.appendChild(el("h3",null,"Could not load dashboard data"));
+      b.appendChild(el("div","note",
+        "Fetching <code>"+DATA_URL+"</code> failed: "+String((err&&err.message)||err)+
+        ".<br>The nightly pipeline publishes this payload to object storage; if this "+
+        "persists, check the upload step of the seedlings workflow."));
+      document.getElementById("main").appendChild(b);
+      return;
+    }
+  }
+  EX=DATA.exec; EX.fields.forEach((f,i)=>IDX[f]=i);
+  build();
+}
+boot();
 </script>
 </body>
 </html>

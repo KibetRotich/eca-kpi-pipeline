@@ -42,6 +42,8 @@ next-env.d.ts
 
 # seedlings pipeline working data (re-fetched from Kobo every run, never committed)
 pipeline/seedlings/seedlings_*.csv
+# built payload — published to object storage, deliberately not committed
+pipeline/seedlings/seedlings_payload.json
 __pycache__/
 
 # hc_survival pipeline working data (re-fetched/rebuilt every run)

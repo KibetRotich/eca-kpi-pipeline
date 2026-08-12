@@ -1,17 +1,22 @@
 name: Seedlings Dashboard Refresh
 
-# Keeps public/Seedlings_Dashboard.html (served at /Seedlings_Dashboard.html) in
-# sync with the live Kobo form. Re-pulls ALL submissions from KoBoToolbox and
-# rebuilds the self-contained dashboard, then commits it — which triggers a Vercel
-# deploy.
+# Keeps the seedlings dashboard in sync with the live Kobo form.
+#
+# The data is published to Supabase Storage, NOT committed. The shell in public/
+# fetches it at runtime, so a refresh needs no commit and no deploy — which is
+# what stops the dashboard freezing when the repo that builds it isn't the repo
+# that deploys it. The shell changes only when the template changes, so the
+# commit step below is now a rare event rather than nightly 5 MB churn.
 #
 # Triggers:
 #   1. Nightly at 03:00 UTC (06:00 EAT) — picks up new submissions / new species
 #   2. On push to the pipeline source files (rebuild after a code change)
 #   3. Manual run from the Actions tab (Actions → Run workflow)
 #
-# Required secret:  KOBO_TOKEN  (Settings → Secrets and variables → Actions)
-#   KoBoToolbox API token for the form (UID a5rJdqQGuy2DtTXvEx3cpq).
+# Required secrets (Settings → Secrets and variables → Actions):
+#   KOBO_TOKEN                  KoBoToolbox API token for form a5rJdqQGuy2DtTXvEx3cpq
+#   NEXT_PUBLIC_SUPABASE_URL    Supabase project URL
+#   SUPABASE_SERVICE_ROLE_KEY   service-role key (Storage write; server-side only)
 on:
   schedule:
     - cron: "0 3 * * *"      # 03:00 UTC daily
@@ -33,11 +38,32 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
     steps:
+      # The build now hard-fails without a payload URL (by design — a shell with
+      # nowhere to fetch from is a broken dashboard). Skip the job cleanly rather
+      # than failing nightly if the Supabase secrets aren't configured yet.
+      # Secrets can't be used in a job-level `if`, so steps are gated on this.
+      - name: Check required secrets
+        id: check
+        run: |
+          if [ -n "$KOBO_TOKEN" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Seedlings refresh skipped — KOBO_TOKEN / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not all set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
+        if: steps.check.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python 3.11
+        if: steps.check.outputs.ready == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -45,35 +71,48 @@ jobs:
           cache-dependency-path: pipeline/seedlings/requirements.txt
 
       - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
         run: pip install -r pipeline/seedlings/requirements.txt
 
       # 1. Pull every submission into pipeline/seedlings/seedlings_*.csv
       #    (gitignored — rebuilt every run, never committed)
       - name: Fetch Kobo submissions
-        env:
-          KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+        if: steps.check.outputs.ready == 'true'
         run: python pipeline/seedlings/fetch_seedlings_json.py
 
-      # 2. Rebuild the dashboard into public/. Species & district lists are
-      #    data-driven, so new species / districts flow through automatically.
-      #    Any district name that fails to match a boundary is printed here.
+      # 2. Rebuild the shell into public/ and the payload alongside the CSVs.
+      #    Species & district lists are data-driven, so new species / districts
+      #    flow through automatically. Any district name that fails to match a
+      #    boundary is printed here.
       - name: Rebuild dashboard
+        if: steps.check.outputs.ready == 'true'
+        env:
+          SEEDLINGS_DATA_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/storage/v1/object/public/dashboard-data/seedlings/payload.json
         run: python pipeline/seedlings/build_dashboard.py
 
-      # 3. Commit the regenerated dashboard. Only commits when the file actually
-      #    changed (quiet days → no commit/deploy). Rebase-and-retry on push so a
-      #    concurrent commit to main doesn't fail the run with a non-fast-forward.
-      #    The push triggers Vercel to redeploy the platform.
+      # 3. Publish the payload. This is the step that actually refreshes the
+      #    live dashboard — it overwrites one object in Storage and reads it
+      #    back to confirm. Runs BEFORE the commit so that if it fails, the
+      #    still-good previous payload stays paired with the deployed shell.
+      - name: Publish payload to Supabase Storage
+        if: steps.check.outputs.ready == 'true'
+        run: python pipeline/seedlings/upload_payload.py
+
+      # 4. Commit the shell only if it actually changed — now rare, since it no
+      #    longer carries data. Rebase-and-retry on push so a concurrent commit
+      #    to main doesn't fail the run with a non-fast-forward. The push
+      #    triggers Vercel to redeploy the platform.
       - name: Commit updated dashboard
+        if: steps.check.outputs.ready == 'true'
         run: |
           if git diff --quiet -- public/Seedlings_Dashboard.html; then
-            echo "No dashboard changes — nothing to commit."
+            echo "No shell changes — data already published to Storage; nothing to commit."
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/Seedlings_Dashboard.html
-          git commit -m "chore: seedlings dashboard refresh $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git commit -m "chore: seedlings dashboard shell rebuild $(date -u '+%Y-%m-%d %H:%M UTC')"
           n=0
           until git push; do
             n=$((n+1))

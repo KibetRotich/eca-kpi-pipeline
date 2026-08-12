@@ -6,7 +6,18 @@ Computation is done in pandas; results are emitted as a JSON blob of typed
 (9) filters client-side over an embedded record-level array. GPS / cooperative
 maps are matplotlib PNGs embedded as base64.
 
-Output: <repo>/public/Seedlings_Dashboard.html  (served by Next.js at /Seedlings_Dashboard.html)
+Outputs two artifacts:
+  <repo>/public/Seedlings_Dashboard.html   the ~5 KB shell (served at /Seedlings_Dashboard.html)
+  <data dir>/seedlings_payload.json        the data, uploaded to object storage
+
+The payload is deliberately NOT inlined. It is ~99.9% of the rendered page, so
+embedding it meant committing 5 MB to git nightly and shipping data changes
+through a redeploy — which silently froze the dashboard whenever the build repo
+and the deploy repo drifted apart. Keeping data out of the artifact decouples
+refresh from deploy (the same property that keeps /eca-events current).
+
+Set SEEDLINGS_INLINE=1 to embed the payload and get the old self-contained file
+back, for offline review or as a fallback.
 """
 import os, io, json, base64, html, re
 import numpy as np
@@ -23,6 +34,15 @@ DDIR = os.environ.get("SEEDLINGS_DATA_DIR", HERE)   # where the fetched CSVs liv
 OUT_HTML = os.environ.get("SEEDLINGS_OUT",
                           os.path.join(REPO_ROOT, "public", "Seedlings_Dashboard.html"))
 os.makedirs(os.path.dirname(OUT_HTML), exist_ok=True)
+
+# Payload written here, then uploaded by upload_payload.py. Gitignored — it is
+# data, not source, and the whole point is to keep it out of the repo.
+OUT_JSON = os.environ.get("SEEDLINGS_PAYLOAD_OUT",
+                          os.path.join(DDIR, "seedlings_payload.json"))
+# URL the shell fetches at runtime. Must match where upload_payload.py puts it.
+DATA_URL = os.environ.get("SEEDLINGS_DATA_URL", "")
+# 1/true/yes → embed the payload and skip the fetch (old self-contained build).
+INLINE = os.environ.get("SEEDLINGS_INLINE", "").strip().lower() in {"1", "true", "yes"}
 
 QTY_CAP = 10_000
 UGX_RATE = 1000
@@ -629,9 +649,23 @@ DATA = to_native({"sections": SECTIONS, "exec": EXEC, "global": GLOBAL})
 payload = json.dumps(DATA, separators=(",", ":"))
 print(f"  payload size: {len(payload)/1e6:.1f} MB  | records embedded: {len(records):,}")
 
+with open(OUT_JSON, "w", encoding="utf-8") as f:
+    f.write(payload)
+print(f"  wrote {OUT_JSON}  ({os.path.getsize(OUT_JSON)/1e6:.1f} MB)")
+
+if not INLINE and not DATA_URL:
+    raise SystemExit(
+        "SEEDLINGS_DATA_URL is required: the shell has to know where to fetch the\n"
+        "payload from. Set it to the public URL upload_payload.py publishes to, or\n"
+        "set SEEDLINGS_INLINE=1 to build the old self-contained file instead.")
+
 with open(os.path.join(HERE, "dashboard_template.html"), "r", encoding="utf-8") as f:
     template = f.read()
-out_html = template.replace("/*__DATA__*/", payload)
+# Exactly one of these carries the data: inline embeds it, otherwise DATA stays
+# null and the shell fetches DATA_URL on load.
+out_html = (template.replace("/*__DATA__*/", payload if INLINE else "null")
+                    .replace("/*__DATA_URL__*/", "" if INLINE else DATA_URL))
 with open(OUT_HTML, "w", encoding="utf-8") as f:
     f.write(out_html)
-print(f"  wrote {OUT_HTML}  ({os.path.getsize(OUT_HTML)/1e6:.1f} MB)")
+size = os.path.getsize(OUT_HTML)
+print(f"  wrote {OUT_HTML}  ({size/1e6:.2f} MB, {'inlined' if INLINE else 'fetches ' + DATA_URL})")
