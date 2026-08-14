@@ -1,0 +1,85 @@
+name: ECA Events → Supabase Sync
+
+# Keeps the eca_* tables in Supabase in sync with the live "ECA Trainings and
+# Events Tracker" Kobo form (aCt5s6EGUnE7UxJVeuXjpY). Re-fetches all submissions
+# via the Kobo REST API and upserts through
+# masp4-platform/pipeline/eca-events/sync_supabase.py.
+#
+# This is the most load-bearing of the pipelines: the /eca-events/* pages query
+# Supabase at request time (lib/eca-events/queries.ts reads eca_sync_meta), so if
+# this cron stops the live pages go stale immediately — no rebuild or manual sync
+# can compensate.
+#
+# MIGRATED from solidaridad-eca/masp4-platform (2026-08-14). This repo is the one
+# Vercel deploys from. The app lives in the masp4-platform/ subfolder here, so paths
+# are prefixed accordingly.
+#
+# NB: a Kobo *MCP* server only exists inside an interactive Claude Code session,
+# so an unattended runner cannot use it — this Action uses the REST path with a
+# KOBO_TOKEN secret (same pattern as the seedlings pipeline). Interactive /
+# MCP-driven loads are run from Claude Code with --source cache.
+#
+# Triggers: every 3 hours, on pipeline code changes, and manual dispatch.
+#
+# Required secrets (Settings → Secrets and variables → Actions):
+#   KOBO_TOKEN                  Kobo API token for the form
+#   NEXT_PUBLIC_SUPABASE_URL    Supabase project URL
+#   SUPABASE_SERVICE_ROLE_KEY   Supabase service-role key (server-side only)
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  push:
+    paths:
+      - "masp4-platform/pipeline/eca-events/**"
+      - ".github/workflows/eca-events-sync.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: eca-events-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Fetch Kobo data → upsert Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      # Skip the whole job cleanly (success) if the required secrets aren't set,
+      # so pushes don't fail before secrets are configured. Secrets can't be used
+      # in job-level `if`, so we gate steps on this check instead.
+      - name: Check required secrets
+        id: check
+        run: |
+          if [ -n "$KOBO_TOKEN" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::ECA sync skipped — KOBO_TOKEN / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not all set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.check.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: masp4-platform/pipeline/eca-events/requirements.txt
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: pip install -r pipeline/eca-events/requirements.txt
+
+      - name: Sync submissions into Supabase
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform/pipeline/eca-events
+        env:
+          ECA_DATA_SOURCE: live
+          KOBO_URL: https://kf.kobotoolbox.org
+        run: python sync_supabase.py --source live

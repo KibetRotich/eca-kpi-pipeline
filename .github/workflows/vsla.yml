@@ -1,0 +1,126 @@
+name: VSLA Performance Dashboard Refresh
+
+# Keeps the VSLA performance dashboard in sync with the live Kobo form:
+#   masp4-platform/public/VSLA_Performance_Dashboard.html
+# Flow: fetch Kobo (JSON) -> defensive clean/transform -> upsert Supabase (vsla_* tables)
+#       -> rebuild dashboard -> commit (triggers Vercel deploy).
+#
+# The vsla_* tables are also read at request time by app/api/analytics/route.ts and
+# lib/analytics/ratios.ts, so this pipeline is load-bearing for live pages — not just
+# for the static HTML tile.
+#
+# MIGRATED from solidaridad-eca/masp4-platform (2026-08-14). This repo is the one
+# Vercel deploys from. The app lives in the masp4-platform/ subfolder here, so each
+# `run` step sets working-directory: masp4-platform, making CWD identical to the old
+# repo root — the pipeline scripts resolve paths from __file__ and so write to
+# masp4-platform/public/ unchanged.
+#
+# Triggers: nightly 04:00 UTC, on pipeline source change, or manual.
+#
+# Required secrets (Settings -> Secrets and variables -> Actions):
+#   KOBO_TOKEN                    KoBoToolbox API token
+#   NEXT_PUBLIC_SUPABASE_URL      Supabase project URL (MASPIV_Platform)
+#   SUPABASE_SERVICE_ROLE_KEY     Supabase service role key (server-side only)
+#   Until all three are set, the job skips cleanly (green) instead of failing nightly.
+on:
+  schedule:
+    - cron: "0 4 * * *"       # 04:00 UTC daily (07:00 EAT)
+  push:
+    paths:
+      - "masp4-platform/pipeline/vsla/**"
+      - ".github/workflows/vsla.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: vsla-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Fetch Kobo → clean → Supabase → rebuild dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      # Gate the job on the secrets being present so pushes don't fail before they
+      # are configured. Runs before checkout, so no working-directory here —
+      # masp4-platform/ does not exist yet.
+      - name: Check required secrets
+        id: check
+        run: |
+          if [ -n "$KOBO_TOKEN" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::VSLA refresh skipped — KOBO_TOKEN / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not all set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: masp4-platform/pipeline/vsla/requirements.txt
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: pip install -r pipeline/vsla/requirements.txt
+
+      # 1. Pull all submissions + the form definition (JSON, gitignored)
+      - name: Fetch Kobo submissions
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/vsla/fetch_vsla_json.py
+
+      # 2. Defensive clean/normalize (incl. rate clamping) -> clean_*.json
+      - name: Transform (defensive clean)
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/vsla/transform.py
+
+      # 3. Upsert raw + normalized rows into Supabase (vsla_* tables), idempotent
+      - name: Load Supabase
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/vsla/load_supabase.py
+
+      # 4. Rebuild the self-contained dashboard into masp4-platform/public/
+      - name: Rebuild dashboard
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/vsla/build_dashboard.py
+
+      # 5. Commit regenerated dashboard (only when changed). Push triggers Vercel deploy.
+      - name: Commit updated dashboard
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: |
+          if git diff --quiet -- public/VSLA_Performance_Dashboard.html; then
+            echo "No dashboard changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/VSLA_Performance_Dashboard.html
+          git commit -m "chore: vsla-performance dashboard refresh $(date -u '+%Y-%m-%d %H:%M UTC')"
+          n=0
+          until git push; do
+            n=$((n+1))
+            if [ "$n" -ge 5 ]; then echo "::error::push failed after $n attempts"; exit 1; fi
+            echo "push rejected (main moved); rebasing — attempt $n"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" \
+              || { echo "::error::rebase conflict on generated dashboard"; git rebase --abort; exit 1; }
+          done
