@@ -35,7 +35,7 @@ function Donut({ parts }: { parts: [string, number, string][] }) {
   return (
     <Doughnut data={{ labels: p.map(lab), datasets: [{ data: p.map(x => x[1]), backgroundColor: p.map(x => x[2]), borderColor: '#fff', borderWidth: 2 }] }}
       options={{ responsive: true, maintainAspectRatio: false, cutout: '58%',
-        plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 10, color: '#222' } },
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 9 }, boxWidth: 10, padding: 6, color: '#222' } },
                    tooltip: { callbacks: { label: c => ` ${c.label}` } } } }} />
   )
 }
@@ -176,31 +176,23 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
             <div style={small}>Values as reported each period. Whether these are running totals is set by the sheet’s cumulative column.</div>
           </div>
         )}
-        {rc && rc.farmers_reached > 0 && (
-          <div style={{ ...card, gridColumn: '1 / -1' }}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender and youth of farmers reached</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem', marginTop: '.3rem' }}>
-              <div>
-                <div style={small}>Gender</div>
-                <div style={{ height: 190 }}>
-                  <Donut parts={[['Women', rc.women, '#d81b60'], ['Men', rc.men, '#1565c0'],
-                                 ['Other / not stated', rc.gender_other, '#9e9e9e'], ['Not in register', rc.not_in_register, '#d8d8d8']]} />
-                </div>
-              </div>
-              <div>
-                <div style={small}>Youth (register age group)</div>
-                <div style={{ height: 190 }}>
-                  <Donut parts={[['Youth', rc.youth, '#e65100'], ['Non-youth', rc.non_youth, '#6b6b6b'], ['Not in register', rc.not_in_register, '#d8d8d8']]} />
-                </div>
-              </div>
+        {rc && rc.farmers_reached > 0 && (<>
+          <div style={card}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender of farmers reached</div>
+            <div style={{ height: 210 }}>
+              <Donut parts={[['Women', rc.women, '#d81b60'], ['Men', rc.men, '#1565c0'],
+                             ['Other / not stated', rc.gender_other, '#9e9e9e'], ['Not in register', rc.not_in_register, '#d8d8d8']]} />
             </div>
-            <div style={small}>
-              {rc.farmers_reached.toLocaleString()} farmers reached with seedlings, all distribution rounds. Gender and age group come from the
-              profiled-farmer register, matched on the beneficiary ID — the distribution form itself does not record them.
-              Farmers who received seedlings but are not in the register are shown as “not in register”.
-            </div>
+            <div style={small}>{rc.farmers_reached.toLocaleString()} farmers reached, all rounds. Gender from the profiled-farmer register (matched on beneficiary ID).</div>
           </div>
-        )}
+          <div style={card}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Youth of farmers reached</div>
+            <div style={{ height: 210 }}>
+              <Donut parts={[['Youth', rc.youth, '#e65100'], ['Non-youth', rc.non_youth, '#6b6b6b'], ['Not in register', rc.not_in_register, '#d8d8d8']]} />
+            </div>
+            <div style={small}>Age group from the profiled-farmer register; the distribution form does not record gender or age.</div>
+          </div>
+        </>)}
       </div>
 
       {/* Editable sheet */}
