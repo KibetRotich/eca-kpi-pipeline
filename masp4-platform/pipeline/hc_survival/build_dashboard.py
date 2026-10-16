@@ -148,7 +148,7 @@ def build(cohort, all_batch, all_species):
     ]
 
     data = dict(
-        cohort=cohort, title=TITLE[cohort], subtitle=SUB[cohort],
+        cohort=cohort, title=TITLE[cohort], subtitle=subtitle(cohort, batch),
         filters=filters, records=records, species=sp_records if is_ke else [],
         sections=sections, loss_reasons=loss, env_block=env_block, insights=insights, dq=dq)
 
@@ -164,8 +164,16 @@ TITLE = {"UG_HC": "Harvesting Carbon — Uganda Tree-Survival Dashboard",
          "KE_SAVE": "SAVE KE — Kenya Tree-Survival Dashboard"}
 H1 = {"UG_HC": "🌳 Harvesting Carbon — Uganda · Tree Survival",
       "KE_SAVE": "🌳 SAVE KE — Kenya · Tree Survival"}
-SUB = {"UG_HC": "Batch-grain monitoring · 208 visits · Mar–Apr 2026",
-       "KE_SAVE": "Species-grain monitoring · 2,157 visits · 866 farmers · Dec-2024→Jul-2026"}
+def subtitle(cohort, batch):
+    """Header line computed from the data (was hard-coded, so it went stale after refreshes)."""
+    import datetime as _dt
+    ds = sorted(d for d in (str(b.get("submitted_at") or "")[:10] for b in batch) if d)
+    fmt = lambda d: _dt.date.fromisoformat(d).strftime("%b-%Y")
+    span = f"{fmt(ds[0])}→{fmt(ds[-1])}" if ds else "no dated visits"
+    if cohort == "UG_HC":
+        return f"Batch-grain monitoring · {len(batch):,} visits · {span}"
+    farmers = len({b.get("farmer_id") for b in batch if b.get("farmer_id")})
+    return f"Species-grain monitoring · {len(batch):,} visits · {farmers:,} farmers · {span}"
 DESC = {"UG_HC": "Harvesting Carbon agroforestry monitoring (Uganda). Counts are per-visit batch totals across all species. Use filters to slice; the Insights tab has the regression story.",
         "KE_SAVE": "SAVE KE agroforestry monitoring (Kenya, Nyandarua). Survival is measured per species within each visit. Filters recompute all KPIs and charts live."}
 OUTFILE = {"UG_HC": "HC_Survival_UG_Dashboard.html", "KE_SAVE": "SAVE_KE_Survival_Dashboard.html"}
