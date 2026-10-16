@@ -112,6 +112,27 @@ def main():
 
         meta = dict(id=1, last_synced_at=now, n_events=len(events), n_entries=len(entries),
                     notes="pipeline/save_seedlings load")
+
+        # Profiled-farmer register (Sprint 26) — only when fetch_profiled.py produced a
+        # fresh copy; otherwise the register already in Supabase is kept as-is.
+        pf_path = os.path.join(DDIR, "clean_profiled.json")
+        if os.path.exists(pf_path):
+            prof = json.load(open(pf_path, encoding="utf-8"))
+            if prof:
+                for r in prof:
+                    r["updated_at"] = now
+                upsert(c, url, key, "save_dist_profiled_farmers", prof, "beneficiary_id")
+                live = {r["beneficiary_id"] for r in prof}
+                gone = [r["beneficiary_id"] for r in
+                        select_all(c, url, key, "save_dist_profiled_farmers", "beneficiary_id")
+                        if r["beneficiary_id"] not in live]
+                for i in range(0, len(gone), 100):
+                    ids = ",".join(f'"{b}"' for b in gone[i:i + 100])
+                    delete_where(c, url, key, "save_dist_profiled_farmers", f"beneficiary_id=in.({ids})")
+                print(f"  profiled register: {len(prof):,} loaded, {len(gone)} pruned")
+                meta.update(n_profiled=len(prof), profiled_synced_at=now)
+        else:
+            print("  profiled register: no fresh copy this run — keeping Supabase register")
         r = c.post(f"{url}/rest/v1/save_dist_sync_meta?on_conflict=id", headers=_hdr(key),
                    content=json.dumps([meta]))
         if r.status_code >= 300:

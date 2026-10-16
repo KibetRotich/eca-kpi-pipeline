@@ -1,3 +1,5 @@
 httpx
 pandas
 numpy
+gspread
+google-auth

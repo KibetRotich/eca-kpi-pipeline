@@ -19,6 +19,11 @@ name: SAVE KE Seedlings Distribution Dashboard Refresh
 #   NEXT_PUBLIC_SUPABASE_URL      Supabase project URL (MASPIV_Platform)
 #   SUPABASE_SERVICE_ROLE_KEY     Supabase service role key (server-side only)
 # Until all three are set, the job skips cleanly (green) instead of failing nightly.
+# Optional:
+#   GOOGLE_CREDENTIALS            service-account JSON (same as etl.yml) used to read the
+#                                 profiled-farmer Google Sheet. Share the sheet (Viewer)
+#                                 with its client_email. If missing / no access, the
+#                                 register already in Supabase is kept and the run stays green.
 on:
   schedule:
     - cron: "20 3 * * *"     # 03:20 UTC daily (staggered after seedlings)
@@ -43,6 +48,7 @@ jobs:
       KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     steps:
       # Gate the job on the secrets being present so pushes don't fail before they
@@ -82,6 +88,13 @@ jobs:
         if: steps.check.outputs.ready == 'true'
         working-directory: masp4-platform
         run: python pipeline/save_seedlings/fetch_save_seedlings.py
+
+      # 1b. Profiled-farmer register from Google Sheets (names/phones/GPS dropped).
+      #     Never fails the run: without access it keeps the Supabase copy.
+      - name: Fetch profiled-farmer register
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/save_seedlings/fetch_profiled.py
 
       # 2. Clean + derive rounds / duplicate / first-receipt flags -> clean_*.json
       - name: Transform

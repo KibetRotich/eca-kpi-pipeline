@@ -208,6 +208,21 @@ function buildExec(){
     [...document.getElementById("f-ward").options].forEach(o=>o.hidden=false); applyExec();};
   fb.appendChild(btn); sd.appendChild(fb);
   const kp=el("div","block full"); kp.appendChild(el("h3",null,"Key indicators (filtered)")); const kc=el("div","kpis"); kc.id="exec-kpis"; kp.appendChild(kc); sd.appendChild(kp);
+  if(EX.profiled){
+    const P=EX.profiled, pb=el("div","block full");
+    pb.appendChild(el("h3",null,"Profiled farmers vs reached (filtered)"));
+    const pk=el("div","kpis"); pk.id="exec-prof"; pb.appendChild(pk);
+    const pg=el("div","grid"); pg.style.marginTop="14px";
+    const t=el("div"); t.id="exec-prof-tbl"; pg.appendChild(t);
+    const cb=el("div","chartbox"); const cv=el("canvas"); cv.id="exec-prof-chart"; cb.appendChild(cv); pg.appendChild(cb);
+    pb.appendChild(pg);
+    pb.appendChild(el("div","note","Register: <b>"+P.source+"</b>"+(P.synced?" (loaded "+P.synced+")":"")+
+      ". A farmer counts as reached once they received seedlings in any round up to the selected round. "+
+      P.out_of_area+" registered farmers are outside the three project wards; "+
+      P.not_in_register+" farmers who received seedlings are not in this register; "+
+      P.zero_plot_reached+" of the "+P.zero_plot+" farmers with no approved plot received seedlings."));
+    sd.appendChild(pb);
+  }
   const grid=el("div","grid");
   [["exec-sp","Seedlings by species (filtered)"],["exec-rnd","Farmers per round — new vs returning (filtered)"],
    ["exec-ward","Seedlings by ward (filtered)"],["exec-mon","Seedlings by month (filtered)"]]
@@ -224,6 +239,33 @@ function buildExec(){
   return sd;
 }
 
+let profChart=null;
+function applyProfiled(sc,w,r){
+  const P=EX.profiled, I={}; P.fields.forEach((f,i)=>I[f]=i);
+  const upto=r?EX.rounds.indexOf(r):EX.rounds.length-1;      // cumulative: reached by end of round
+  const rows=P.records.filter(x=>(!sc||x[I.subcounty]==sc)&&(!w||x[I.ward]==w));
+  const hit=x=>x[I.first]>=0&&x[I.first]<=upto;
+  const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"–";
+  const n=rows.length, got=rows.filter(hit).length;
+  const fem=rows.filter(x=>x[I.gender]=="female"), yth=rows.filter(x=>x[I.youth]);
+  const pk=document.getElementById("exec-prof"); pk.innerHTML="";
+  [["Profiled farmers",fmt(n)],["Reached with seedlings",fmt(got)],["Coverage",pct(got,n)],["Not yet reached",fmt(n-got)],
+   ["Women coverage",pct(fem.filter(hit).length,fem.length)],["Youth coverage",pct(yth.filter(hit).length,yth.length)]]
+   .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); pk.appendChild(d);});
+  const by={}; rows.forEach(x=>{const k=x[I.ward]; by[k]=by[k]||{sc:x[I.subcounty],n:0,g:0,f:0,fg:0,y:0,yg:0};
+    const b=by[k], h=hit(x); b.n++; if(h)b.g++; if(x[I.gender]=="female"){b.f++; if(h)b.fg++;} if(x[I.youth]){b.y++; if(h)b.yg++;}});
+  const wards=Object.keys(by).sort((a,b)=>by[b].n-by[a].n);
+  const tb=document.getElementById("exec-prof-tbl"); tb.innerHTML="";
+  tb.appendChild(buildTable(["Ward","Sub-county","Profiled","Reached","Coverage","Women","Youth"],
+    wards.map(k=>{const b=by[k]; return [k,b.sc,b.n,b.g,pct(b.g,b.n),pct(b.fg,b.f),pct(b.yg,b.y)];})));
+  if(profChart) profChart.destroy();
+  profChart=new Chart(document.getElementById("exec-prof-chart"),{type:"bar",data:{labels:wards,datasets:[
+    {label:"reached",data:wards.map(k=>by[k].g),backgroundColor:PAL[1]},
+    {label:"not yet reached",data:wards.map(k=>by[k].n-by[k].g),backgroundColor:"#d8d8d8"}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},
+      scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9}}}}}});
+}
+
 let execCharts=[];
 function applyExec(){
   const sc=document.getElementById("f-sc").value, w=document.getElementById("f-ward").value,
@@ -235,6 +277,7 @@ function applyExec(){
   [["Unique farmers reached",fmt(farmers)],["Seedlings distributed",fmt(seed)],["Farmer entries",fmt(rows.length)],
    ["Avg seedlings / farmer",farmers?(seed/farmers).toFixed(1):"–"],["First-time farmers",fmt(newN)],["Probable duplicate entries",fmt(dupN)]]
    .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
+  if(EX.profiled) applyProfiled(sc,w,r);
   const sp=EX.species.map(([k,n])=>[n,rows.reduce((a,x)=>a+x[IDX[k]],0)]).sort((a,b)=>b[1]-a[1]);
   const byWard={}, byMon={}, rnd={}; EX.rounds.forEach(k=>rnd[k]={n:new Set(),all:new Set()});
   rows.forEach(x=>{

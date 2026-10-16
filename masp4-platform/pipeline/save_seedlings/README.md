@@ -8,6 +8,7 @@ Supabase is the source of truth — the dashboard is built from the database, no
 
 ```
 Kobo API ─fetch_save_seedlings.py─▶ save_dist_*.csv + save_dist_raw.json (PII stripped, gitignored)
+Google Sheet ─fetch_profiled.py──▶ clean_profiled.json (register; names/phones/GPS dropped)
          ─transform.py───────────▶ clean_events.json + clean_entries.json (rounds, dup flags)
          ─load_supabase.py───────▶ Supabase save_dist_* tables (Sprint 24; upsert + prune)
 Supabase ─build_dashboard.py─────▶ public/SAVE_KE_Seedlings_Dashboard.html → Vercel
@@ -21,6 +22,8 @@ Secrets: KOBO_TOKEN, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (same a
 | `save_dist_raw_submissions` | Kobo JSON per submission, farmer names/phones stripped |
 | `save_dist_events` | one row per distribution event (submission) |
 | `save_dist_farmer_entries` | one row per farmer entry, with `is_probable_dup`, `is_first_receipt` |
+| `save_dist_profiled_farmers` | profiled-farmer register (Sprint 26), one row per beneficiary ID |
+| `v_save_dist_profiled_coverage` | profiled vs reached by ward, incl. women / youth |
 | `save_dist_sync_meta` | last sync time + row counts |
 | `v_save_dist_ward_summary`, `v_save_dist_round_summary`, `v_save_dist_species_totals` | rollups (`security_invoker`) |
 
@@ -35,6 +38,14 @@ python pipeline/save_seedlings/load_supabase.py     # Supabase creds from .env.l
 python pipeline/save_seedlings/build_dashboard.py
 ```
 `SAVE_DATA_DIR` overrides where working files are written and read; `SAVE_OUT` overrides the HTML path.
+
+## Profiled-farmer register (Executive → "Profiled farmers vs reached")
+Source: Google Sheet *SAVE KE Profiled Farmers Summary 20241015* (`1nWQwYcmygu2aeEJLIUq-bVirMLtF-OVZgrTRoEAl19E`, tab `in`).
+`fetch_profiled.py` reads it with the `GOOGLE_CREDENTIALS` service account — **share the sheet (Viewer) with that
+account's `client_email`**. Without access the nightly run keeps the register already in Supabase.
+Reach is matched on `sol_beneficiary_id`; with a round selected, coverage is cumulative to the end of that round.
+Sub-county is taken from the ward (the register has alternative names, e.g. Charagita under "Nyandarua West").
+Initial load (2026-10-16) was made from the sheet via `fetch_profiled.py --csv`.
 
 ## Data model
 - One submission = one **distribution event**; the `farmer_details` repeat = one **farmer entry**.

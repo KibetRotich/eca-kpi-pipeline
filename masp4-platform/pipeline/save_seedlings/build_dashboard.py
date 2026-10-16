@@ -63,6 +63,10 @@ url, key = _load_env()
 with httpx.Client(timeout=120) as c:
     m = pd.DataFrame(select_all(c, url, key, "save_dist_events", "*"))
     f = pd.DataFrame(select_all(c, url, key, "save_dist_farmer_entries", "*"))
+    pf = pd.DataFrame(select_all(c, url, key, "save_dist_profiled_farmers",
+                                 "beneficiary_id,gender,age_group,sub_county,ward,in_project_area,"
+                                 "approved_plots,source_sheet"))
+    meta = select_all(c, url, key, "save_dist_sync_meta", "profiled_synced_at")
 if m.empty:
     sys.exit("save_dist_events is empty — run fetch → transform → load first")
 # PostgREST row order is not guaranteed — sort so identical data gives an identical file
@@ -328,6 +332,35 @@ EXEC = {
     "ward_sc": {w: sc for w, sc in R[["ward", "subcounty"]].drop_duplicates().values},
     "rounds": ROUNDS,
 }
+# ── Profiled register vs reached (Sprint 26) ──────────────────────────────────
+# Reach is matched on the beneficiary ID. For the round filter we keep each farmer's
+# FIRST round, so "reached by round Rn" is cumulative coverage up to that round.
+PROFILED = None
+if not pf.empty:
+    pf = pf.sort_values("beneficiary_id").reset_index(drop=True)
+    first_round = (R.assign(key=R["fid"].str.upper()).sort_values(["start_dt", "_id", "entry_no"], kind="stable")
+                   .drop_duplicates("key").set_index("key")["round_no"])
+    rpos = {int(n): i for i, n in enumerate(rl["round_no"])}          # round_no -> index in ROUNDS
+    pf["first"] = pf["beneficiary_id"].map(first_round).map(lambda n: rpos.get(int(n), -1) if pd.notna(n) else -1)
+    reg_keys = set(pf["beneficiary_id"])
+    not_in_reg = int((~R["fid"].str.upper().drop_duplicates().isin(reg_keys)).sum())
+    ap = pd.to_numeric(pf["approved_plots"], errors="coerce").fillna(0)
+    synced = (meta[0].get("profiled_synced_at") if meta else None) or ""
+    PROFILED = {
+        "fields": ["subcounty", "ward", "gender", "youth", "first", "in_area"],
+        "records": [[r.sub_county or "(blank)", r.ward or "(blank)", r.gender or "", 1 if r.age_group == "youth" else 0,
+                     int(r.first), 1 if r.in_project_area else 0] for r in pf.itertuples()],
+        "source": pf["source_sheet"].dropna().iloc[0] if pf["source_sheet"].notna().any() else "profiled register",
+        "synced": str(synced)[:10],
+        "out_of_area": int((~pf["in_project_area"].fillna(False).astype(bool)).sum()),
+        "not_in_register": not_in_reg,
+        "zero_plot_reached": int(((ap == 0) & (pf["first"] >= 0)).sum()),
+        "zero_plot": int((ap == 0).sum()),
+    }
+    print(f"  profiled: {len(pf):,} register | reached {int((pf['first'] >= 0).sum()):,} | "
+          f"not in register {not_in_reg} | out of area {PROFILED['out_of_area']}")
+EXEC["profiled"] = PROFILED
+
 GLOBAL = {
     "events": len(m), "events_all": N_ALL, "entries": len(R),
     "farmers": int(R["fid"].nunique()), "seedlings": int(R["qty"].sum()),
