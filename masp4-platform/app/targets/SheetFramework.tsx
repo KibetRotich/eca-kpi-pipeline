@@ -8,10 +8,10 @@
  * (save_mf_indicator_values), so this page and tab 8 always show the same numbers.
  * The logic mirrors pipeline/save_seedlings/build_dashboard.py (section 8).
  */
-import { Bar, Line } from 'react-chartjs-2'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend } from 'chart.js'
+import { Doughnut, Line } from 'react-chartjs-2'
+import { Chart as ChartJS, CategoryScale, LinearScale, ArcElement, LineElement, PointElement, Tooltip, Legend } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, ArcElement, LineElement, PointElement, Tooltip, Legend)
 
 export interface SheetRow {
   indicator_id: string; period_end: string; level: string | null; indicator: string; unit: string | null
@@ -23,6 +23,21 @@ export interface SheetLink {
   sheet_id: string; gid: number; tab: string; label: string | null; synced_at: string | null
   rows: SheetRow[]
   reference?: { indicator_id: string; label: string; series: { period_end: string; value: number }[] }
+  reached?: { farmers_reached: number; women: number; men: number; gender_other: number
+              youth: number; non_youth: number; not_in_register: number } | null
+}
+
+/** Donut with % + count in every legend label (colours as on the Seedlings Summary dashboard). */
+function Donut({ parts }: { parts: [string, number, string][] }) {
+  const p = parts.filter(x => x[1] > 0)
+  const tot = p.reduce((a, x) => a + x[1], 0)
+  const lab = (x: [string, number, string]) => `${x[0]} — ${tot ? ((x[1] / tot) * 100).toFixed(1) : 0}% (${x[1].toLocaleString()})`
+  return (
+    <Doughnut data={{ labels: p.map(lab), datasets: [{ data: p.map(x => x[1]), backgroundColor: p.map(x => x[2]), borderColor: '#fff', borderWidth: 2 }] }}
+      options={{ responsive: true, maintainAspectRatio: false, cutout: '58%',
+        plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 10, color: '#222' } },
+                   tooltip: { callbacks: { label: c => ` ${c.label}` } } } }} />
+  )
 }
 
 const fmt = (n: number | null | undefined) => (n == null ? '–' : Number(n).toLocaleString())
@@ -77,8 +92,8 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const seen: string[] = []
   const people = score.filter(s => /farmer|people/i.test(s.unit) && byId(s.id).filter(r => r.total != null).length >= 2)
     .filter(s => { const k = JSON.stringify(series(s.id)); if (seen.includes(k)) return false; seen.push(k); return true }).slice(0, 2)
-  // Graph 4 — gender split, latest period with a breakdown per indicator
-  const gl = ids.map(id => byId(id).filter(r => r.male != null && r.female != null).slice(-1)[0]).filter(Boolean) as SheetRow[]
+  // Graph 4 — gender and youth of farmers reached (profiled register x Kobo distributions)
+  const rc = sheet.reached ? Object.fromEntries(Object.entries(sheet.reached).map(([k, v]) => [k, Number(v) || 0])) as Record<string, number> : null
 
   const src = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit?gid=${sheet.gid}&rm=minimal`
   const link = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit#gid=${sheet.gid}`
@@ -161,17 +176,29 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
             <div style={small}>Values as reported each period. Whether these are running totals is set by the sheet’s cumulative column.</div>
           </div>
         )}
-        {gl.length > 0 && (
-          <div style={card}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender split — latest period with a breakdown</div>
-            <div style={{ height: 210 }}>
-              <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { size: 9 }, boxWidth: 10 } } },
-                  scales: { x: { stacked: true, ticks: { font: { size: 8 } } }, y: { stacked: true, ticks: { font: { size: 9 } } } } }}
-                data={{ labels: gl.map(r => `${short(r.indicator).slice(0, 34)} (${plab(r.period_end)})`), datasets: [
-                  { label: 'male', data: gl.map(r => Number(r.male)), backgroundColor: '#1565c0', borderRadius: 3 },
-                  { label: 'female', data: gl.map(r => Number(r.female)), backgroundColor: '#d81b60', borderRadius: 3 }] }} />
+        {rc && rc.farmers_reached > 0 && (
+          <div style={{ ...card, gridColumn: '1 / -1' }}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender and youth of farmers reached</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem', marginTop: '.3rem' }}>
+              <div>
+                <div style={small}>Gender</div>
+                <div style={{ height: 190 }}>
+                  <Donut parts={[['Women', rc.women, '#d81b60'], ['Men', rc.men, '#1565c0'],
+                                 ['Other / not stated', rc.gender_other, '#9e9e9e'], ['Not in register', rc.not_in_register, '#d8d8d8']]} />
+                </div>
+              </div>
+              <div>
+                <div style={small}>Youth (register age group)</div>
+                <div style={{ height: 190 }}>
+                  <Donut parts={[['Youth', rc.youth, '#e65100'], ['Non-youth', rc.non_youth, '#6b6b6b'], ['Not in register', rc.not_in_register, '#d8d8d8']]} />
+                </div>
+              </div>
             </div>
-            <div style={small}>Youth counts overlap male/female and are shown in the sheet.</div>
+            <div style={small}>
+              {rc.farmers_reached.toLocaleString()} farmers reached with seedlings, all distribution rounds. Gender and age group come from the
+              profiled-farmer register, matched on the beneficiary ID — the distribution form itself does not record them.
+              Farmers who received seedlings but are not in the register are shown as “not in register”.
+            </div>
           </div>
         )}
       </div>

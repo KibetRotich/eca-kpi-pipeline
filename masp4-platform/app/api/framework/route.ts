@@ -57,12 +57,13 @@ export async function GET(req: NextRequest) {
   const link = await supabaseAdmin.from('project_mf_sheets')
     .select('sheet_id, gid, tab, source_table, label').eq('project_id', projectId).maybeSingle()
   if (link.data?.source_table === 'save_mf_indicator_values') {
-    const [rows, meta, dist] = await Promise.all([
+    const [rows, meta, dist, reached] = await Promise.all([
       supabaseAdmin.from('save_mf_indicator_values')
         .select('indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note')
         .order('indicator_id').order('period_end'),
       supabaseAdmin.from('save_dist_sync_meta').select('framework_synced_at').eq('id', 1).maybeSingle(),
       supabaseAdmin.from('v_save_dist_seedlings_by_period').select('period_end, seedlings_distributed_cum').order('period_end'),
+      supabaseAdmin.from('v_save_dist_reached_gender_youth').select('*').maybeSingle(),
     ])
     if (rows.error) return NextResponse.json({ error: rows.error.message }, { status: 500 })
     sheet = {
@@ -72,6 +73,8 @@ export async function GET(req: NextRequest) {
       // cross-check for "trees planted": seedlings handed out on the Kobo distribution form
       reference: { indicator_id: 'SAVE-01', label: 'seedlings distributed (Kobo form, cumulative)',
                    series: (dist.data ?? []).map(d => ({ period_end: d.period_end, value: Number(d.seedlings_distributed_cum) })) },
+      // gender / youth of farmers reached (profiled register x distributions) — Sprint 30
+      reached: reached.data ?? null,
     }
   }
 
