@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRole } from '@/lib/role-context'
 
 const BASELINE_YEAR = 2026
@@ -76,6 +76,8 @@ export default function TargetsPage() {
   const [filterCountry,    setFilterCountry]    = useState('')
   const [filterCommodity,  setFilterCommodity]  = useState('')
   const [filterProject,    setFilterProject]    = useState('')
+  const [search,           setSearch]           = useState('')
+  const gridScroll = useRef(0)                                     // scroll position of the project grid
 
   // Output KPI state
   const [outputMap,    setOutputMap]    = useState<Record<string, OutputEntry>>({})  // project_code → quarters
@@ -117,6 +119,30 @@ export default function TargetsPage() {
   }, [])
 
   useEffect(() => { load(year) }, [year, load])
+
+  // Project view <-> URL (?project=CODE). Opening a project pushes a history entry,
+  // so both the "Back to projects" button and the browser Back button return to the grid.
+  useEffect(() => {
+    const fromUrl = () => setFilterProject(new URLSearchParams(window.location.search).get('project') ?? '')
+    fromUrl()
+    window.addEventListener('popstate', fromUrl)
+    return () => window.removeEventListener('popstate', fromUrl)
+  }, [])
+  useEffect(() => {
+    if (!filterProject) window.scrollTo(0, gridScroll.current)   // back on the grid: restore position
+  }, [filterProject])
+
+  function openProject(code: string) {
+    if (!filterProject) gridScroll.current = window.scrollY
+    window.history.pushState({ project: code }, '', `?project=${encodeURIComponent(code)}`)
+    setFilterProject(code)
+    window.scrollTo(0, 0)
+  }
+
+  function backToProjects() {
+    if (window.history.state?.project) window.history.back()       // popstate restores the grid
+    else { window.history.replaceState(null, '', window.location.pathname); setFilterProject('') }
+  }
 
   function cellKey(code: string, kpi: string) { return `${code}:${kpi}` }
 
@@ -243,6 +269,13 @@ export default function TargetsPage() {
     (!filterCommodity || p.commodity    === filterCommodity) &&
     (!filterProject   || p.project_code === filterProject)
   )
+  const q = search.trim().toLowerCase()
+  const gridProjects = projects
+    .filter(p =>
+      (!filterCountry   || p.country   === filterCountry) &&
+      (!filterCommodity || p.commodity === filterCommodity) &&
+      (!q || p.project_name.toLowerCase().includes(q) || p.project_code.toLowerCase().includes(q)))
+    .sort((a, b) => a.country.localeCompare(b.country) || a.project_name.localeCompare(b.project_name))
 
 
   return (
@@ -290,7 +323,7 @@ export default function TargetsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '.35rem' }}>
           <span style={{ fontSize: '.58rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '.5px' }}>Project</span>
           <div style={{ position: 'relative' }}>
-            <select value={filterProject} onChange={e => setFilterProject(e.target.value)} style={{ paddingRight: '1.4rem', minWidth: 190 }}>
+            <select value={filterProject} onChange={e => e.target.value ? openProject(e.target.value) : backToProjects()} style={{ paddingRight: '1.4rem', minWidth: 190 }}>
               <option value="">All projects</option>
               {projects
                 .filter(p =>
@@ -308,16 +341,50 @@ export default function TargetsPage() {
           </div>
         </div>
 
-        {(filterCountry || filterCommodity || filterProject) && (
-          <button className="btn-secondary" onClick={() => { setFilterCountry(''); setFilterCommodity(''); setFilterProject('') }} style={{ marginLeft: 'auto' }}>Clear</button>
+        {/* Quick search — only on the project grid */}
+        {!filterProject && (
+          <input type="search" placeholder="Search project name or code…" value={search}
+            onChange={e => setSearch(e.target.value)} style={{ minWidth: 220, fontSize: '.65rem' }} />
+        )}
+
+        {(filterCountry || filterCommodity || filterProject || search) && (
+          <button className="btn-secondary" onClick={() => { setFilterCountry(''); setFilterCommodity(''); setSearch(''); if (filterProject) backToProjects() }} style={{ marginLeft: 'auto' }}>Clear</button>
         )}
 
       </div>
 
       {loading ? (
         <div style={{ fontSize: '.7rem', color: '#888', padding: '1.5rem 0' }}>Loading…</div>
+      ) : !filterProject ? (
+        <>
+          <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#666', marginBottom: '.5rem' }}>
+            Projects · {gridProjects.length} — select a project to view and edit its targets
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '.6rem' }}>
+            {gridProjects.map(p => {
+              const set = Object.keys(targetMap).filter(k => k.startsWith(p.project_code + ':')).length
+              return (
+                <button key={p.id} type="button" onClick={() => openProject(p.project_code)}
+                  className="cc"
+                  style={{ textAlign: 'left', cursor: 'pointer', padding: '.65rem .8rem', margin: 0, border: '1px solid #d0d0d0',
+                           borderTop: '3px solid #FFC800', background: '#fff', display: 'flex', flexDirection: 'column', gap: '.25rem', minHeight: 96 }}>
+                  <span style={{ fontSize: '.56rem', fontWeight: 800, letterSpacing: '1px', color: '#b8a800', textTransform: 'uppercase' }}>{p.project_code}</span>
+                  <span style={{ fontSize: '.7rem', fontWeight: 700, color: '#111', lineHeight: 1.25 }}>{p.project_name}</span>
+                  <span style={{ fontSize: '.56rem', color: '#888', marginTop: 'auto' }}>{p.country} · {p.commodity}</span>
+                  <span style={{ fontSize: '.52rem', color: set ? '#2e7d32' : '#aaa' }}>
+                    {set ? `${set} target${set === 1 ? '' : 's'} set for ${year}` : `No targets set for ${year}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </>
       ) : (
-        visible.map(project => (
+        <>
+        <button type="button" className="btn-secondary" onClick={backToProjects} style={{ marginBottom: '.7rem' }}>
+          ← Back to projects
+        </button>
+        {visible.map(project => (
           <div key={project.id} className="cc" style={{ padding: 0, overflow: 'hidden', marginBottom: '.8rem' }}>
 
             {/* Project header */}
@@ -777,10 +844,11 @@ export default function TargetsPage() {
             </div>
 
           </div>
-        ))
+        ))}
+        </>
       )}
 
-      {!loading && visible.length === 0 && (
+      {!loading && (filterProject ? visible.length === 0 : gridProjects.length === 0) && (
         <div style={{ fontSize: '.7rem', color: '#aaa', fontStyle: 'italic', padding: '1rem 0' }}>
           No projects match the selected filters.
         </div>
