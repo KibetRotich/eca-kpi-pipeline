@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
+import SheetFramework, { type SheetLink } from './SheetFramework'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -57,6 +58,7 @@ const emptyVal = { total: '', female: '', male: '', youth: '', notes: '' }
 export default function ProjectFramework({ projectId, year, canEdit }: { projectId: string; year: string; canEdit: boolean }) {
   const [inds, setInds] = useState<Indicator[]>([])
   const [vals, setVals] = useState<Value[]>([])
+  const [sheet, setSheet] = useState<SheetLink | null>(null)   // linked Google-Sheet framework (Sprint 29)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
   const [indForm, setIndForm] = useState<typeof emptyInd | null>(null)   // add / edit indicator
@@ -72,7 +74,7 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
       const r = await fetch(`/api/framework?project_id=${projectId}`)
       const j = await r.json()
       if (!r.ok) throw new Error(j.error ?? 'Could not load the framework')
-      setInds(j.indicators ?? []); setVals(j.values ?? [])
+      setInds(j.indicators ?? []); setVals(j.values ?? []); setSheet(j.sheet ?? null)
     } catch (e: any) { setErr(e.message) }
     finally { setLoading(false) }
   }, [projectId])
@@ -151,7 +153,9 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
         <span style={{ background: '#FFC800', color: '#000', fontSize: '.48rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.5px', padding: '.1rem .35rem' }}>
           Measurement framework
         </span>
-        <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#333' }}>Project logframe indicators · 6-monthly (June / December)</span>
+        <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#333' }}>
+          {sheet ? (sheet.label ?? 'Project M&E framework') : 'Project logframe indicators · 6-monthly (June / December)'}
+        </span>
         {canEdit && !indForm && (
           <button className="btn-secondary" style={{ padding: '.2rem .55rem', fontSize: '.58rem', marginLeft: 'auto' }} onClick={() => openIndicator()}>
             + Add indicator
@@ -162,6 +166,12 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
       {loading ? <div style={{ padding: '0 .9rem .7rem', fontSize: '.62rem', color: '#888' }}>Loading framework…</div>
       : err ? <div style={{ padding: '0 .9rem .7rem', fontSize: '.62rem', color: '#c62828' }}>{err}</div>
       : (<>
+        {sheet && <SheetFramework sheet={sheet} />}
+        {sheet && (inds.length > 0 || canEdit) && (
+          <div style={{ padding: '.2rem .9rem .35rem', fontSize: '.56rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#8a6d00' }}>
+            Platform indicators — MASP IV outputs recorded here (e.g. OUT.1 farmers trained, REC01–REC05)
+          </div>
+        )}
         {msg && <div style={{ padding: '0 .9rem .35rem', fontSize: '.58rem', color: msg.ok ? '#2e7d32' : '#c62828' }}>{msg.text}</div>}
 
         {/* Indicator editor */}
@@ -215,11 +225,11 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
           </div>
         )}
 
-        {inds.length === 0 ? (
+        {inds.length === 0 ? (sheet ? null : (
           <div style={{ padding: '0 .9rem .8rem', fontSize: '.62rem', color: '#888', fontStyle: 'italic' }}>
             No framework indicators for this project yet.{canEdit ? ' Use “+ Add indicator” to enter the project’s logframe.' : ''}
           </div>
-        ) : (<>
+        )) : (<>
           {/* Scorecard + selected year's 6-monthly values */}
           <div style={{ padding: '0 .9rem .5rem', overflowX: 'auto' }}>
             <table style={{ fontSize: '.64rem', background: '#fff', minWidth: 760 }}>
