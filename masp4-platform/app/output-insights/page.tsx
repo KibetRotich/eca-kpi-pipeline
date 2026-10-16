@@ -58,7 +58,7 @@ const DASHBOARDS: Dashboard[] = [
     href: '/SAVE_KE_Survival_Dashboard.html',
     external: true,
     title: 'Tree Survival — Kenya (SAVE KE)',
-    blurb: 'Tree-survival monitoring for SAVE KE (Kenya, Nyandarua). Per-species survival across 867 farmers and four monitoring waves (Dec 2024 – Sep 2026), crop & environmental/economic outcomes, loss reasons, and a regression/risk Insights tab. Refreshed nightly from KoboToolbox.',
+    blurb: 'Tree-survival monitoring for SAVE KE (Kenya, Nyandarua). Per-species survival on monitored farms across four monitoring waves, crop & environmental/economic outcomes, loss reasons, and a regression/risk Insights tab. Refreshed nightly from KoboToolbox.',
     chips: ['Survival by species', 'Sub-county', 'Monitoring waves', 'Environment', 'Transport', 'Insights'],
   },
   {
