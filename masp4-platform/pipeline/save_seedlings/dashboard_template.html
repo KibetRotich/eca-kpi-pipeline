@@ -293,10 +293,8 @@ function applyProfiled(sc,w,r){
   const hit=x=>x[I.first]>=0&&x[I.first]<=upto;
   const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"–";
   const n=rows.length, got=rows.filter(hit).length;
-  const fem=rows.filter(x=>x[I.gender]=="female"), yth=rows.filter(x=>x[I.youth]);
   const pk=document.getElementById("exec-prof"); pk.innerHTML="";
-  [["Profiled farmers",fmt(n)],["Reached with seedlings",fmt(got)],["Coverage",pct(got,n)],["Not yet reached",fmt(n-got)],
-   ["Women coverage",pct(fem.filter(hit).length,fem.length)],["Youth coverage",pct(yth.filter(hit).length,yth.length)]]
+  [["Profiled farmers",fmt(n)],["Reached with seedlings",fmt(got)],["Coverage",pct(got,n)],["Not yet reached",fmt(n-got)]]
    .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); pk.appendChild(d);});
   const by={}; rows.forEach(x=>{const k=x[I.ward]; by[k]=by[k]||{sc:x[I.subcounty],n:0,g:0,f:0,fg:0,y:0,yg:0};
     const b=by[k], h=hit(x); b.n++; if(h)b.g++; if(x[I.gender]=="female"){b.f++; if(h)b.fg++;} if(x[I.youth]){b.y++; if(h)b.yg++;}});
