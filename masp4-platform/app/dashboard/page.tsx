@@ -16,6 +16,35 @@ const COUNTRIES   = ['Ethiopia','Kenya','Tanzania','Uganda']
 const COMMODITIES = ['Cocoa','Coffee','Cotton','Dairy','Fashion','F&V','Gold','Leather','Palm Oil','Tea']
 const REC_CODES   = ['REC01','REC02','REC03','REC04','REC05'] as const
 
+/**
+ * REC01–REC05 from the per-project Measurement Framework, shaped like the old
+ * project_rec_records rows: { survey_year, rec_code, count, projects }.
+ * Per-period values are summed within a year; for an indicator marked as a running
+ * total only its latest value in the year counts.
+ */
+async function frameworkRecRows(year: number | string | null, country: string, commodity: string) {
+  let q = supabaseAdmin
+    .from('project_mf_values')
+    .select('period_end, total, project_mf_indicators!inner(project_id, indicator_code, cumulative, projects!inner(country, commodity))')
+    .in('project_mf_indicators.indicator_code', ['REC01', 'REC02', 'REC03', 'REC04', 'REC05'])
+  if (year)      q = (q as any).like('period_end', `${year}-%`)
+  if (country)   q = (q as any).eq('project_mf_indicators.projects.country',   country)
+  if (commodity) q = (q as any).eq('project_mf_indicators.projects.commodity', commodity)
+  const { data } = await q
+  const latest: Record<string, any> = {}
+  const out: any[] = []
+  for (const r of (data ?? []) as any[]) {
+    if (r.total == null) continue
+    const ind = r.project_mf_indicators
+    const row = { survey_year: Number(r.period_end.slice(0, 4)), rec_code: ind.indicator_code, count: Number(r.total), projects: ind.projects, period_end: r.period_end }
+    if (ind.cumulative === true) {
+      const k = `${ind.project_id}:${ind.indicator_code}:${row.survey_year}`
+      if (!latest[k] || r.period_end > latest[k].period_end) latest[k] = row
+    } else out.push(row)
+  }
+  return [...out, ...Object.values(latest)]
+}
+
 export default async function DashboardPage({ searchParams }: Props) {
   const sp        = await searchParams
   const year      = sp.year      ? parseInt(sp.year, 10) : null
@@ -52,28 +81,36 @@ export default async function DashboardPage({ searchParams }: Props) {
       const { data } = await q
       return data ?? []
     })(),
-    // Output records — farmers trained (direct headcount)
+    // Farmers trained / reached (direct headcount) — framework indicator OUT.1 (Sprint 28;
+    // converted from the old quarterly project_output_records). Per-period values are summed
+    // over the year; for an indicator marked as a running total only its latest value counts.
     (async () => {
       let q = supabaseAdmin
-        .from('project_output_records')
-        .select('farmers_trained, female_count, male_count, youth_count, projects!inner(country, commodity)')
-      if (year)      q = (q as any).eq('survey_year', year)
-      if (country)   q = (q as any).eq('projects.country',   country)
-      if (commodity) q = (q as any).eq('projects.commodity', commodity)
+        .from('project_mf_values')
+        .select('period_end, total, female, male, youth, project_mf_indicators!inner(project_id, indicator_code, cumulative, projects!inner(country, commodity))')
+        .eq('project_mf_indicators.indicator_code', 'OUT.1')
+      if (year)      q = (q as any).like('period_end', `${year}-%`)
+      if (country)   q = (q as any).eq('project_mf_indicators.projects.country',   country)
+      if (commodity) q = (q as any).eq('project_mf_indicators.projects.commodity', commodity)
       const { data } = await q
-      return data ?? []
+      const rows = (data ?? []).filter((r: any) => r.total != null)
+      const latest: Record<string, any> = {}
+      const out: any[] = []
+      for (const r of rows as any[]) {
+        const ind = r.project_mf_indicators
+        if (ind?.cumulative === true) {
+          const k = `${ind.project_id}:${r.period_end.slice(0, 4)}`
+          if (!latest[k] || r.period_end > latest[k].period_end) latest[k] = r
+        } else out.push(r)
+      }
+      return [...out, ...Object.values(latest)].map((r: any) => ({
+        farmers_trained: r.total, female_count: r.female, male_count: r.male, youth_count: r.youth,
+        projects: r.project_mf_indicators?.projects,
+      }))
     })(),
-    // REC records — responsible economy KPI counts (with country for byCountry breakdown)
-    (async () => {
-      let q = supabaseAdmin
-        .from('project_rec_records')
-        .select('rec_code, count, projects!inner(country, commodity)')
-      if (year)      q = (q as any).eq('survey_year', year)
-      if (country)   q = (q as any).eq('projects.country',   country)
-      if (commodity) q = (q as any).eq('projects.commodity', commodity)
-      const { data } = await q
-      return data ?? []
-    })(),
+    // REC records — responsible economy KPI counts, recorded as framework indicators
+    // REC01–REC05 in each project's Measurement Framework (Sprint 28)
+    frameworkRecRows(year, country, commodity),
   ])
 
   // ── Aggregate totals ──────────────────────────────────────────────────────
@@ -234,11 +271,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   if (country)   achAllQuery = (achAllQuery as any).eq('country',   country)
   if (commodity) achAllQuery = (achAllQuery as any).eq('commodity', commodity)
 
-  let recTrendQuery = supabaseAdmin
-    .from('project_rec_records')
-    .select('survey_year, rec_code, count, projects!inner(country, commodity)')
-  if (country)   recTrendQuery = (recTrendQuery as any).eq('projects.country',   country)
-  if (commodity) recTrendQuery = (recTrendQuery as any).eq('projects.commodity', commodity)
+  const recTrendQuery = frameworkRecRows('', country, commodity).then(data => ({ data }))
 
   const [{ data: targetsRaw }, { data: achAllRaw }, { data: recTrendRaw }] = await Promise.all([
     targetsQuery, achAllQuery, recTrendQuery,

@@ -108,7 +108,8 @@ export default function InstructionsPage() {
             Solidaridad's East &amp; Central Africa programme (Kenya, Uganda, Tanzania, Ethiopia) from 2026 to 2030.
             These comprise <strong>Network mandated KPIs</strong> (S6.1–S6.5, S2.1, S2.5) and <strong>five REC Level
             Indicators</strong> (REC01–REC05). Outcome data enters through <strong>KoboToolbox surveys</strong>;
-            REC indicators are entered directly in the Targets &amp; Achievements tab as annual counts.
+            REC indicators are recorded as indicators (codes REC01–REC05) in each project&rsquo;s Measurement Framework
+            on the Targets &amp; Achievements page, every 6 months.
             The system distinguishes between two measurement approaches — <em>sample-based extrapolation</em> for
             farmer-level production KPIs, and <em>direct counting</em> for institutional, company, and REC KPIs.
             <strong> 2026 is the first year of MASP IV</strong>, continuing directly from the MASP III cycle (2021–2025).
@@ -144,7 +145,7 @@ export default function InstructionsPage() {
                 description="Direct count of partner companies that have adopted and implemented direct farmer reward mechanisms (e.g. premium payments, bonus schemes). Reported by company respondents." />
               <KpiRow code="S6.5" label="Companies with responsible procurement"  pathway="Market"     color={GREEN}  method="count"
                 description="Direct count of partner companies with responsible procurement policies in place. Scored on 5 criteria: policy document, SMART commitments, action plan, country coverage, third-party verification." />
-              <tr><td colSpan={5} style={{ background: '#111', color: '#FFC800', padding: '.3rem .7rem', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>REC Level Indicators — entered directly in Targets &amp; Achievements (no KoboToolbox form)</td></tr>
+              <tr><td colSpan={5} style={{ background: '#111', color: '#FFC800', padding: '.3rem .7rem', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>REC Level Indicators — recorded in each project&rsquo;s Measurement Framework (Targets &amp; Achievements; no KoboToolbox form)</td></tr>
               <KpiRow code="REC01" label="Processors with reduced pollution"              pathway="Production" color={YELLOW} method="count"
                 description="Direct count of processors (mills, factories, aggregators) that have adopted verified pollution-reduction measures within the reporting year." />
               <KpiRow code="REC02" label="Workers under improved working conditions"      pathway="Production" color={YELLOW} method="count"
@@ -173,8 +174,9 @@ export default function InstructionsPage() {
             <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: '#888', marginBottom: '.4rem' }}>Count-based KPIs</div>
             <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.7 }}>
               <strong>S2.5, S6.3, S6.4, S6.5</strong> are direct counts from KoboToolbox submissions.
-              <strong> REC01–REC05</strong> are also direct counts, entered manually each year in the
-              Targets &amp; Achievements tab — no survey form or CSV upload is required for these.
+              <strong> REC01–REC05</strong> are also direct counts, recorded every 6 months as indicators
+              REC01–REC05 in the project&rsquo;s Measurement Framework (Targets &amp; Achievements → open the
+              project) — no survey form or CSV upload is required for these.
               Cards show a <span style={{ background: '#e8e8e8', color: '#444', fontSize: '0.5rem', fontWeight: 800,
               textTransform: 'uppercase', padding: '0 .25rem', marginLeft: '.25rem' }}>count</span> badge.
               No sampling or extrapolation is involved.
