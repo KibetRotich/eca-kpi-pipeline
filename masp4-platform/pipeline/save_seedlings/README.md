@@ -9,6 +9,7 @@ Supabase is the source of truth — the dashboard is built from the database, no
 ```
 Kobo API ─fetch_save_seedlings.py─▶ save_dist_*.csv + save_dist_raw.json (PII stripped, gitignored)
 Google Sheet ─fetch_profiled.py──▶ clean_profiled.json (register; names/phones/GPS dropped)
+Google Sheet ─fetch_framework.py─▶ clean_framework.json (logframe KPIs, tab dashboard_input)
          ─transform.py───────────▶ clean_events.json + clean_entries.json (rounds, dup flags)
          ─load_supabase.py───────▶ Supabase save_dist_* tables (Sprint 24; upsert + prune)
 Supabase ─build_dashboard.py─────▶ public/SAVE_KE_Seedlings_Dashboard.html → Vercel
@@ -24,6 +25,8 @@ Secrets: KOBO_TOKEN, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (same a
 | `save_dist_farmer_entries` | one row per farmer entry, with `is_probable_dup`, `is_first_receipt` |
 | `save_dist_profiled_farmers` | profiled-farmer register (Sprint 26), one row per beneficiary ID |
 | `v_save_dist_profiled_coverage` | profiled vs reached by ward, incl. women / youth |
+| `save_mf_indicator_values` | logframe KPI values, one row per indicator × 6-monthly period (Sprint 27) |
+| `v_save_mf_progress` | latest progress per indicator vs end target |
 | `save_dist_sync_meta` | last sync time + row counts |
 | `v_save_dist_ward_summary`, `v_save_dist_round_summary`, `v_save_dist_species_totals` | rollups (`security_invoker`) |
 
@@ -46,6 +49,15 @@ account's `client_email`**. Without access the nightly run keeps the register al
 Reach is matched on `sol_beneficiary_id`; with a round selected, coverage is cumulative to the end of that round.
 Sub-county is taken from the ward (the register has alternative names, e.g. Charagita under "Nyandarua West").
 Initial load (2026-10-16) was made from the sheet via `fetch_profiled.py --csv`.
+
+## Measurement framework (tab "8 · Measurement Framework")
+Source: Google Sheet *SAVE Project M&E Framework* (`1tAW3zllJ1UYYIbMl5XTqVQhN8MBXrcFRKMm3erD1aN4`), tab
+**`dashboard_input`** (gid 2028076445) — a tidy copy of the `logframe` tab created 2026-10-16: one row per
+indicator × period, numeric `total / male / female / youth / survival_rate_%`, plus `cumulative (Y/N)`.
+The M&E team edits that tab (embedded, editable, in dashboard tab 8 — Google access required); the
+`logframe` tab is untouched and kept for reference. Progress = latest value when cumulative = Y or blank,
+sum of periods when N; values typed into a period that has not ended are shown as provisional.
+Trees planted is cross-checked against seedlings distributed on the Kobo form.
 
 ## Data model
 - One submission = one **distribution event**; the `farmer_details` repeat = one **farmer entry**.

@@ -66,7 +66,8 @@ with httpx.Client(timeout=120) as c:
     pf = pd.DataFrame(select_all(c, url, key, "save_dist_profiled_farmers",
                                  "beneficiary_id,gender,age_group,sub_county,ward,in_project_area,"
                                  "approved_plots,source_sheet"))
-    meta = select_all(c, url, key, "save_dist_sync_meta", "profiled_synced_at")
+    meta = select_all(c, url, key, "save_dist_sync_meta", "profiled_synced_at,framework_synced_at")
+    mf = pd.DataFrame(select_all(c, url, key, "save_mf_indicator_values", "*"))
 if m.empty:
     sys.exit("save_dist_events is empty — run fetch → transform → load first")
 # PostgREST row order is not guaranteed — sort so identical data gives an identical file
@@ -315,6 +316,97 @@ words = re.findall(r"[a-z]{4,}", " ".join(sub.str.lower()))
 wf = pd.Series([w for w in words if w not in STOP], dtype=str).value_counts().head(25)
 add(s, bar("Most frequent keywords in comments", wf, "mentions", tall=True,
            note=f"{len(sub):,} substantive comments out of {len(m):,} events ({len(sub)/len(m)*100:.0f}%)."))
+
+# ════════════════════════════════════════════════════════════════════════════
+# 8 · Measurement Framework (logframe KPIs, Google Sheet → Supabase Sprint 27)
+# ════════════════════════════════════════════════════════════════════════════
+MF_SHEET = "1tAW3zllJ1UYYIbMl5XTqVQhN8MBXrcFRKMm3erD1aN4"
+MF_GID = 2028076445                                    # tab "dashboard_input"
+NOW_YM = pd.to_datetime(m["submitted_at"], errors="coerce", utc=True).max().strftime("%Y-%m")
+if not mf.empty:
+    s = sec("s8", "8 · Measurement Framework",
+            "Project logframe KPIs against end-of-project targets, from the SAVE M&E framework. "
+            "Values are updated by the M&E team in the embedded sheet below and refresh on the dashboard nightly.")
+    mf = mf.sort_values(["indicator_id", "period_end"]).reset_index(drop=True)
+    for c_ in ["total", "male", "female", "youth", "survival_pct", "end_target"]:
+        mf[c_] = pd.to_numeric(mf[c_], errors="coerce")
+    plab = lambda pe: pd.Timestamp(pe + "-01").strftime("%b %Y")
+    sc_rows = []
+    for iid, g in mf.groupby("indicator_id", sort=True):
+        rep = g.dropna(subset=["total"])
+        tgt = g["end_target"].dropna().max()
+        cum = g["cumulative"].dropna()
+        per_period = len(cum) and not cum.astype(bool).any()
+        if rep.empty:
+            prog, when, how = None, "not yet reported", ""
+        elif per_period:
+            prog, when, how = rep["total"].sum(), f"sum to {plab(rep['period_end'].iloc[-1])}", "sum of periods"
+        else:
+            prog, when = rep["total"].iloc[-1], plab(rep["period_end"].iloc[-1])
+            how = "latest" if len(cum) else "latest — confirm cumulative/per-period"
+            # A value typed into a reporting period that has not ended yet is provisional.
+            # Compared with the latest Kobo submission month (not the clock) so builds stay reproducible.
+            if rep["period_end"].iloc[-1] > NOW_YM:
+                when += " (provisional — period not yet ended)"
+        pct = round(float(prog) / float(tgt) * 100, 1) if prog is not None and tgt else None
+        sc_rows.append({"id": iid, "level": g["level"].dropna().iloc[0] if g["level"].notna().any() else "",
+                        "indicator": g["indicator"].dropna().iloc[0], "unit": g["unit"].dropna().iloc[0] if g["unit"].notna().any() else "",
+                        "target": None if pd.isna(tgt) else float(tgt), "progress": None if prog is None else float(prog),
+                        "when": when, "how": how, "pct": pct,
+                        "notes": "; ".join(sorted(set(g["note"].dropna()) - {""}))})
+    add(s, {"type": "scorecard", "title": "Progress against end-of-project targets", "rows": sc_rows,
+            "note": "Progress = latest reported value for running totals; sum of periods where the sheet marks the "
+                    "indicator as per-period (cumulative = N). Bars are capped at 100% of the end target; the % shows the true figure."})
+
+    def series_of(iid):
+        g = mf[(mf["indicator_id"] == iid)].dropna(subset=["total"])
+        return {pe: float(v) for pe, v in zip(g["period_end"], g["total"])}
+    periods = sorted(mf["period_end"].unique())
+    rep_periods = [p_ for p_ in periods if mf[(mf["period_end"] == p_) & mf["total"].notna()].shape[0]]
+    last = max(rep_periods) if rep_periods else periods[0]
+    axis = [p_ for p_ in periods if p_ <= last]
+    tgt_of = lambda iid: float(mf.loc[mf["indicator_id"] == iid, "end_target"].dropna().max())
+
+    planted = series_of("SAVE-01")
+    if planted:
+        # Cross-check against the Kobo distribution form: seedlings handed out up to each reporting date
+        dist = R.assign(pe=R["start_dt"].dt.tz_convert("Africa/Nairobi").dt.strftime("%Y-%m"))
+        dist_cum = [int(dist.loc[dist["pe"] <= p_, "qty"].sum()) for p_ in axis]
+        add(s, {"type": "line", "title": "Trees planted vs end target (with seedlings distributed, Kobo)",
+                "labels": [plab(p_) for p_ in axis],
+                "series": [{"label": "trees planted (logframe)", "data": [planted.get(p_) for p_ in axis]},
+                           {"label": "seedlings distributed (Kobo form, cumulative)", "data": dist_cum},
+                           {"label": "end target", "data": [tgt_of("SAVE-01")] * len(axis)}],
+                "note": "Distributed counts come from this dashboard's Kobo data, cut at each reporting month; planted counts are as reported in the framework."})
+    surv = mf[(mf["indicator_id"] == "SAVE-02")].dropna(subset=["survival_pct"])
+    if len(surv):
+        add(s, {"type": "line", "title": "Reported tree survival rate (%)",
+                "labels": [plab(p_) for p_ in surv["period_end"]],
+                "series": [{"label": "survival rate %", "data": [float(v) for v in surv["survival_pct"]]}],
+                "note": "From the 'trees restored' indicator. Restored-tree counts are missing after Dec 2024 — only rates were reported."})
+    people = [i_ for i_ in ["SAVE-13", "SAVE-09"] if series_of(i_)]
+    if people:
+        add(s, {"type": "line", "title": "Farmers trained and community members benefiting vs targets",
+                "labels": [plab(p_) for p_ in axis],
+                "series": sum([[{"label": mf.loc[mf["indicator_id"] == i_, "indicator"].iloc[0].replace("# of ", ""),
+                                 "data": [series_of(i_).get(p_) for p_ in axis]},
+                                {"label": f"target ({int(tgt_of(i_)):,})", "data": [tgt_of(i_)] * len(axis)}] for i_ in people], []),
+                "note": "Values as reported each period. Whether these are running totals is not yet confirmed in the sheet (cumulative column blank)."})
+    gl = (mf.dropna(subset=["male", "female"]).sort_values("period_end").groupby("indicator_id").tail(1))
+    if len(gl):
+        short = lambda t: re.sub(r"^# of ", "", t).split(" (")[0][:48]
+        add(s, {"type": "stacked", "title": "Gender split — latest period with a breakdown",
+                "labels": [f"{short(r.indicator)} ({plab(r.period_end)})" for r in gl.itertuples()],
+                "series": [{"label": "male", "data": [int(v) for v in gl["male"]]},
+                           {"label": "female", "data": [int(v) for v in gl["female"]]}],
+                "note": "Youth counts overlap male/female and are shown in the sheet."})
+    add(s, {"type": "iframe", "title": "Update values — SAVE M&E framework (tab: dashboard_input)",
+            "src": f"https://docs.google.com/spreadsheets/d/{MF_SHEET}/edit?gid={MF_GID}&rm=minimal",
+            "link": f"https://docs.google.com/spreadsheets/d/{MF_SHEET}/edit#gid={MF_GID}",
+            "note": "Edit the yellow columns (total, male, female, youth, survival %) and set cumulative = Y (running total) or N (per period). "
+                    "Editing needs Google access to the sheet; changes appear on the charts after the nightly refresh "
+                    f"(last loaded {str((meta[0].get('framework_synced_at') if meta else '') or '')[:10]})."})
+    print(f"  framework: {mf['indicator_id'].nunique()} indicators, {int(mf['total'].notna().sum())} reported values")
 
 # ════════════════════════════════════════════════════════════════════════════
 # Executive (interactive)

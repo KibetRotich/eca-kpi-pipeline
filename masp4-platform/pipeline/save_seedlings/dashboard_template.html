@@ -79,7 +79,7 @@ function el(tag, cls, html){const e=document.createElement(tag); if(cls)e.classN
 
 // ── generic block renderers ───────────────────────────────────────────────
 function renderBlock(b){
-  const box = el("div","block"+((b.tall||b.type=="table"||b.type=="heatmap"||b.type=="pointmap"||b.full)?" full":""));
+  const box = el("div","block"+((b.tall||b.type=="table"||b.type=="heatmap"||b.type=="pointmap"||b.type=="scorecard"||b.type=="iframe"||b.full)?" full":""));
   if(b.title) box.appendChild(el("h3",null,b.title));
   if(b.type=="kpi"){
     const k=el("div","kpis");
@@ -96,11 +96,38 @@ function renderBlock(b){
     box.appendChild(buildHeatmap(b));
   } else if(b.type=="pointmap"){
     box.appendChild(buildPointMap(b));
+  } else if(b.type=="scorecard"){
+    box.appendChild(buildScorecard(b));
+  } else if(b.type=="iframe"){
+    const lk=el("div","mapctl",'<a href="'+b.link+'" target="_blank" rel="noopener">Open the sheet in Google Sheets ↗</a>');
+    box.appendChild(lk);
+    const fr=el("iframe"); fr.src=b.src; fr.loading="lazy"; fr.title=b.title;
+    fr.style.cssText="width:100%;height:620px;border:1px solid var(--bd);border-radius:8px;background:#fff";
+    box.appendChild(fr);
   } else if(b.type=="note"){
     box.appendChild(el("div","note","⚠ "+b.text));
   }
   if(b.note) box.appendChild(el("div","note",b.note));
   return box;
+}
+
+function buildScorecard(b){
+  const wrap=el("div","tablebox"); wrap.style.maxHeight="none"; const t=el("table");
+  const hd=el("tr"); ["Indicator","Level","End target","Progress","As of","% of target",""].forEach((h,i)=>hd.appendChild(el("th",(i>=2&&i!=4)?"num":null,h))); t.appendChild(hd);
+  b.rows.forEach(r=>{
+    const tr=el("tr");
+    const nm=el("td",null,"<b>"+r.id+"</b> "+r.indicator+(r.notes?'<div class="note" style="margin:2px 0 0">⚠ '+r.notes+'</div>':""));
+    tr.appendChild(nm); tr.appendChild(el("td",null,r.level));
+    tr.appendChild(el("td","num",r.target==null?"–":fmt(r.target)+" "+r.unit));
+    tr.appendChild(el("td","num",r.progress==null?"–":fmt(r.progress)));
+    tr.appendChild(el("td",null,r.when+(r.how&&r.how!="latest"?'<div class="note" style="margin:0">'+r.how+'</div>':"")));
+    const pc=r.pct, cls=pc==null?"":pc>=100?"rag-g":pc>=50?"rag-a":"rag-r";
+    tr.appendChild(el("td","num "+cls,pc==null?"–":pc.toFixed(1)+"%"));
+    const bar=el("td"); bar.style.minWidth="140px";
+    if(pc!=null) bar.innerHTML='<div style="background:#eee;border-radius:4px;height:10px"><div style="width:'+Math.min(100,pc)+'%;height:10px;border-radius:4px;background:'+(pc>=100?"#2e7d32":pc>=50?"#FFC800":"#e65100")+'"></div></div>';
+    tr.appendChild(bar); t.appendChild(tr);
+  });
+  wrap.appendChild(t); return wrap;
 }
 
 function buildTable(cols,rows){
@@ -131,7 +158,7 @@ function drawChart(cv,b){
       options:{indexAxis:b.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{ticks:{autoSkip:!b.horizontal,maxRotation:b.horizontal?0:60,minRotation:0,font:{size:9}}},y:{ticks:{font:{size:9},autoSkip:false}}}}};
   } else if(b.type=="line"){
-    cfg={type:"line",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+"33",borderWidth:1.6,pointRadius:0,tension:.25,fill:false}))},
+    cfg={type:"line",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+"33",borderWidth:1.6,pointRadius:(b.labels.length<20?3:0),tension:.25,fill:false,spanGaps:true,borderDash:(/target/.test(sx.label)?[6,4]:[])}))},
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:14,font:{size:9}}},y:{ticks:{font:{size:9}}}}}};
   } else if(b.type=="stacked"){
     cfg={type:"bar",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,backgroundColor:PAL[i%PAL.length]}))},

@@ -133,6 +133,25 @@ def main():
                 meta.update(n_profiled=len(prof), profiled_synced_at=now)
         else:
             print("  profiled register: no fresh copy this run — keeping Supabase register")
+
+        # Measurement framework (Sprint 27) — same "fresh copy or keep" rule.
+        mf_path = os.path.join(DDIR, "clean_framework.json")
+        if os.path.exists(mf_path):
+            mf = json.load(open(mf_path, encoding="utf-8"))
+            if mf:
+                for r in mf:
+                    r["updated_at"] = now
+                upsert(c, url, key, "save_mf_indicator_values", mf, "indicator_id,period_end")
+                live = {(r["indicator_id"], r["period_end"]) for r in mf}
+                gone = [r for r in select_all(c, url, key, "save_mf_indicator_values", "indicator_id,period_end")
+                        if (r["indicator_id"], r["period_end"]) not in live]
+                for r in gone:
+                    delete_where(c, url, key, "save_mf_indicator_values",
+                                 f"indicator_id=eq.{r['indicator_id']}&period_end=eq.{r['period_end']}")
+                print(f"  framework: {len(mf)} indicator-periods loaded, {len(gone)} pruned")
+                meta.update(n_framework_rows=len(mf), framework_synced_at=now)
+        else:
+            print("  framework: no fresh copy this run — keeping Supabase framework")
         r = c.post(f"{url}/rest/v1/save_dist_sync_meta?on_conflict=id", headers=_hdr(key),
                    content=json.dumps([meta]))
         if r.status_code >= 300:

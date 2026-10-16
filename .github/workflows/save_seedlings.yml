@@ -21,7 +21,7 @@ name: SAVE KE Seedlings Distribution Dashboard Refresh
 # Until all three are set, the job skips cleanly (green) instead of failing nightly.
 # Optional:
 #   GOOGLE_CREDENTIALS            service-account JSON (same as etl.yml) used to read the
-#                                 profiled-farmer Google Sheet. Share the sheet (Viewer)
+#                                 profiled-farmer and M&E framework Google Sheets. Share them (Viewer)
 #                                 with its client_email. If missing / no access, the
 #                                 register already in Supabase is kept and the run stays green.
 on:
@@ -95,6 +95,13 @@ jobs:
         if: steps.check.outputs.ready == 'true'
         working-directory: masp4-platform
         run: python pipeline/save_seedlings/fetch_profiled.py
+
+      # 1c. Measurement framework (logframe KPIs) from the SAVE M&E Google Sheet,
+      #     tab "dashboard_input". Same rule: no access -> keep the Supabase copy.
+      - name: Fetch measurement framework
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/save_seedlings/fetch_framework.py
 
       # 2. Clean + derive rounds / duplicate / first-receipt flags -> clean_*.json
       - name: Transform
