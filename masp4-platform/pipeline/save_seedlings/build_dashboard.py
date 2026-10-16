@@ -436,6 +436,12 @@ if not pf.empty:
     pf["first"] = pf["beneficiary_id"].map(first_round).map(lambda n: rpos.get(int(n), -1) if pd.notna(n) else -1)
     reg_keys = set(pf["beneficiary_id"])
     not_in_reg = int((~R["fid"].str.upper().drop_duplicates().isin(reg_keys)).sum())
+    # Reached farmers missing from the register: kept (as ward + first round only) so the
+    # Summary gender/youth charts can show them as "not in register" under the same filters.
+    unreg = (R.assign(key=R["fid"].str.upper()).sort_values(["start_dt", "_id", "entry_no"], kind="stable")
+             .drop_duplicates("key"))
+    unreg = unreg[~unreg["key"].isin(reg_keys)]
+    unreg_records = [[r.subcounty, r.ward, rpos.get(int(r.round_no), -1)] for r in unreg.itertuples()]
     ap = pd.to_numeric(pf["approved_plots"], errors="coerce").fillna(0)
     synced = (meta[0].get("profiled_synced_at") if meta else None) or ""
     PROFILED = {
@@ -448,6 +454,7 @@ if not pf.empty:
         "not_in_register": not_in_reg,
         "zero_plot_reached": int(((ap == 0) & (pf["first"] >= 0)).sum()),
         "zero_plot": int((ap == 0).sum()),
+        "unregistered": unreg_records,
     }
     print(f"  profiled: {len(pf):,} register | reached {int((pf['first'] >= 0).sum()):,} | "
           f"not in register {not_in_reg} | out of area {PROFILED['out_of_area']}")

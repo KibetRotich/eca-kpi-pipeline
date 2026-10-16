@@ -249,6 +249,14 @@ function buildExec(){
       P.not_in_register+" farmers who received seedlings are not in this register; "+
       P.zero_plot_reached+" of the "+P.zero_plot+" farmers with no approved plot received seedlings."));
     sd.appendChild(pb);
+    const gb=el("div","block full"); gb.appendChild(el("h3",null,"Gender and youth of farmers reached (filtered)"));
+    const gg=el("div","grid");
+    [["exec-pie-gender","Gender"],["exec-pie-youth","Youth (register age group)"]].forEach(([id,t])=>{
+      const c=el("div"); c.appendChild(el("div","sec-desc",t)); const cb=el("div","chartbox"); const cv=el("canvas"); cv.id=id; cb.appendChild(cv); c.appendChild(cb); gg.appendChild(c);});
+    gb.appendChild(gg);
+    gb.appendChild(el("div","note","Gender and age group come from the profiled-farmer register, matched on the beneficiary ID — the distribution form itself does not record them. "+
+      "Farmers who received seedlings but are not in the register are shown as “not in register”."));
+    sd.appendChild(gb);
   }
   const grid=el("div","grid");
   [["exec-sp","Seedlings by species (filtered)"],["exec-rnd","Farmers per round — new vs returning (filtered)"],
@@ -266,7 +274,18 @@ function buildExec(){
   return sd;
 }
 
-let profChart=null;
+let profChart=null; const pieCharts={};
+function drawPie(id,parts){
+  parts=parts.filter(p=>p[1]>0);                      // drop empty slices (e.g. no "other" in a ward)
+  const tot=parts.reduce((a,p)=>a+p[1],0);
+  const lab=p=>p[0]+" — "+(tot?(p[1]/tot*100).toFixed(1):0)+"% ("+fmt(p[1])+")";
+  if(pieCharts[id]) pieCharts[id].destroy();
+  pieCharts[id]=new Chart(document.getElementById(id),{type:"doughnut",
+    data:{labels:parts.map(lab),datasets:[{data:parts.map(p=>p[1]),backgroundColor:parts.map(p=>p[2]),borderColor:"#fff",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",
+      plugins:{legend:{position:"right",labels:{font:{size:11},boxWidth:12,color:"#222"}},
+        tooltip:{callbacks:{label:c=>" "+c.label}}}}});
+}
 function applyProfiled(sc,w,r){
   const P=EX.profiled, I={}; P.fields.forEach((f,i)=>I[f]=i);
   const upto=r?EX.rounds.indexOf(r):EX.rounds.length-1;      // cumulative: reached by end of round
@@ -285,6 +304,14 @@ function applyProfiled(sc,w,r){
   const tb=document.getElementById("exec-prof-tbl"); tb.innerHTML="";
   tb.appendChild(buildTable(["Ward","Sub-county","Profiled","Reached","Coverage","Women","Youth"],
     wards.map(k=>{const b=by[k]; return [k,b.sc,b.n,b.g,pct(b.g,b.n),pct(b.fg,b.f),pct(b.yg,b.y)];})));
+  // Gender / youth donuts — farmers reached under the current filters
+  const got_rows=rows.filter(hit);
+  const unreg=(P.unregistered||[]).filter(x=>(!sc||x[0]==sc)&&(!w||x[1]==w)&&x[2]>=0&&x[2]<=upto).length;
+  const cnt=(f)=>got_rows.filter(f).length;
+  const other=cnt(x=>x[I.gender]!="female"&&x[I.gender]!="male");
+  drawPie("exec-pie-gender",[["Women",cnt(x=>x[I.gender]=="female"),"#d81b60"],["Men",cnt(x=>x[I.gender]=="male"),"#1565c0"],
+    ["Other / not stated",other,"#9e9e9e"],["Not in register",unreg,"#d8d8d8"]]);
+  drawPie("exec-pie-youth",[["Youth",cnt(x=>x[I.youth]),"#e65100"],["Non-youth",cnt(x=>!x[I.youth]),"#6b6b6b"],["Not in register",unreg,"#d8d8d8"]]);
   if(profChart) profChart.destroy();
   profChart=new Chart(document.getElementById("exec-prof-chart"),{type:"bar",data:{labels:wards,datasets:[
     {label:"reached",data:wards.map(k=>by[k].g),backgroundColor:PAL[1]},
