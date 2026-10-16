@@ -156,7 +156,7 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
         <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#333' }}>
           {sheet ? (sheet.label ?? 'Project M&E framework') : 'Project logframe indicators · 6-monthly (June / December)'}
         </span>
-        {canEdit && !indForm && (
+        {canEdit && !indForm && !sheet && (
           <button className="btn-secondary" style={{ padding: '.2rem .55rem', fontSize: '.58rem', marginLeft: 'auto' }} onClick={() => openIndicator()}>
             + Add indicator
           </button>
@@ -165,13 +165,9 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
 
       {loading ? <div style={{ padding: '0 .9rem .7rem', fontSize: '.62rem', color: '#888' }}>Loading framework…</div>
       : err ? <div style={{ padding: '0 .9rem .7rem', fontSize: '.62rem', color: '#c62828' }}>{err}</div>
+      // A project with a linked Google-Sheet framework shows only that framework (as in Seedlings tab 8)
+      : sheet ? <SheetFramework sheet={sheet} />
       : (<>
-        {sheet && <SheetFramework sheet={sheet} />}
-        {sheet && (inds.length > 0 || canEdit) && (
-          <div style={{ padding: '.2rem .9rem .35rem', fontSize: '.56rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#8a6d00' }}>
-            Platform indicators — MASP IV outputs recorded here (e.g. OUT.1 farmers trained, REC01–REC05)
-          </div>
-        )}
         {msg && <div style={{ padding: '0 .9rem .35rem', fontSize: '.58rem', color: msg.ok ? '#2e7d32' : '#c62828' }}>{msg.text}</div>}
 
         {/* Indicator editor */}
@@ -225,11 +221,11 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
           </div>
         )}
 
-        {inds.length === 0 ? (sheet ? null : (
+        {inds.length === 0 ? (
           <div style={{ padding: '0 .9rem .8rem', fontSize: '.62rem', color: '#888', fontStyle: 'italic' }}>
             No framework indicators for this project yet.{canEdit ? ' Use “+ Add indicator” to enter the project’s logframe.' : ''}
           </div>
-        )) : (<>
+        ) : (<>
           {/* Scorecard + selected year's 6-monthly values */}
           <div style={{ padding: '0 .9rem .5rem', overflowX: 'auto' }}>
             <table style={{ fontSize: '.64rem', background: '#fff', minWidth: 760 }}>
