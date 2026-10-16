@@ -40,7 +40,11 @@ def upsert(url, key, table, rows, on_conflict):
     n = 0
     with httpx.Client(timeout=120) as c:
         for i in range(0, len(rows), BATCH):
-            chunk = rows[i:i+BATCH]
+            # PostgREST bulk upserts require every object to carry the same keys
+            # (PGRST102). UG and KE rows differ (e.g. reason_death is UG-only), so pad
+            # each chunk to the union of its keys with nulls.
+            keys = set().union(*rows[i:i+BATCH])
+            chunk = [{k: r.get(k) for k in keys} for r in rows[i:i+BATCH]]
             r = c.post(f"{url}/rest/v1/{table}?on_conflict={on_conflict}",
                        headers=hdr, content=json.dumps(chunk, default=str))
             if r.status_code >= 300:
