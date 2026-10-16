@@ -203,7 +203,7 @@ function build(){
   document.getElementById("hdr-sub").textContent =
     fmt(g.farmers)+" farmers · "+fmt(g.seedlings)+" seedlings · "+g.rounds+" rounds · "+g.date_min+" → "+g.date_max+" · latest submission "+g.built;
   const nav=document.getElementById("nav"), main=document.getElementById("main");
-  const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec"); nav.appendChild(exNav);
+  const exNav=el("a",null,"★ Summary Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec"); nav.appendChild(exNav);
   main.appendChild(buildExec());
   DATA.sections.forEach(sc=>{
     const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
@@ -217,11 +217,11 @@ function build(){
   show("exec");
 }
 
-// ── Executive interactive section ─────────────────────────────────────────
+// ── Summary (interactive) section ─────────────────────────────────────────
 const EX=DATA.exec; const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
 function buildExec(){
   const sd=el("div","section"); sd.id="exec";
-  sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
+  sd.appendChild(el("div","sec-title","★ Summary Dashboard"));
   sd.appendChild(el("div","sec-desc","Headline reach and species figures, filterable by sub-county, ward and distribution round."));
   const fb=el("div","filters");
   const mkSel=(id,label,opts)=>{const w=el("div"); w.appendChild(el("label",null,label));

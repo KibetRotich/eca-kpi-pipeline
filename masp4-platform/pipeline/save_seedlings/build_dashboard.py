@@ -7,7 +7,7 @@ flags come from transform.py via the database, not recomputed here.
 
 Computation is done in pandas; results are emitted as a JSON blob of typed
 "blocks" rendered client-side by generic JS + Chart.js (same block contract as
-pipeline/seedlings). The Executive section filters client-side over an embedded
+pipeline/seedlings). The Summary section filters client-side over an embedded
 farmer-entry array. Distribution points are drawn on a Leaflet map.
 
 PII policy: Beneficiary IDs are replaced by integer indices before embedding;
@@ -409,7 +409,7 @@ if not mf.empty:
     print(f"  framework: {mf['indicator_id'].nunique()} indicators, {int(mf['total'].notna().sum())} reported values")
 
 # ════════════════════════════════════════════════════════════════════════════
-# Executive (interactive)
+# Summary dashboard (interactive)
 # ════════════════════════════════════════════════════════════════════════════
 fidx = {k: i for i, k in enumerate(R["fid"].unique())}
 records = [[r.subcounty, r.ward, r.round, r.ym, fidx[r.fid], int(r.qty), 1 if r.dup else 0, 1 if r.first_time else 0]

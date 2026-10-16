@@ -42,7 +42,7 @@ python pipeline/save_seedlings/build_dashboard.py
 ```
 `SAVE_DATA_DIR` overrides where working files are written and read; `SAVE_OUT` overrides the HTML path.
 
-## Profiled-farmer register (Executive → "Profiled farmers vs reached")
+## Profiled-farmer register (Summary → "Profiled farmers vs reached")
 Source: Google Sheet *SAVE KE Profiled Farmers Summary 20241015* (`1nWQwYcmygu2aeEJLIUq-bVirMLtF-OVZgrTRoEAl19E`, tab `in`).
 `fetch_profiled.py` reads it with the `GOOGLE_CREDENTIALS` service account — **share the sheet (Viewer) with that
 account's `client_email`**. Without access the nightly run keeps the register already in Supabase.
@@ -64,7 +64,7 @@ Trees planted is cross-checked against seedlings distributed on the Kobo form.
 - Farmers are identified by `farmer__sol_beneficiary_id` (falls back to `farmer_ref_no`).
 - **Rounds** are detected from the data: a gap of more than 21 days between events opens a new round.
 - **Probable duplicate** = same farmer recorded again within 7 days. Headline totals include them;
-  the Executive view has an "Exclude probable duplicates" toggle and the Data Quality tab quantifies them.
+  the Summary view has an "Exclude probable duplicates" toggle and the Data Quality tab quantifies them.
 - Test submissions (`real_test_submission = test`) are dropped.
 
 ## PII
