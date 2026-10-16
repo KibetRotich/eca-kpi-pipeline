@@ -183,6 +183,25 @@ export default function InstructionsPage() {
             </div>
           </Card>
         </div>
+        <Card style={{ borderTop: `3px solid ${YELLOW}`, marginTop: '.7rem' }}>
+          <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: '#888', marginBottom: '.4rem' }}>Measurement Framework (per project)</div>
+          <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.7 }}>
+            Each project&rsquo;s window on <em>Targets &amp; Achievements</em> shows its logframe indicators below the MASP IV
+            KPI targets. It replaces the former quarterly <em>Output</em> and <em>REC</em> sections.
+            <ul style={{ margin: '.35rem 0 0', paddingLeft: '1.1rem' }}>
+              <li><strong>Indicators</strong> — M&amp;E Officers and Admins add or edit each project&rsquo;s indicators: code, level
+                (Goal / Outcome / Output), unit, baseline, end-of-project target, yearly targets and whether values are cumulative.</li>
+              <li><strong>Values</strong> — entered for <strong>June</strong> and <strong>December</strong> of the selected year: total,
+                female, male and youth. Female + male cannot exceed the total.</li>
+              <li><strong>Progress</strong> — running totals (cumulative = Y) use the latest value; per-period indicators (N) are
+                summed across periods. Values entered for a period that has not yet ended are marked <em>provisional</em>.</li>
+              <li><strong>Farmers / miners trained (OUT.1)</strong> feeds the dashboard&rsquo;s farmers-trained figure; the 2026
+                quarterly records were converted into June 2026 values.</li>
+              <li><strong>&ldquo;OUT.2 – OUT.6 (label to confirm)&rdquo;</strong> indicators were converted from earlier output counts —
+                please rename them with their proper indicator names.</li>
+            </ul>
+          </div>
+        </Card>
       </Section>
 
       {/* Data Collection Process */}
