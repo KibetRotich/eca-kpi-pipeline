@@ -42,6 +42,10 @@ next-env.d.ts
 
 # seedlings pipeline working data (re-fetched from Kobo every run, never committed)
 pipeline/seedlings/seedlings_*.csv
+# SAVE KE seedlings distribution working data (re-fetched every run, never committed)
+pipeline/save_seedlings/save_dist_*.csv
+pipeline/save_seedlings/save_dist_raw.json
+pipeline/save_seedlings/clean_*.json
 __pycache__/
 
 # hc_survival pipeline working data (re-fetched/rebuilt every run)

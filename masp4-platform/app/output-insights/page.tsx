@@ -34,6 +34,13 @@ const DASHBOARDS: Dashboard[] = [
     chips: ['Species', 'District coverage', 'Distribution', 'Beneficiaries', 'Trends'],
   },
   {
+    href: '/SAVE_KE_Seedlings_Dashboard.html',
+    external: true,
+    title: 'Seedlings Distribution — Kenya (SAVE KE)',
+    blurb: 'Tree-seedling distribution analytics for SAVE KE (Nyandarua, Kenya) — unique farmers reached and seedlings handed out by sub-county, ward and village, automatically detected distribution rounds with new vs returning farmers, species mix (fodder, fruit, indigenous/timber), farmer groups, GPS map of distribution events, and data-quality checks including probable duplicate entries. Executive filters by sub-county, ward and round. Refreshed nightly from KoboToolbox.',
+    chips: ['Executive', 'Reach & Geography', 'Distribution rounds', 'Species', 'Farmer groups', 'Operations', 'Data quality', 'Feedback'],
+  },
+  {
     href: '/eca-events',
     title: 'ECA Trainings & Events Tracker',
     blurb: 'Training & event delivery analytics across Kenya, Uganda, Tanzania & Ethiopia — reach, gender & youth, geography, curriculum, beneficiaries, facilitators, farmer-level depth, data quality and planning. Global filters (date, country, project, event type) apply across every page.',

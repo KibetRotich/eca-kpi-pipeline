@@ -1,0 +1,130 @@
+name: SAVE KE Seedlings Distribution Dashboard Refresh
+
+# Keeps masp4-platform/public/SAVE_KE_Seedlings_Dashboard.html (served at
+# /SAVE_KE_Seedlings_Dashboard.html) in sync with the live Kobo form
+# "SAVE KE Seedlings Distribution". Pipeline (Supabase is the source of truth):
+#   Kobo API → transform → Supabase save_dist_* tables (Sprint 24) → dashboard built
+#   FROM Supabase → commit → Vercel deploy of ecadata.solidaridadnetwork.org.
+# Modelled on vsla.yml; the app lives in the masp4-platform/ subfolder, so every
+# `run` step sets working-directory.
+#
+# Triggers:
+#   1. Nightly at 03:20 UTC (06:20 EAT) — picks up new submissions / new species
+#   2. On push to the pipeline source files (rebuild after a code change)
+#   3. Manual run from the Actions tab (Actions → Run workflow)
+#
+# Required secrets (Settings → Secrets and variables → Actions) — the same three the
+# vsla / cva / hc_survival workflows use:
+#   KOBO_TOKEN                    KoBoToolbox API token with access to ar7ZyJqG8qJ9sUu4JLWiTY
+#   NEXT_PUBLIC_SUPABASE_URL      Supabase project URL (MASPIV_Platform)
+#   SUPABASE_SERVICE_ROLE_KEY     Supabase service role key (server-side only)
+# Until all three are set, the job skips cleanly (green) instead of failing nightly.
+on:
+  schedule:
+    - cron: "20 3 * * *"     # 03:20 UTC daily (staggered after seedlings)
+  push:
+    paths:
+      - "masp4-platform/pipeline/save_seedlings/**"
+      - ".github/workflows/save_seedlings.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: save-seedlings-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Fetch Kobo → Supabase → rebuild dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      # Gate the job on the secrets being present so pushes don't fail before they
+      # are configured. Secrets can't be used in a job-level `if`, so steps are gated
+      # on this output instead. No working-directory here: this runs before
+      # checkout, when masp4-platform/ does not yet exist.
+      - name: Check required secrets
+        id: check
+        run: |
+          if [ -n "$KOBO_TOKEN" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SAVE KE seedlings refresh skipped — KOBO_TOKEN / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not all set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: masp4-platform/pipeline/save_seedlings/requirements.txt
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: pip install -r pipeline/save_seedlings/requirements.txt
+
+      # 1. Pull every submission (PII stripped) into pipeline/save_seedlings/
+      #    save_dist_* (gitignored — rebuilt every run, never committed)
+      - name: Fetch Kobo submissions
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/save_seedlings/fetch_save_seedlings.py
+
+      # 2. Clean + derive rounds / duplicate / first-receipt flags -> clean_*.json
+      - name: Transform
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/save_seedlings/transform.py
+
+      # 3. Upsert into Supabase save_dist_* tables and prune rows deleted in Kobo
+      - name: Load Supabase
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/save_seedlings/load_supabase.py
+
+      # 4. Rebuild the dashboard into masp4-platform/public/ reading FROM Supabase.
+      #    Wards and distribution rounds are data-driven, so new rounds flow
+      #    through automatically.
+      - name: Rebuild dashboard
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/save_seedlings/build_dashboard.py
+
+      # 5. Commit the regenerated dashboard. Only commits when the file actually
+      #    changed (quiet days → no commit/deploy). Rebase-and-retry on push so a
+      #    concurrent commit to main (e.g. the ETL run) doesn't fail the run with a
+      #    non-fast-forward. The push triggers Vercel to redeploy the platform.
+      - name: Commit updated dashboard
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: |
+          if git diff --quiet -- public/SAVE_KE_Seedlings_Dashboard.html; then
+            echo "No dashboard changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/SAVE_KE_Seedlings_Dashboard.html
+          git commit -m "chore: SAVE KE seedlings dashboard refresh $(date -u '+%Y-%m-%d %H:%M UTC')"
+          n=0
+          until git push; do
+            n=$((n+1))
+            if [ "$n" -ge 5 ]; then echo "::error::push failed after $n attempts"; exit 1; fi
+            echo "push rejected (main moved); rebasing — attempt $n"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" \
+              || { echo "::error::rebase conflict on generated dashboard"; git rebase --abort; exit 1; }
+          done

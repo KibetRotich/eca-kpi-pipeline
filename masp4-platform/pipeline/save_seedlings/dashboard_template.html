@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SAVE KE Seedlings Distribution — Insights Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--g:#FFC800;--g2:#e6b400;--t:#2a2a2a;--b:#1565c0;--accent:#e65100;--bg:#e6e6e6;--card:#fff;--ink:#222;--mut:#6b6b6b;--bd:#d8d8d8;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Open Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#FFC800;color:#000;padding:14px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20;border-bottom:3px solid #2a2a2a}
+  header h1{font-size:18px;margin:0;font-weight:800}
+  header .sub{font-size:12px;color:#000;opacity:.7}
+  .wrap{display:flex;min-height:calc(100vh - 50px)}
+  nav{width:230px;background:#fff;border-right:1px solid var(--bd);padding:10px 0;position:sticky;top:50px;height:calc(100vh - 50px);overflow:auto;flex:none}
+  nav a{display:block;padding:10px 18px;color:var(--ink);text-decoration:none;font-size:13px;border-left:3px solid transparent;cursor:pointer}
+  nav a:hover{background:#fffce8}
+  nav a.active{border-left-color:#FFC800;background:#fffce8;font-weight:700;color:#000}
+  main{flex:1;padding:20px 26px;max-width:1500px}
+  .sec-title{font-size:20px;font-weight:800;color:var(--accent);margin:6px 0 2px}
+  .sec-desc{color:var(--mut);font-size:13px;margin-bottom:16px;max-width:900px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .block{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .block.full{grid-column:1/-1}
+  .block h3{margin:0 0 10px;font-size:14px;font-weight:650}
+  .note{color:var(--mut);font-size:11.5px;margin-top:8px;line-height:1.5}
+  .chartbox{position:relative;height:300px}
+  .chartbox.tall{height:560px}
+  .kpis{display:flex;flex-wrap:wrap;gap:12px}
+  .kpi{flex:1;min-width:150px;background:#faf8f0;border:1px solid var(--bd);border-top:3px solid #FFC800;border-radius:8px;padding:12px 14px}
+  .kpi .v{font-size:22px;font-weight:800;color:var(--accent)}
+  .kpi .l{font-size:11.5px;color:var(--mut);margin-top:3px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left}
+  th{background:#f5f5f5;font-weight:650;position:sticky;top:0}
+  .tablebox{max-height:420px;overflow:auto}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  img.map{width:100%;border-radius:8px;border:1px solid var(--bd)}
+  .hm{overflow:auto}
+  .hm td{text-align:center;font-size:11px;color:#222;border:1px solid #fff;min-width:48px}
+  .hm th{font-size:11px}
+  .filters{display:flex;flex-wrap:wrap;gap:14px;align-items:end;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .filters label{font-size:11px;color:var(--mut);display:block;margin-bottom:4px}
+  .filters select{padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font-size:13px;min-width:140px}
+  .filters button{padding:7px 14px;border:0;background:#FFC800;color:#000;font-weight:600;border-radius:6px;cursor:pointer;font-size:13px}
+  .filters button:hover{background:#e6b400}
+  .rag-g{background:#c8e6c9}.rag-a{background:#fff3cd}.rag-r{background:#f8d7da}
+  .footer{color:var(--mut);font-size:11px;margin-top:30px;padding-top:14px;border-top:1px solid var(--bd)}
+  .pill{display:inline-block;background:#fffce8;border:1px solid var(--bd);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px}
+  .mapbox{height:540px;border-radius:8px;border:1px solid var(--bd);overflow:hidden;background:#eef3f5}
+  .leaflet-container{background:#eef3f5;font-family:inherit;font-size:12px}
+  .mapctl{margin-bottom:8px;font-size:12px}
+  .mapctl select{padding:5px 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px}
+  .legend{background:#fff;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:11px;line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .legend i{display:inline-block;width:14px;height:12px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.1)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌳 SAVE KE Seedlings Distribution — Insights Dashboard</h1>
+  <span class="sub" id="hdr-sub"></span>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script>
+const DATA = /*__DATA__*/;
+const PAL = ["#FFC800","#2e7d32","#1565c0","#e65100","#7b1fa2","#888888","#00838f","#c62828","#4527a0","#ad1457","#9e9d24","#0277bd"];
+const fmt = n => (n==null?"–":n.toLocaleString());
+const charts = [];
+const leafletMaps = [];   // {map, refit} — refit on section show (Leaflet inits in hidden divs)
+const CHORO_STOPS = ["#fff7cc","#ffe066","#ffc800","#ff9a00","#e65100","#a31515"];
+
+function el(tag, cls, html){const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;}
+
+// ── generic block renderers ───────────────────────────────────────────────
+function renderBlock(b){
+  const box = el("div","block"+((b.tall||b.type=="table"||b.type=="heatmap"||b.type=="pointmap"||b.full)?" full":""));
+  if(b.title) box.appendChild(el("h3",null,b.title));
+  if(b.type=="kpi"){
+    const k=el("div","kpis");
+    b.cards.forEach(c=>{const d=el("div","kpi"); d.appendChild(el("div","v",c.value)); d.appendChild(el("div","l",c.label)); k.appendChild(d);});
+    box.appendChild(k);
+  } else if(b.type=="bar"||b.type=="line"||b.type=="stacked"){
+    const cb=el("div","chartbox"+(b.tall?" tall":"")); const cv=el("canvas"); cb.appendChild(cv); box.appendChild(cb);
+    setTimeout(()=>drawChart(cv,b),0);
+  } else if(b.type=="image"){
+    const im=el("img","map"); im.src=b.src; box.appendChild(im);
+  } else if(b.type=="table"){
+    box.appendChild(buildTable(b.columns,b.rows));
+  } else if(b.type=="heatmap"){
+    box.appendChild(buildHeatmap(b));
+  } else if(b.type=="pointmap"){
+    box.appendChild(buildPointMap(b));
+  } else if(b.type=="note"){
+    box.appendChild(el("div","note","⚠ "+b.text));
+  }
+  if(b.note) box.appendChild(el("div","note",b.note));
+  return box;
+}
+
+function buildTable(cols,rows){
+  const wrap=el("div","tablebox"); const t=el("table");
+  const thead=el("thead"); const tr=el("tr");
+  cols.forEach((c,i)=>{const th=el("th",i>0?"num":null,c); tr.appendChild(th);}); thead.appendChild(tr); t.appendChild(thead);
+  const tb=el("tbody");
+  rows.forEach(r=>{const tr=el("tr"); r.forEach((v,i)=>{const td=el("td",(i>0&&typeof v=="number")?"num":null, typeof v=="number"?fmt(v):v); tr.appendChild(td);}); tb.appendChild(tr);});
+  t.appendChild(tb); wrap.appendChild(t); return wrap;
+}
+
+function buildHeatmap(b){
+  const wrap=el("div","hm"); const t=el("table");
+  const max=Math.max(...b.matrix.flat(),1);
+  const head=el("tr"); head.appendChild(el("th",null,""));
+  b.xlabels.forEach(x=>head.appendChild(el("th",null,x.replace(/_/g," ")))); t.appendChild(head);
+  b.ylabels.forEach((y,i)=>{const tr=el("tr"); tr.appendChild(el("th",null,y));
+    b.matrix[i].forEach(v=>{const a=v/max; const td=el("td",null,fmt(v));
+      td.style.background=`rgba(230,81,0,${0.06+a*0.9})`; td.style.color=a>0.5?"#fff":"#222"; tr.appendChild(td);});
+    t.appendChild(tr);});
+  wrap.appendChild(t); return wrap;
+}
+
+function drawChart(cv,b){
+  let cfg;
+  if(b.type=="bar"){
+    cfg={type:"bar",data:{labels:b.labels,datasets:[{label:b.axisLabel||"",data:b.values,backgroundColor:PAL[0]}]},
+      options:{indexAxis:b.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{autoSkip:!b.horizontal,maxRotation:b.horizontal?0:60,minRotation:0,font:{size:9}}},y:{ticks:{font:{size:9},autoSkip:false}}}}};
+  } else if(b.type=="line"){
+    cfg={type:"line",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+"33",borderWidth:1.6,pointRadius:0,tension:.25,fill:false}))},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:14,font:{size:9}}},y:{ticks:{font:{size:9}}}}}};
+  } else if(b.type=="stacked"){
+    cfg={type:"bar",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,backgroundColor:PAL[i%PAL.length]}))},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:60}},y:{stacked:true,ticks:{font:{size:9}}}}}};
+  }
+  charts.push(new Chart(cv,cfg));
+}
+
+// ── GPS point map (Leaflet + OpenStreetMap tiles) ─────────────────────────
+function buildPointMap(b){
+  const wrap=el("div"); const md=el("div","mapbox"); wrap.appendChild(md);
+  setTimeout(()=>{
+    const map=L.map(md,{scrollWheelZoom:false}).setView([-0.25,36.4],10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+    const col={}; b.groups.forEach((g,i)=>col[g]=PAL[(i+1)%PAL.length]);
+    const lyr=L.featureGroup().addTo(map);
+    b.points.forEach(([lat,lon,ward,n,rnd])=>L.circleMarker([lat,lon],{radius:4+Math.sqrt(n)*1.6,color:"#333",weight:.5,fillColor:col[ward],fillOpacity:.7})
+      .bindTooltip("<b>"+ward+"</b><br>"+n+" farmers<br>"+rnd).addTo(lyr));
+    const fit=()=>{ if(map.getSize().x>0 && b.points.length) map.fitBounds(lyr.getBounds(),{padding:[12,12]}); };
+    const lg=L.control({position:"bottomright"});
+    lg.onAdd=()=>{const d=el("div","legend"); d.innerHTML="<b>Ward</b><br>"+b.groups.map(g=>'<i style="background:'+col[g]+'"></i>'+g).join("<br>"); return d;};
+    lg.addTo(map);
+    leafletMaps.push({map,refit:()=>{map.invalidateSize(); fit();}});
+    fit();
+    if(window.ResizeObserver) new ResizeObserver(()=>{ if(map.getSize().x>0) map.invalidateSize(); }).observe(md);
+  },0);
+  return wrap;
+}
+
+// ── navigation & sections ─────────────────────────────────────────────────
+function show(id){
+  document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("active",a.dataset.id==id));
+  document.querySelectorAll("main > .section").forEach(sd=>sd.style.display=sd.id==id?"block":"none");
+  window.scrollTo(0,0);
+  setTimeout(()=>leafletMaps.forEach(m=>m.refit()),0);
+}
+
+const FOOT="Source: KoBoToolbox form ar7ZyJqG8qJ9sUu4JLWiTY (SAVE KE Seedlings Distribution) · test submissions excluded · refreshed nightly. Farmer names and phone numbers are never included.";
+
+function build(){
+  const g=DATA.global;
+  document.getElementById("hdr-sub").textContent =
+    fmt(g.farmers)+" farmers · "+fmt(g.seedlings)+" seedlings · "+g.rounds+" rounds · "+g.date_min+" → "+g.date_max+" · latest submission "+g.built;
+  const nav=document.getElementById("nav"), main=document.getElementById("main");
+  const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec"); nav.appendChild(exNav);
+  main.appendChild(buildExec());
+  DATA.sections.forEach(sc=>{
+    const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
+    const sd=el("div","section"); sd.id=sc.id; sd.style.display="none";
+    sd.appendChild(el("div","sec-title",sc.title));
+    if(sc.desc) sd.appendChild(el("div","sec-desc",sc.desc));
+    const grid=el("div","grid"); sc.blocks.forEach(b=>grid.appendChild(renderBlock(b))); sd.appendChild(grid);
+    sd.appendChild(el("div","footer",FOOT));
+    main.appendChild(sd);
+  });
+  show("exec");
+}
+
+// ── Executive interactive section ─────────────────────────────────────────
+const EX=DATA.exec; const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
+function buildExec(){
+  const sd=el("div","section"); sd.id="exec";
+  sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
+  sd.appendChild(el("div","sec-desc","Headline reach and species figures, filterable by sub-county, ward and distribution round."));
+  const fb=el("div","filters");
+  const mkSel=(id,label,opts)=>{const w=el("div"); w.appendChild(el("label",null,label));
+    const s=el("select"); s.id=id; s.appendChild(new Option("All","")); opts.forEach(o=>s.appendChild(new Option(o,o))); w.appendChild(s); return w;};
+  fb.appendChild(mkSel("f-sc","Sub-county",EX.subcounties));
+  fb.appendChild(mkSel("f-ward","Ward",EX.wards));
+  fb.appendChild(mkSel("f-round","Distribution round",EX.rounds));
+  const ck=el("div"); ck.innerHTML='<label>&nbsp;</label><label style="font-size:13px;color:#222"><input type="checkbox" id="f-dedup"> Exclude probable duplicates</label>'; fb.appendChild(ck);
+  const btn=el("button",null,"Reset");
+  btn.onclick=()=>{["f-sc","f-ward","f-round"].forEach(i=>document.getElementById(i).value=""); document.getElementById("f-dedup").checked=false;
+    [...document.getElementById("f-ward").options].forEach(o=>o.hidden=false); applyExec();};
+  fb.appendChild(btn); sd.appendChild(fb);
+  const kp=el("div","block full"); kp.appendChild(el("h3",null,"Key indicators (filtered)")); const kc=el("div","kpis"); kc.id="exec-kpis"; kp.appendChild(kc); sd.appendChild(kp);
+  const grid=el("div","grid");
+  [["exec-sp","Seedlings by species (filtered)"],["exec-rnd","Farmers per round — new vs returning (filtered)"],
+   ["exec-ward","Seedlings by ward (filtered)"],["exec-mon","Seedlings by month (filtered)"]]
+    .forEach(([id,t])=>{const c=el("div","block"); c.appendChild(el("h3",null,t)); const cb=el("div","chartbox"); const cv=el("canvas"); cv.id=id; cb.appendChild(cv); c.appendChild(cb); grid.appendChild(c);});
+  sd.appendChild(grid);
+  setTimeout(()=>{
+    document.getElementById("f-sc").onchange=()=>{
+      const sc=document.getElementById("f-sc").value, w=document.getElementById("f-ward");
+      [...w.options].forEach(o=>o.hidden=!!(sc&&o.value&&EX.ward_sc[o.value]!=sc));
+      if(w.value&&sc&&EX.ward_sc[w.value]!=sc) w.value="";
+      applyExec();};
+    ["f-ward","f-round","f-dedup"].forEach(i=>document.getElementById(i).onchange=applyExec);
+    applyExec();},0);
+  return sd;
+}
+
+let execCharts=[];
+function applyExec(){
+  const sc=document.getElementById("f-sc").value, w=document.getElementById("f-ward").value,
+        r=document.getElementById("f-round").value, dd=document.getElementById("f-dedup").checked;
+  const rows=EX.records.filter(x=>(!sc||x[IDX.subcounty]==sc)&&(!w||x[IDX.ward]==w)&&(!r||x[IDX.round]==r)&&(!dd||!x[IDX.dup]));
+  const seed=rows.reduce((a,x)=>a+x[IDX.seedlings],0), farmers=new Set(rows.map(x=>x[IDX.farmer])).size;
+  const dupN=rows.filter(x=>x[IDX.dup]).length, newN=rows.filter(x=>x[IDX.first]).length;
+  const kc=document.getElementById("exec-kpis"); kc.innerHTML="";
+  [["Unique farmers reached",fmt(farmers)],["Seedlings distributed",fmt(seed)],["Farmer entries",fmt(rows.length)],
+   ["Avg seedlings / farmer",farmers?(seed/farmers).toFixed(1):"–"],["First-time farmers",fmt(newN)],["Probable duplicate entries",fmt(dupN)]]
+   .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
+  const sp=EX.species.map(([k,n])=>[n,rows.reduce((a,x)=>a+x[IDX[k]],0)]).sort((a,b)=>b[1]-a[1]);
+  const byWard={}, byMon={}, rnd={}; EX.rounds.forEach(k=>rnd[k]={n:new Set(),all:new Set()});
+  rows.forEach(x=>{
+    byWard[x[IDX.ward]]=(byWard[x[IDX.ward]]||0)+x[IDX.seedlings];
+    byMon[x[IDX.ym]]=(byMon[x[IDX.ym]]||0)+x[IDX.seedlings];
+    const R=rnd[x[IDX.round]]; if(R){R.all.add(x[IDX.farmer]); if(x[IDX.first]) R.n.add(x[IDX.farmer]);}});
+  const wl=Object.keys(byWard).sort((a,b)=>byWard[b]-byWard[a]), ml=Object.keys(byMon).sort();
+  const rl=EX.rounds.filter(k=>rnd[k].all.size);
+  execCharts.forEach(c=>c.destroy()); execCharts=[];
+  const o=extra=>Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}},extra||{});
+  execCharts.push(new Chart(document.getElementById("exec-sp"),{type:"bar",
+    data:{labels:sp.map(s=>s[0]),datasets:[{data:sp.map(s=>s[1]),backgroundColor:PAL[0]}]},options:o({indexAxis:"y"})}));
+  execCharts.push(new Chart(document.getElementById("exec-rnd"),{type:"bar",data:{labels:rl,datasets:[
+    {label:"new",data:rl.map(k=>rnd[k].n.size),backgroundColor:PAL[1]},
+    {label:"returning",data:rl.map(k=>rnd[k].all.size-rnd[k].n.size),backgroundColor:PAL[0]}]},
+    options:o({plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}},
+      scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9}}}}})}));
+  execCharts.push(new Chart(document.getElementById("exec-ward"),{type:"bar",
+    data:{labels:wl,datasets:[{data:wl.map(k=>byWard[k]),backgroundColor:PAL[2]}]},options:o()}));
+  execCharts.push(new Chart(document.getElementById("exec-mon"),{type:"bar",
+    data:{labels:ml,datasets:[{data:ml.map(k=>byMon[k]),backgroundColor:PAL[3]}]},options:o()}));
+}
+build();
+</script>
+</body>
+</html>
