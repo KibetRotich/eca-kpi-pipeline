@@ -56,14 +56,15 @@ export async function GET(req: NextRequest) {
   // other project, loaded nightly by pipeline/frameworks/sync_framework_sheets.py.
   let sheet: any = null
   const link = await supabaseAdmin.from('project_mf_sheets')
-    .select('sheet_id, gid, tab, source_table, label, cadence, extras, last_synced_at').eq('project_id', projectId).maybeSingle()
+    .select('sheet_id, gid, tab, source_table, label, cadence, extras, last_synced_at, county_tabs').eq('project_id', projectId).maybeSingle()
   if (link.data) {
     const extras: string[] = link.data.extras ?? []
     const cols = 'indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note'
     const rowsQ = link.data.source_table === 'save_mf_indicator_values'
       ? supabaseAdmin.from('save_mf_indicator_values').select(cols)
       : supabaseAdmin.from('project_mf_sheet_values').select(cols + ', target_direct, non_individual').eq('project_id', projectId)
-    const [rows, meta, dist, reached] = await Promise.all([
+    const countyTabs: string[] = link.data.county_tabs ?? []
+    const [rows, meta, dist, reached, counties] = await Promise.all([
       rowsQ.order('indicator_id').order('period_end'),
       link.data.source_table === 'save_mf_indicator_values'
         ? supabaseAdmin.from('save_dist_sync_meta').select('framework_synced_at').eq('id', 1).maybeSingle()
@@ -73,6 +74,12 @@ export async function GET(req: NextRequest) {
         : Promise.resolve({ data: null }),
       extras.includes('save_reached')
         ? supabaseAdmin.from('v_save_dist_reached_gender_youth').select('*').maybeSingle()
+        : Promise.resolve({ data: null }),
+      // per-county yearly achievements (Sprint 32) — IPTT county tabs
+      countyTabs.length
+        ? supabaseAdmin.from('project_mf_sheet_county_values')
+            .select('county, indicator_id, period_end, total, male, female, youth, non_individual')
+            .eq('project_id', projectId).order('county').order('indicator_id').order('period_end')
         : Promise.resolve({ data: null }),
     ])
     if (rows.error) return NextResponse.json({ error: rows.error.message }, { status: 500 })
@@ -86,6 +93,8 @@ export async function GET(req: NextRequest) {
                    series: (dist.data as any[]).map(d => ({ period_end: d.period_end, value: Number(d.seedlings_distributed_cum) })) } : undefined,
       // SAVE only: gender / youth of farmers reached (profiled register x distributions) — Sprint 30
       reached: reached.data ?? null,
+      county_order: countyTabs,
+      counties: counties.data ?? [],
     }
   }
 

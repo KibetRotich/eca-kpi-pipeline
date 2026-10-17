@@ -9,10 +9,11 @@
  * The logic mirrors pipeline/save_seedlings/build_dashboard.py (section 8).
  */
 import { useState } from 'react'
-import { Bar, Doughnut, Line } from 'react-chartjs-2'
-import { Chart as ChartJS, CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, Tooltip, Legend } from 'chart.js'
+import { Bar, Chart, Doughnut, Line } from 'react-chartjs-2'
+import { Chart as ChartJS, CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement,
+         BarController, LineController, Tooltip, Legend } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, BarController, LineController, Tooltip, Legend)
 
 export interface SheetRow {
   indicator_id: string; period_end: string; level: string | null; indicator: string; unit: string | null
@@ -24,6 +25,9 @@ export interface SheetRow {
 export interface SheetLink {
   sheet_id: string; gid: number; tab: string; label: string | null; synced_at: string | null
   cadence?: '6-monthly' | 'annual'
+  county_order?: string[]
+  counties?: { county: string; indicator_id: string; period_end: string; total: number | null; male: number | null
+               female: number | null; youth: number | null; non_individual: number | null }[]
   rows: SheetRow[]
   reference?: { indicator_id: string; label: string; series: { period_end: string; value: number }[] }
   reached?: { farmers_reached: number; women: number; men: number; gender_other: number
@@ -54,10 +58,44 @@ const lineOpts = (pct = false): any => ({
   scales: { x: { ticks: { font: { size: 9 } } }, y: { ticks: { font: { size: 9 }, callback: (v: any) => (pct ? `${v}%` : Number(v).toLocaleString()) } } },
 })
 
+/** Achievement per year (bars) + cumulative achievement (line) + end target (dashed), with an indicator picker. */
+function YearChart({ title, axis, label, points, target, options, value, onPick, height = 230, note }: {
+  title: string; axis: string[]; label: (p: string) => string; points: Record<string, number>; target: number | null
+  options: { id: string; name: string }[]; value: string; onPick: (id: string) => void; height?: number; note?: string
+}) {
+  let run = 0
+  const last = Object.keys(points).sort().slice(-1)[0] ?? ''
+  const cum = axis.map(p => { if (points[p] != null) run += points[p]; return p <= last ? run : null })
+  const sets: any[] = [
+    { type: 'bar', label: 'achievement in the year', data: axis.map(p => points[p] ?? null), backgroundColor: '#FFC800', borderRadius: 4, order: 3 },
+    { type: 'line', label: 'cumulative achievement', data: cum, borderColor: '#2e7d32', backgroundColor: '#2e7d32', pointRadius: 3, spanGaps: true, order: 1 },
+  ]
+  if (target != null) sets.push({ type: 'line', label: `end target (${target.toLocaleString()})`, data: axis.map(() => target),
+                                   borderColor: '#1565c0', borderDash: [6, 4], pointRadius: 0, order: 2 })
+  return (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '.6rem', fontWeight: 700 }}>{title}</span>
+        <select value={value} onChange={e => onPick(e.target.value)} style={{ fontSize: '.56rem', marginLeft: 'auto', maxWidth: 260 }}>
+          {options.map(o => <option key={o.id} value={o.id}>{o.id} — {o.name}</option>)}
+        </select>
+      </div>
+      <div style={{ height }}>
+        <Chart type="bar" data={{ labels: axis.map(label), datasets: sets }}
+          options={{ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { labels: { font: { size: 9 }, boxWidth: 10 } } },
+            scales: { x: { ticks: { font: { size: 9 } } }, y: { beginAtZero: true, ticks: { font: { size: 9 }, callback: (v: any) => Number(v).toLocaleString() } } } }} />
+      </div>
+      {note && <div style={small}>{note}</div>}
+    </div>
+  )
+}
+
 export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const annual = sheet.cadence === 'annual'
   const plab = (pe: string) => (annual ? pe.slice(0, 4) : plab6(pe))     // annual frameworks label periods by year
   const [pick, setPick] = useState('')
+  const [countyPick, setCountyPick] = useState<Record<string, string>>({})   // per-county indicator override
   const rows = [...sheet.rows].map(r => ({ ...r, total: r.total == null ? null : Number(r.total) }))
   const ids = [...new Set(rows.map(r => r.indicator_id))].sort()
   const byId = (id: string) => rows.filter(r => r.indicator_id === id).sort((a, b) => a.period_end.localeCompare(b.period_end))
@@ -117,6 +155,18 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const pickId = pick || [...score].sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]?.id || ''
   const pickRows = byId(pickId).filter(r => r.total != null)
 
+  const hasCounties = (sheet.counties?.length ?? 0) > 0
+  const opts = score.map(s => ({ id: s.id, name: short(s.indicator).slice(0, 70) }))
+  const yearAxis = [...new Set(rows.map(r => r.period_end))].sort()
+  const mainId = pick || [...score].sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]?.id || ''
+  const mainInd = score.find(s => s.id === mainId)
+  const pointsOf = (id: string) => series(id)
+  const countyPoints = (county: string, id: string) => Object.fromEntries((sheet.counties ?? [])
+    .filter(r => r.county === county && r.indicator_id === id && r.total != null).map(r => [r.period_end, Number(r.total)]))
+  const gsel = mainInd ? mainInd.g.filter(r => r.total != null) : []
+  const gsum = (k: 'male' | 'female' | 'non_individual' | 'total') => gsel.reduce((a, r) => a + (Number((r as any)[k]) || 0), 0)
+  const gm = gsum('male'), gf = gsum('female'), gni = gsum('non_individual'), gt = gsum('total')
+
   const src = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit?gid=${sheet.gid}&rm=minimal`
   const link = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit#gid=${sheet.gid}`
 
@@ -161,7 +211,38 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
         </div>
       </div>
 
-      {/* Progress graphs */}
+      {/* Progress graphs — county layout (P2P): overall per-year chart, one per county, gender pie last */}
+      {hasCounties && mainInd && (<>
+        <YearChart title={`Progress per year — ${annual ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={260}
+          points={pointsOf(mainId)} target={mainInd.tgt} options={opts} value={mainId} onPick={id => { setPick(id); setCountyPick({}) }}
+          note={`Bars: achievement reported for each ${annual ? 'year' : 'period'}. Green line: running total. Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
+          {(sheet.county_order ?? []).map(county => {
+            const cid = countyPick[county] || mainId
+            return (
+              <YearChart key={county} title={county} axis={yearAxis} label={plab} height={190}
+                points={countyPoints(county, cid)} target={null} options={opts} value={cid}
+                onPick={id => setCountyPick(cp => ({ ...cp, [county]: id }))} />
+            )
+          })}
+        </div>
+        <div style={small}>
+          County charts show achievement as entered in each county tab; there are no county targets in the sheet. County figures do not
+          always add up to the project totals in the indicator tracking table — check the county tabs where they differ.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
+          <div style={card}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender — {short(mainInd.indicator)}</div>
+            <div style={{ height: 220 }}>
+              <Donut parts={[['Women', gf, '#d81b60'], ['Men', gm, '#1565c0'],
+                             ['Non-individual (co-ops, companies…)', gni, '#9e9e9e'], ['Not disaggregated', Math.max(0, gt - gm - gf - gni), '#d8d8d8']]} />
+            </div>
+            <div style={small}>All reported {annual ? 'years' : 'periods'} for the indicator selected in the first chart.</div>
+          </div>
+        </div>
+      </>)}
+
+      {!hasCounties && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '.6rem' }}>
         {refInd && ref && (
           <div style={card}>
@@ -252,6 +333,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Editable sheet */}
       <div style={card}>
