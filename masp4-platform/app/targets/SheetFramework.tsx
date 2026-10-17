@@ -156,6 +156,8 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const pickRows = byId(pickId).filter(r => r.total != null)
 
   const hasCounties = (sheet.counties?.length ?? 0) > 0
+  // Annual frameworks (P2P Kenya / Tanzania) use the progress-per-year layout; counties are added when present
+  const yearLayout = hasCounties || annual
   const opts = score.map(s => ({ id: s.id, name: short(s.indicator).slice(0, 70) }))
   const yearAxis = [...new Set(rows.map(r => r.period_end))].sort()
   const mainId = pick || [...score].sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]?.id || ''
@@ -212,10 +214,10 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
       </div>
 
       {/* Progress graphs — county layout (P2P): overall per-year chart, one per county, gender pie last */}
-      {hasCounties && mainInd && (<>
+      {yearLayout && mainInd && (<>
         {/* Row 1: overall progress per year and the gender pie, side by side (half width each) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
-          <YearChart title={`Progress per year — ${annual ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={220}
+          <YearChart title={`Progress per year — ${hasCounties ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={220}
             points={pointsOf(mainId)} target={mainInd.tgt} options={opts} value={mainId} onPick={id => { setPick(id); setCountyPick({}) }}
             note={`Bars: achievement in each ${annual ? 'year' : 'period'}. Green line: running total. Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
           <div style={card}>
@@ -228,6 +230,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
           </div>
         </div>
         {/* Then one chart per county */}
+        {hasCounties && (<>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
           {(sheet.county_order ?? []).map(county => {
             const cid = countyPick[county] || mainId
@@ -242,9 +245,10 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
           County charts show achievement as entered in each county tab; there are no county targets in the sheet. County figures do not
           always add up to the project totals in the indicator tracking table — check the county tabs where they differ.
         </div>
+        </>)}
       </>)}
 
-      {!hasCounties && (
+      {!yearLayout && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '.6rem' }}>
         {refInd && ref && (
           <div style={card}>
