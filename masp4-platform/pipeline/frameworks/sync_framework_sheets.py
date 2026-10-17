@@ -34,6 +34,8 @@ sys.path.insert(0, HERE)
 from iptt import parse_iptt, norm                                        # noqa: E402
 
 EXTRA_NUM = {"target_direct": "target_direct", "non_individual": "non_individual"}
+# Option A layout: the four parts plus non_individual add up to total; male/female/youth are derived from them
+PARTS = ("male_adults", "female_adults", "male_youths", "female_youths")
 TABLE = "project_mf_sheet_values"
 COUNTY_TABLE = "project_mf_sheet_county_values"
 
@@ -46,6 +48,10 @@ def to_rows(project_id, header, rows):
         get = lambda h: (r[idx[h]].strip() if h in idx and idx[h] < len(r) else "")
         key = (get("indicator_id"), get("period_end")[:7])
         extra[key] = {col: num(get(h)) for h, col in EXTRA_NUM.items()}
+        if all(h in idx for h in PARTS):
+            ma, fa, my, fy = (num(get(h)) for h in PARTS)
+            sm = lambda *xs: None if all(x is None for x in xs) else sum(x or 0 for x in xs)
+            extra[key].update(male=sm(ma, my), female=sm(fa, fy), youth=sm(my, fy))
     out = []
     for b in base:
         b = dict(b)
