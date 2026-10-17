@@ -8,19 +8,22 @@
  * (save_mf_indicator_values), so this page and tab 8 always show the same numbers.
  * The logic mirrors pipeline/save_seedlings/build_dashboard.py (section 8).
  */
-import { Doughnut, Line } from 'react-chartjs-2'
-import { Chart as ChartJS, CategoryScale, LinearScale, ArcElement, LineElement, PointElement, Tooltip, Legend } from 'chart.js'
+import { useState } from 'react'
+import { Bar, Doughnut, Line } from 'react-chartjs-2'
+import { Chart as ChartJS, CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, Tooltip, Legend } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, ArcElement, LineElement, PointElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, Tooltip, Legend)
 
 export interface SheetRow {
   indicator_id: string; period_end: string; level: string | null; indicator: string; unit: string | null
   baseline: number | null; end_target: number | null; cumulative: boolean | null
   total: number | null; male: number | null; female: number | null; youth: number | null
   survival_pct: number | null; note: string | null
+  target_direct?: number | null; non_individual?: number | null
 }
 export interface SheetLink {
   sheet_id: string; gid: number; tab: string; label: string | null; synced_at: string | null
+  cadence?: '6-monthly' | 'annual'
   rows: SheetRow[]
   reference?: { indicator_id: string; label: string; series: { period_end: string; value: number }[] }
   reached?: { farmers_reached: number; women: number; men: number; gender_other: number
@@ -41,7 +44,7 @@ function Donut({ parts }: { parts: [string, number, string][] }) {
 }
 
 const fmt = (n: number | null | undefined) => (n == null ? '–' : Number(n).toLocaleString())
-const plab = (pe: string) => new Date(`${pe}-01T00:00:00`).toLocaleString('en-GB', { month: 'short', year: 'numeric' })
+const plab6 = (pe: string) => new Date(`${pe}-01T00:00:00`).toLocaleString('en-GB', { month: 'short', year: 'numeric' })
 const nowYM = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 const card = { background: '#fff', border: '1px solid #e8e0a0', padding: '.5rem .6rem' }
 const small = { fontSize: '.52rem', color: '#888' }
@@ -52,6 +55,9 @@ const lineOpts = (pct = false): any => ({
 })
 
 export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
+  const annual = sheet.cadence === 'annual'
+  const plab = (pe: string) => (annual ? pe.slice(0, 4) : plab6(pe))     // annual frameworks label periods by year
+  const [pick, setPick] = useState('')
   const rows = [...sheet.rows].map(r => ({ ...r, total: r.total == null ? null : Number(r.total) }))
   const ids = [...new Set(rows.map(r => r.indicator_id))].sort()
   const byId = (id: string) => rows.filter(r => r.indicator_id === id).sort((a, b) => a.period_end.localeCompare(b.period_end))
@@ -61,6 +67,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const score = ids.map(id => {
     const g = byId(id), rep = g.filter(r => r.total != null)
     const tgt = Math.max(...g.map(r => (r.end_target == null ? -1 : Number(r.end_target))))
+    const direct = Math.max(...g.map(r => (r.target_direct == null ? -1 : Number(r.target_direct))))
     const cum = g.map(r => r.cumulative).filter(c => c != null) as boolean[]
     const perPeriod = cum.length > 0 && !cum.some(Boolean)
     let prog: number | null = null, when = 'not yet reported', how = ''
@@ -69,11 +76,12 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
     } else if (rep.length) {
       const last = rep[rep.length - 1]
       prog = last.total; when = plab(last.period_end); how = cum.length ? '' : 'latest — confirm cumulative/per-period'
-      if (last.period_end > now) when += ' (provisional — period not yet ended)'
+      if (last.period_end > now) when += annual ? ' (provisional — year not yet ended)' : ' (provisional — period not yet ended)'
     }
     const pct = prog != null && tgt > 0 ? Math.round((prog / tgt) * 1000) / 10 : null
     const notes = [...new Set(g.map(r => r.note).filter(Boolean))].join('; ')
-    return { id, g, level: g[0]?.level ?? '', indicator: g[0]?.indicator ?? id, unit: g[0]?.unit ?? '', tgt: tgt > 0 ? tgt : null, prog, when, how, pct, notes }
+    return { id, g, level: g[0]?.level ?? '', indicator: g[0]?.indicator ?? id, unit: g[0]?.unit ?? '', tgt: tgt > 0 ? tgt : null,
+             direct: direct > 0 && direct !== tgt ? direct : null, prog, when, how, pct, notes, perPeriod }
   })
 
   const reported = rows.filter(r => r.total != null).map(r => r.period_end)
@@ -91,9 +99,23 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   // Graph 3 — people indicators vs targets (series identical to an earlier one are skipped)
   const seen: string[] = []
   const people = score.filter(s => /farmer|people/i.test(s.unit) && byId(s.id).filter(r => r.total != null).length >= 2)
+    .sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))
     .filter(s => { const k = JSON.stringify(series(s.id)); if (seen.includes(k)) return false; seen.push(k); return true }).slice(0, 2)
   // Graph 4 — gender and youth of farmers reached (profiled register x Kobo distributions)
   const rc = sheet.reached ? Object.fromEntries(Object.entries(sheet.reached).map(([k, v]) => [k, Number(v) || 0])) as Record<string, number> : null
+  // No register data: take gender / youth from the framework itself - the people indicator with the
+  // largest progress that has a male / female breakdown (summed over periods, or latest if a running total).
+  const head = rc ? null : score.filter(s => /farmer|people|worker|member/i.test(s.unit) && s.g.some(r => r.male != null && r.female != null && Number(r.total) > 0))
+    .sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]
+  const hb = head ? (() => {
+    const rp = head.g.filter(r => r.total != null && r.male != null)
+    const use = head.perPeriod ? rp : rp.slice(-1)
+    const sum = (k: 'male' | 'female' | 'youth' | 'non_individual' | 'total') => use.reduce((a, r) => a + (Number((r as any)[k]) || 0), 0)
+    const m = sum('male'), f = sum('female'), y = sum('youth'), ni = sum('non_individual'), t = sum('total')
+    return { m, f, y, ni, other: Math.max(0, t - m - f - ni), span: use.length > 1 ? `${plab(use[0].period_end)}–${plab(use[use.length - 1].period_end)}` : plab(use[0].period_end) }
+  })() : null
+  const pickId = pick || [...score].sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]?.id || ''
+  const pickRows = byId(pickId).filter(r => r.total != null)
 
   const src = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit?gid=${sheet.gid}&rm=minimal`
   const link = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit#gid=${sheet.gid}`
@@ -123,7 +145,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
                 <tr key={s.id} style={{ background: i % 2 ? '#fafafa' : '#fff', verticalAlign: 'top' }}>
                   <td><b>{s.id}</b> {s.indicator}{s.notes && <div style={{ ...small, color: '#8a6d00' }}>⚠ {s.notes}</div>}</td>
                   <td>{s.level}</td>
-                  <td style={{ textAlign: 'right' }}>{s.tgt == null ? '–' : `${fmt(s.tgt)} ${s.unit}`}</td>
+                  <td style={{ textAlign: 'right' }}>{s.tgt == null ? '–' : `${fmt(s.tgt)} ${s.unit}`}{s.direct != null && <div style={small}>direct {fmt(s.direct)}</div>}</td>
                   <td style={{ textAlign: 'right' }}>{fmt(s.prog)}</td>
                   <td>{s.when}{s.how && <div style={small}>{s.how}</div>}</td>
                   <td style={{ textAlign: 'right', background: c }}>{s.pct == null ? '–' : `${s.pct.toFixed(1)}%`}</td>
@@ -193,6 +215,42 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
             <div style={small}>Age group from the profiled-farmer register; the distribution form does not record gender or age.</div>
           </div>
         </>)}
+        {!rc && head && hb && (<>
+          <div style={card}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender — {short(head.indicator)}</div>
+            <div style={{ height: 210 }}>
+              <Donut parts={[['Women', hb.f, '#d81b60'], ['Men', hb.m, '#1565c0'],
+                             ['Non-individual (co-ops, companies…)', hb.ni, '#9e9e9e'], ['Not disaggregated', hb.other, '#d8d8d8']]} />
+            </div>
+            <div style={small}>{head.perPeriod ? 'Sum of' : 'Latest'} reported values, {hb.span}. From the framework male / female columns.</div>
+          </div>
+          <div style={card}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Youth — {short(head.indicator)}</div>
+            <div style={{ height: 210 }}>
+              <Donut parts={[['Youth', hb.y, '#e65100'], ['Non-youth', Math.max(0, hb.m + hb.f - hb.y), '#6b6b6b']]} />
+            </div>
+            <div style={small}>Individuals only (men + women), {hb.span}. Youth overlaps men / women.</div>
+          </div>
+        </>)}
+        {!ref && pickRows.length > 0 && (
+          <div style={card}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+              <span style={{ fontSize: '.6rem', fontWeight: 700 }}>Values by {annual ? 'year' : 'period'}</span>
+              <select value={pickId} onChange={e => setPick(e.target.value)} style={{ fontSize: '.56rem', marginLeft: 'auto', maxWidth: 230 }}>
+                {score.map(s => <option key={s.id} value={s.id}>{s.id} — {short(s.indicator)}</option>)}
+              </select>
+            </div>
+            <div style={{ height: 210 }}>
+              <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { size: 9 }, boxWidth: 10 } } },
+                  scales: { x: { stacked: true, ticks: { font: { size: 9 } } }, y: { stacked: true, ticks: { font: { size: 9 } } } } }}
+                data={{ labels: pickRows.map(r => plab(r.period_end)), datasets: [
+                  { label: 'female', data: pickRows.map(r => Number(r.female) || 0), backgroundColor: '#d81b60', borderRadius: 3 },
+                  { label: 'male', data: pickRows.map(r => Number(r.male) || 0), backgroundColor: '#1565c0', borderRadius: 3 },
+                  { label: 'non-individual / not disaggregated', data: pickRows.map(r => Math.max(0, Number(r.total) - (Number(r.female) || 0) - (Number(r.male) || 0))), backgroundColor: '#bdbdbd', borderRadius: 3 }] }} />
+            </div>
+            <div style={small}>Each bar is the value reported for that {annual ? 'year' : 'period'}.</div>
+          </div>
+        )}
       </div>
 
       {/* Editable sheet */}

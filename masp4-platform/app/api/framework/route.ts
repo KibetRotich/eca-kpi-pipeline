@@ -51,29 +51,40 @@ export async function GET(req: NextRequest) {
     if (val.error) return NextResponse.json({ error: val.error.message }, { status: 500 })
     values = val.data ?? []
   }
-  // Google-Sheet framework linked to this project (Sprint 29) — e.g. Shade for Vegetables
-  // -> SAVE M&E Framework. Rows come from the nightly sheet sync used by Seedlings tab 8.
+  // Google-Sheet framework linked to this project (Sprints 29 / 31) — shown like Seedlings tab 8.
+  // source_table 'save_mf_indicator_values' = SAVE (KE-SVP-001); 'project_mf_sheet_values' = any
+  // other project, loaded nightly by pipeline/frameworks/sync_framework_sheets.py.
   let sheet: any = null
   const link = await supabaseAdmin.from('project_mf_sheets')
-    .select('sheet_id, gid, tab, source_table, label').eq('project_id', projectId).maybeSingle()
-  if (link.data?.source_table === 'save_mf_indicator_values') {
+    .select('sheet_id, gid, tab, source_table, label, cadence, extras, last_synced_at').eq('project_id', projectId).maybeSingle()
+  if (link.data) {
+    const extras: string[] = link.data.extras ?? []
+    const cols = 'indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note'
+    const rowsQ = link.data.source_table === 'save_mf_indicator_values'
+      ? supabaseAdmin.from('save_mf_indicator_values').select(cols)
+      : supabaseAdmin.from('project_mf_sheet_values').select(cols + ', target_direct, non_individual').eq('project_id', projectId)
     const [rows, meta, dist, reached] = await Promise.all([
-      supabaseAdmin.from('save_mf_indicator_values')
-        .select('indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note')
-        .order('indicator_id').order('period_end'),
-      supabaseAdmin.from('save_dist_sync_meta').select('framework_synced_at').eq('id', 1).maybeSingle(),
-      supabaseAdmin.from('v_save_dist_seedlings_by_period').select('period_end, seedlings_distributed_cum').order('period_end'),
-      supabaseAdmin.from('v_save_dist_reached_gender_youth').select('*').maybeSingle(),
+      rowsQ.order('indicator_id').order('period_end'),
+      link.data.source_table === 'save_mf_indicator_values'
+        ? supabaseAdmin.from('save_dist_sync_meta').select('framework_synced_at').eq('id', 1).maybeSingle()
+        : Promise.resolve({ data: { framework_synced_at: link.data.last_synced_at } }),
+      extras.includes('save_kobo_reference')
+        ? supabaseAdmin.from('v_save_dist_seedlings_by_period').select('period_end, seedlings_distributed_cum').order('period_end')
+        : Promise.resolve({ data: null }),
+      extras.includes('save_reached')
+        ? supabaseAdmin.from('v_save_dist_reached_gender_youth').select('*').maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
     if (rows.error) return NextResponse.json({ error: rows.error.message }, { status: 500 })
     sheet = {
-      ...link.data,
-      synced_at: meta.data?.framework_synced_at ?? null,
+      sheet_id: link.data.sheet_id, gid: link.data.gid, tab: link.data.tab, label: link.data.label,
+      cadence: link.data.cadence ?? '6-monthly',
+      synced_at: (meta.data as any)?.framework_synced_at ?? null,
       rows: rows.data ?? [],
-      // cross-check for "trees planted": seedlings handed out on the Kobo distribution form
-      reference: { indicator_id: 'SAVE-01', label: 'seedlings distributed (Kobo form, cumulative)',
-                   series: (dist.data ?? []).map(d => ({ period_end: d.period_end, value: Number(d.seedlings_distributed_cum) })) },
-      // gender / youth of farmers reached (profiled register x distributions) — Sprint 30
+      // SAVE only: "trees planted" cross-check with seedlings handed out on the Kobo distribution form
+      reference: dist.data ? { indicator_id: 'SAVE-01', label: 'seedlings distributed (Kobo form, cumulative)',
+                   series: (dist.data as any[]).map(d => ({ period_end: d.period_end, value: Number(d.seedlings_distributed_cum) })) } : undefined,
+      // SAVE only: gender / youth of farmers reached (profiled register x distributions) — Sprint 30
       reached: reached.data ?? null,
     }
   }

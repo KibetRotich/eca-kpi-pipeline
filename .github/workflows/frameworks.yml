@@ -1,0 +1,65 @@
+name: Project Measurement Frameworks Sync
+
+# Mirrors every project measurement framework kept in a Google Sheet into
+# Supabase (project_mf_sheet_values, Sprint 31) so each project's window on
+# /targets shows it like tab 8 of the Seedlings dashboard. Sheets are listed in
+# the project_mf_sheets table (source_table = 'project_mf_sheet_values').
+# Data only — nothing is committed, so no redeploy is needed (the page reads
+# Supabase live). SAVE (KE-SVP-001) is refreshed by save_seedlings.yml.
+#
+# Triggers: nightly 03:40 UTC (06:40 EAT), on push to the sync script, manual.
+#
+# Secrets: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CREDENTIALS.
+# Each sheet must be shared (Viewer) with the GOOGLE_CREDENTIALS service account;
+# an unshared sheet is skipped with a warning and keeps its last copy.
+on:
+  schedule:
+    - cron: "40 3 * * *"
+  push:
+    paths:
+      - "masp4-platform/pipeline/frameworks/**"
+      - ".github/workflows/frameworks.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: frameworks-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Google Sheets → Supabase (project frameworks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+    steps:
+      - name: Check required secrets
+        id: check
+        run: |
+          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -n "$GOOGLE_CREDENTIALS" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Framework sync skipped — NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / GOOGLE_CREDENTIALS not all set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        run: pip install httpx gspread google-auth
+
+      - name: Sync framework sheets
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/frameworks/sync_framework_sheets.py
