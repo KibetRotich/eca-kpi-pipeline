@@ -213,9 +213,21 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
 
       {/* Progress graphs — county layout (P2P): overall per-year chart, one per county, gender pie last */}
       {hasCounties && mainInd && (<>
-        <YearChart title={`Progress per year — ${annual ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={260}
-          points={pointsOf(mainId)} target={mainInd.tgt} options={opts} value={mainId} onPick={id => { setPick(id); setCountyPick({}) }}
-          note={`Bars: achievement reported for each ${annual ? 'year' : 'period'}. Green line: running total. Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
+        {/* Row 1: overall progress per year and the gender pie, side by side (half width each) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
+          <YearChart title={`Progress per year — ${annual ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={220}
+            points={pointsOf(mainId)} target={mainInd.tgt} options={opts} value={mainId} onPick={id => { setPick(id); setCountyPick({}) }}
+            note={`Bars: achievement in each ${annual ? 'year' : 'period'}. Green line: running total. Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
+          <div style={card}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender — {short(mainInd.indicator)}</div>
+            <div style={{ height: 220 }}>
+              <Donut parts={[['Women', gf, '#d81b60'], ['Men', gm, '#1565c0'],
+                             ['Non-individual (co-ops, companies…)', gni, '#9e9e9e'], ['Not disaggregated', Math.max(0, gt - gm - gf - gni), '#d8d8d8']]} />
+            </div>
+            <div style={small}>All reported {annual ? 'years' : 'periods'} for the indicator selected in the progress chart.</div>
+          </div>
+        </div>
+        {/* Then one chart per county */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
           {(sheet.county_order ?? []).map(county => {
             const cid = countyPick[county] || mainId
@@ -229,16 +241,6 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
         <div style={small}>
           County charts show achievement as entered in each county tab; there are no county targets in the sheet. County figures do not
           always add up to the project totals in the indicator tracking table — check the county tabs where they differ.
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
-          <div style={card}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender — {short(mainInd.indicator)}</div>
-            <div style={{ height: 220 }}>
-              <Donut parts={[['Women', gf, '#d81b60'], ['Men', gm, '#1565c0'],
-                             ['Non-individual (co-ops, companies…)', gni, '#9e9e9e'], ['Not disaggregated', Math.max(0, gt - gm - gf - gni), '#d8d8d8']]} />
-            </div>
-            <div style={small}>All reported {annual ? 'years' : 'periods'} for the indicator selected in the first chart.</div>
-          </div>
         </div>
       </>)}
 
