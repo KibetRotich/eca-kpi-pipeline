@@ -145,8 +145,9 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   // not the ones whose progress is a partial sum to an earlier year; the charts keep every indicator.
   const cardRows = score.some(s => s.eop != null) ? score.filter(s => s.eop != null) : score
   // one progress column per year / period, up to the last period with any reported value
+  // (all of the framework's periods while nothing has been reported yet)
   const lastRep = rows.filter(r => r.total != null).map(r => r.period_end).sort().slice(-1)[0] ?? ''
-  const cardPeriods = [...new Set(rows.map(r => r.period_end))].sort().filter(p => p <= lastRep)
+  const cardPeriods = [...new Set(rows.map(r => r.period_end))].sort().filter(p => !lastRep || p <= lastRep)
   const periodName = (p: string) => {
     const l = rows.find(r => r.period_end === p && r.period_label)?.period_label
     return l ? l.replace(/ \(annual\)$/, '').replace(/^P\d+ /, '') : plab(p)
