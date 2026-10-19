@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     const cols = 'indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note'
     const rowsQ = link.data.source_table === 'save_mf_indicator_values'
       ? supabaseAdmin.from('save_mf_indicator_values').select(cols)
-      : supabaseAdmin.from('project_mf_sheet_values').select(cols + ', target_direct, non_individual, eop_total, eop_male, eop_female, eop_youth').eq('project_id', projectId)
+      : supabaseAdmin.from('project_mf_sheet_values').select(cols + ', target_direct, non_individual, eop_total, eop_male, eop_female, eop_youth, overall_total').eq('project_id', projectId)
     const countyTabs: string[] = link.data.county_tabs ?? []
     const [rows, meta, dist, reached, counties] = await Promise.all([
       rowsQ.order('indicator_id').order('period_end'),

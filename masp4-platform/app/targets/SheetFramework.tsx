@@ -23,6 +23,8 @@ export interface SheetRow {
   target_direct?: number | null; non_individual?: number | null
   // end-of-project figure reported by the sheet (KE-CSV-001): the project total when yearly figures overlap
   eop_total?: number | null; eop_male?: number | null; eop_female?: number | null; eop_youth?: number | null
+  // overall achievement so far reported by the sheet (UG-HAR-001): progress where given
+  overall_total?: number | null
 }
 export interface SheetLink {
   sheet_id: string; gid: number; tab: string; label: string | null; synced_at: string | null
@@ -61,10 +63,11 @@ const lineOpts = (pct = false): any => ({
 })
 
 /** Achievement per year (bars) + cumulative achievement (line) + end target (dashed), with an indicator picker. */
-function YearChart({ title, axis, label, points, target, options, value, onPick, height = 230, note, running = true, eop = null }: {
+function YearChart({ title, axis, label, points, target, options, value, onPick, height = 230, note, running = true, eop = null,
+                     eopLabel = 'end-of-project achievement' }: {
   title: string; axis: string[]; label: (p: string) => string; points: Record<string, number>; target: number | null
   options: { id: string; name: string }[]; value: string; onPick: (id: string) => void; height?: number; note?: string
-  running?: boolean; eop?: number | null
+  running?: boolean; eop?: number | null; eopLabel?: string
 }) {
   let run = 0
   const last = Object.keys(points).sort().slice(-1)[0] ?? ''
@@ -74,7 +77,7 @@ function YearChart({ title, axis, label, points, target, options, value, onPick,
   ]
   // values that are already running totals or rates (cumulative = Y) are not added up
   if (running) sets.push({ type: 'line', label: 'cumulative achievement', data: cum, borderColor: '#2e7d32', backgroundColor: '#2e7d32', pointRadius: 3, spanGaps: true, order: 1 })
-  if (eop != null) sets.push({ type: 'line', label: `end-of-project achievement (${eop.toLocaleString()})`, data: axis.map((_, i) => (i === axis.length - 1 ? eop : null)),
+  if (eop != null) sets.push({ type: 'line', label: `${eopLabel} (${eop.toLocaleString()})`, data: axis.map((_, i) => (i === axis.length - 1 ? eop : null)),
                                borderColor: '#6a1b9a', backgroundColor: '#6a1b9a', pointRadius: 6, pointStyle: 'rectRot', showLine: false, order: 0 })
   if (target != null) sets.push({ type: 'line', label: `end target (${target.toLocaleString()})`, data: axis.map(() => target),
                                    borderColor: '#1565c0', borderDash: [6, 4], pointRadius: 0, order: 2 })
@@ -116,8 +119,13 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
     const perPeriod = cum.length > 0 && !cum.some(Boolean)
     let prog: number | null = null, when = 'not yet reported', how = ''
     const eopRow = g.find(r => r.eop_total != null)
+    const overallRow = g.find(r => r.overall_total != null)
     if (eopRow) {                                        // the sheet's end-of-project figure wins (yearly figures may overlap)
       prog = Number(eopRow.eop_total); when = `end of project (${plab(g[g.length - 1].period_end)})`; how = 'EoP achievement from the sheet'
+    } else if (overallRow) {                             // the sheet's own overall figure (may differ from the sum of the years)
+      const lastPe = (rep.length ? rep : g)[(rep.length ? rep : g).length - 1].period_end
+      prog = Number(overallRow.overall_total); when = `overall to ${plab(lastPe)}`; how = 'overall achievement from the sheet'
+      if (lastPe > now) when += annual ? ' (provisional — year not yet ended)' : ' (provisional — period not yet ended)'
     } else if (rep.length && perPeriod) {
       prog = rep.reduce((a, r) => a + (r.total as number), 0); when = `sum to ${plab(rep[rep.length - 1].period_end)}`; how = 'sum of periods'
     } else if (rep.length) {
@@ -129,7 +137,8 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
     const notes = [...new Set(g.map(r => r.note).filter(Boolean))].join('; ')
     return { id, g, level: g[0]?.level ?? '', indicator: g[0]?.indicator ?? id, unit: g[0]?.unit ?? '', tgt: tgt > 0 ? tgt : null,
              direct: direct > 0 && direct !== tgt ? direct : null, prog, when, how, pct, notes, perPeriod,
-             running: !cum.some(Boolean), eop: eopRow ? Number(eopRow.eop_total) : null, eopRow }
+             running: !cum.some(Boolean), eop: eopRow ? Number(eopRow.eop_total) : null, eopRow,
+             overall: overallRow ? Number(overallRow.overall_total) : null }
   })
 
   // A framework with end-of-project figures (KE-CSV-001) lists only those indicators in the scorecard,
@@ -240,8 +249,9 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
           <YearChart title={`Progress per year — ${hasCounties ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={220}
             points={pointsOf(mainId)} target={mainInd.tgt} options={opts} value={mainId} onPick={id => { setPick(id); setCountyPick({}) }}
-            running={mainInd.running} eop={mainInd.eop}
-            note={`Bars: ${mainInd.running ? `achievement in each ${annual ? 'year' : 'period'}. Green line: running total` : 'value reported (already a running total or rate, so not added up)'}.${mainInd.eop != null ? ' Purple: end-of-project achievement from the sheet, the project total where yearly figures overlap.' : ''} Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
+            running={mainInd.running} eop={mainInd.eop ?? mainInd.overall}
+            eopLabel={mainInd.eop != null ? 'end-of-project achievement' : 'overall achievement so far'}
+            note={`Bars: ${mainInd.running ? `achievement in each ${annual ? 'year' : 'period'}. Green line: running total` : 'value reported (already a running total or rate, so not added up)'}.${mainInd.eop != null ? ' Purple: end-of-project achievement from the sheet, the project total where yearly figures overlap.' : mainInd.overall != null ? ' Purple: the sheet’s overall achievement so far, used as progress.' : ''} Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
           <div style={card}>
             <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender — {short(mainInd.indicator)}</div>
             <div style={{ height: 220 }}>
