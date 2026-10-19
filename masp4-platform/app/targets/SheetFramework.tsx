@@ -19,7 +19,7 @@ export interface SheetRow {
   indicator_id: string; period_end: string; level: string | null; indicator: string; unit: string | null
   baseline: number | null; end_target: number | null; cumulative: boolean | null
   total: number | null; male: number | null; female: number | null; youth: number | null
-  survival_pct: number | null; note: string | null
+  survival_pct: number | null; note: string | null; period_label?: string | null
   target_direct?: number | null; non_individual?: number | null
   // end-of-project figure reported by the sheet (KE-CSV-001): the project total when yearly figures overlap
   eop_total?: number | null; eop_male?: number | null; eop_female?: number | null; eop_youth?: number | null
@@ -144,6 +144,13 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   // A framework with end-of-project figures (KE-CSV-001) lists only those indicators in the scorecard,
   // not the ones whose progress is a partial sum to an earlier year; the charts keep every indicator.
   const cardRows = score.some(s => s.eop != null) ? score.filter(s => s.eop != null) : score
+  // one progress column per year / period, up to the last period with any reported value
+  const lastRep = rows.filter(r => r.total != null).map(r => r.period_end).sort().slice(-1)[0] ?? ''
+  const cardPeriods = [...new Set(rows.map(r => r.period_end))].sort().filter(p => p <= lastRep)
+  const periodName = (p: string) => {
+    const l = rows.find(r => r.period_end === p && r.period_label)?.period_label
+    return l ? l.replace(/ \(annual\)$/, '').replace(/^P\d+ /, '') : plab(p)
+  }
 
   const reported = rows.filter(r => r.total != null).map(r => r.period_end)
   const last = reported.length ? reported.sort().slice(-1)[0] : ''
@@ -215,30 +222,40 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
         <table style={{ fontSize: '.62rem', minWidth: 720 }}>
           <thead><tr>
             <th style={{ textAlign: 'left' }}>Indicator</th><th style={{ textAlign: 'left' }}>Level</th>
-            <th style={{ textAlign: 'right' }}>End target</th><th style={{ textAlign: 'right' }}>Progress</th>
-            <th style={{ textAlign: 'left' }}>As of</th><th style={{ textAlign: 'right' }}>% of target</th><th style={{ width: 140 }} />
+            <th style={{ textAlign: 'right' }}>End target</th>
+            {cardPeriods.map((p, k) => (
+              <th key={p} style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                Progress {annual ? 'year' : 'period'} {k + 1}<div style={{ ...small, fontWeight: 400 }}>{periodName(p)}</div>
+              </th>
+            ))}
+            <th style={{ textAlign: 'right', width: 120 }}>% of target</th>
           </tr></thead>
           <tbody>
             {cardRows.map((s, i) => {
               const c = s.pct == null ? '' : s.pct >= 100 ? '#c8e6c9' : s.pct >= 50 ? '#fff3cd' : '#f8d7da'
               const bar = s.pct == null ? '' : s.pct >= 100 ? '#2e7d32' : s.pct >= 50 ? '#FFC800' : '#e65100'
+              const byPe = Object.fromEntries(s.g.filter(r => r.total != null).map(r => [r.period_end, r.total as number]))
               return (
                 <tr key={s.id} style={{ background: i % 2 ? '#fafafa' : '#fff', verticalAlign: 'top' }}>
                   <td><b>{s.id}</b> {s.indicator}{s.notes && <div style={{ ...small, color: '#8a6d00' }}>⚠ {s.notes}</div>}</td>
                   <td>{s.level}</td>
                   <td style={{ textAlign: 'right' }}>{s.tgt == null ? '–' : `${fmt(s.tgt)} ${s.unit}`}{s.direct != null && <div style={small}>direct {fmt(s.direct)}</div>}</td>
-                  <td style={{ textAlign: 'right' }}>{fmt(s.prog)}</td>
-                  <td>{s.when}{s.how && <div style={small}>{s.how}</div>}</td>
-                  <td style={{ textAlign: 'right', background: c }}>{s.pct == null ? '–' : `${s.pct.toFixed(1)}%`}</td>
-                  <td>{s.pct != null && <div style={{ background: '#eee', borderRadius: 4, height: 10 }}><div style={{ width: `${Math.min(100, s.pct)}%`, height: 10, borderRadius: 4, background: bar }} /></div>}</td>
+                  {cardPeriods.map(p => <td key={p} style={{ textAlign: 'right' }}>{fmt(byPe[p])}</td>)}
+                  <td style={{ textAlign: 'right', background: c }}>
+                    {s.pct == null ? '–' : `${s.pct.toFixed(1)}%`}
+                    {s.prog != null && <div style={small}>{fmt(s.prog)} {s.how === 'sum of periods' ? 'in total' : s.how ? s.how.replace(' from the sheet', '') : 'latest'}</div>}
+                    {s.pct != null && <div style={{ background: '#eee', borderRadius: 4, height: 6, marginTop: 2 }}><div style={{ width: `${Math.min(100, s.pct)}%`, height: 6, borderRadius: 4, background: bar }} /></div>}
+                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
         <div style={{ ...small, marginTop: 4 }}>
-          Progress = latest reported value for running totals; sum of periods where the sheet marks the indicator as per-period
-          (cumulative = N); the sheet’s end-of-project achievement where it gives one. Bars are capped at 100% of the end target; the % shows the true figure.
+          Each progress column is the value reported for that {annual ? 'year' : 'period'}: the achievement in the {annual ? 'year' : 'period'} for
+          per-period indicators, or the running total at that point for indicators the sheet marks as cumulative. % of target uses the
+          sum of the {annual ? 'years' : 'periods'} for per-period indicators, the latest value for running totals, and the sheet’s own end-of-project
+          or overall figure where it gives one (shown under the %). Bars are capped at 100% of the end target; the % shows the true figure.
           {cardRows.length < score.length && ` Only the ${cardRows.length} indicators with an end-of-project figure are listed; the other ${score.length - cardRows.length} are in the progress chart’s drop-down.`}
         </div>
       </div>
