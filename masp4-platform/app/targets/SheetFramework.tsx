@@ -117,7 +117,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
     let prog: number | null = null, when = 'not yet reported', how = ''
     const eopRow = g.find(r => r.eop_total != null)
     if (eopRow) {                                        // the sheet's end-of-project figure wins (yearly figures may overlap)
-      prog = Number(eopRow.eop_total); when = 'end of project'; how = 'EoP achievement from the sheet'
+      prog = Number(eopRow.eop_total); when = `end of project (${plab(g[g.length - 1].period_end)})`; how = 'EoP achievement from the sheet'
     } else if (rep.length && perPeriod) {
       prog = rep.reduce((a, r) => a + (r.total as number), 0); when = `sum to ${plab(rep[rep.length - 1].period_end)}`; how = 'sum of periods'
     } else if (rep.length) {
@@ -131,6 +131,10 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
              direct: direct > 0 && direct !== tgt ? direct : null, prog, when, how, pct, notes, perPeriod,
              running: !cum.some(Boolean), eop: eopRow ? Number(eopRow.eop_total) : null, eopRow }
   })
+
+  // A framework with end-of-project figures (KE-CSV-001) lists only those indicators in the scorecard,
+  // not the ones whose progress is a partial sum to an earlier year; the charts keep every indicator.
+  const cardRows = score.some(s => s.eop != null) ? score.filter(s => s.eop != null) : score
 
   const reported = rows.filter(r => r.total != null).map(r => r.period_end)
   const last = reported.length ? reported.sort().slice(-1)[0] : ''
@@ -203,7 +207,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
             <th style={{ textAlign: 'left' }}>As of</th><th style={{ textAlign: 'right' }}>% of target</th><th style={{ width: 140 }} />
           </tr></thead>
           <tbody>
-            {score.map((s, i) => {
+            {cardRows.map((s, i) => {
               const c = s.pct == null ? '' : s.pct >= 100 ? '#c8e6c9' : s.pct >= 50 ? '#fff3cd' : '#f8d7da'
               const bar = s.pct == null ? '' : s.pct >= 100 ? '#2e7d32' : s.pct >= 50 ? '#FFC800' : '#e65100'
               return (
@@ -223,6 +227,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
         <div style={{ ...small, marginTop: 4 }}>
           Progress = latest reported value for running totals; sum of periods where the sheet marks the indicator as per-period
           (cumulative = N); the sheet’s end-of-project achievement where it gives one. Bars are capped at 100% of the end target; the % shows the true figure.
+          {cardRows.length < score.length && ` Only the ${cardRows.length} indicators with an end-of-project figure are listed; the other ${score.length - cardRows.length} are in the progress chart’s drop-down.`}
         </div>
       </div>
 
