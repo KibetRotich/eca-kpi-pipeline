@@ -26,6 +26,7 @@ const PATHWAY_COLORS: Record<string, string> = {
 
 interface Project {
   id: string; project_code: string; project_name: string; country: string; commodity: string
+  has_framework?: boolean
 }
 
 interface TargetRow {
@@ -156,6 +157,11 @@ export default function TargetsPage() {
       (!filterCommodity || p.commodity === filterCommodity) &&
       (!q || p.project_name.toLowerCase().includes(q) || p.project_code.toLowerCase().includes(q)))
     .sort((a, b) => a.country.localeCompare(b.country) || a.project_name.localeCompare(b.project_name))
+  // projects with a measurement framework first, then those not yet updated
+  const gridGroups = [
+    { label: 'With measurement framework', items: gridProjects.filter(p => p.has_framework) },
+    { label: 'Measurement framework not yet added', items: gridProjects.filter(p => !p.has_framework) },
+  ].filter(g => g.items.length)
 
 
   return (
@@ -210,7 +216,7 @@ export default function TargetsPage() {
                   (!filterCountry   || p.country   === filterCountry) &&
                   (!filterCommodity || p.commodity === filterCommodity)
                 )
-                .sort((a, b) => a.project_name.localeCompare(b.project_name))
+                .sort((a, b) => Number(!!b.has_framework) - Number(!!a.has_framework) || a.project_name.localeCompare(b.project_name))
                 .map(p => (
                   <option key={p.project_code} value={p.project_code}>
                     {p.project_code} — {p.project_name}
@@ -240,8 +246,10 @@ export default function TargetsPage() {
           <div style={{ fontSize: '.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#666', marginBottom: '.5rem' }}>
             Projects · {gridProjects.length} — select a project to view and edit its targets
           </div>
+          {gridGroups.map(grp => (<div key={grp.label} style={{ marginBottom: '.9rem' }}>
+          <div style={{ fontSize: '.54rem', fontWeight: 700, color: '#888', margin: '.2rem 0 .4rem' }}>{grp.label} · {grp.items.length}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '.6rem' }}>
-            {gridProjects.map(p => {
+            {grp.items.map(p => {
               const set = Object.keys(targetMap).filter(k => k.startsWith(p.project_code + ':')).length
               return (
                 <button key={p.id} type="button" onClick={() => openProject(p.project_code)}
@@ -254,10 +262,12 @@ export default function TargetsPage() {
                   <span style={{ fontSize: '.52rem', color: set ? '#2e7d32' : '#aaa' }}>
                     {set ? `${set} target${set === 1 ? '' : 's'} set for ${year}` : `No targets set for ${year}`}
                   </span>
+                  {p.has_framework && <span style={{ fontSize: '.52rem', color: '#2e7d32', fontWeight: 700 }}>✓ Measurement framework</span>}
                 </button>
               )
             })}
           </div>
+          </div>))}
         </>
       ) : (
         <>

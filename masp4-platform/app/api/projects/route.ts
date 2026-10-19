@@ -1,5 +1,6 @@
 /**
- * /api/projects — list all active projects (used by enrollment UI)
+ * /api/projects — list all active projects (used by enrollment UI and /targets)
+ * has_framework = the project has a measurement framework linked (project_mf_sheets).
  */
 
 import { supabaseAdmin } from '@/lib/supabase'
@@ -14,5 +15,7 @@ export async function GET() {
     .order('project_code')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  const links = await supabaseAdmin.from('project_mf_sheets').select('project_id')
+  const linked = new Set((links.data ?? []).map(l => l.project_id))
+  return NextResponse.json((data ?? []).map(p => ({ ...p, has_framework: linked.has(p.id) })))
 }
