@@ -179,7 +179,10 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const pointsOf = (id: string) => series(id)
   const countyPoints = (county: string, id: string) => Object.fromEntries((sheet.counties ?? [])
     .filter(r => r.county === county && r.indicator_id === id && r.total != null).map(r => [r.period_end, Number(r.total)]))
-  const gsel = mainInd ? mainInd.g.filter(r => r.total != null) : []
+  // running totals (cumulative = Y): the latest year with a male / female split, not the sum of all years
+  const gall = mainInd ? mainInd.g.filter(r => r.total != null) : []
+  const gsplit = gall.filter(r => r.male != null || r.female != null)
+  const gsel = mainInd && !mainInd.running ? gall : gsplit.length ? gsplit.slice(-1) : gall.slice(-1)
   const gsum = (k: 'male' | 'female' | 'non_individual' | 'total') => gsel.reduce((a, r) => a + (Number((r as any)[k]) || 0), 0)
   // with an EoP gender split in the sheet, the pie shows it instead of adding up overlapping years
   const eg = mainInd?.eopRow?.eop_male != null && mainInd?.eopRow?.eop_female != null ? mainInd.eopRow : null
@@ -245,7 +248,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
               <Donut parts={[['Women', gf, '#d81b60'], ['Men', gm, '#1565c0'],
                              ['Non-individual (co-ops, companies…)', gni, '#9e9e9e'], ['Not disaggregated', Math.max(0, gt - gm - gf - gni), '#d8d8d8']]} />
             </div>
-            <div style={small}>{eg ? 'End-of-project figure from the sheet' : `All reported ${annual ? 'years' : 'periods'}`} for the indicator selected in the progress chart.</div>
+            <div style={small}>{eg ? 'End-of-project figure from the sheet' : mainInd.running ? `All reported ${annual ? 'years' : 'periods'}` : `Running total as of ${gsel[0] ? plab(gsel[0].period_end) : '–'}`} for the indicator selected in the progress chart.</div>
           </div>
         </div>
         {/* Then one chart per county */}
