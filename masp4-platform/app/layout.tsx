@@ -69,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           height: 38,
         }}>
           {[
-            { href: '/targets',      label: "Project's Progress"      },
+            { href: '/targets',      label: "Projects' Progress"      },
             { href: '/dashboard',    label: 'Network KPIs'            },
             { href: '/instructions', label: 'Network KPI Measurement' },
           ].map(({ href, label }) => (

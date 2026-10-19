@@ -109,7 +109,7 @@ export default function InstructionsPage() {
             These comprise <strong>Network mandated KPIs</strong> (S6.1–S6.5, S2.1, S2.5) and <strong>five REC Level
             Indicators</strong> (REC01–REC05). Outcome data enters through <strong>KoboToolbox surveys</strong>;
             REC indicators are recorded as indicators (codes REC01–REC05) in each project&rsquo;s Measurement Framework
-            on the Project&rsquo;s Progress page, every 6 months.
+            on the Projects&rsquo; Progress page, every 6 months.
             The system distinguishes between two measurement approaches — <em>sample-based extrapolation</em> for
             farmer-level production KPIs, and <em>direct counting</em> for institutional, company, and REC KPIs.
             <strong> 2026 is the first year of MASP IV</strong>, continuing directly from the MASP III cycle (2021–2025).
@@ -145,7 +145,7 @@ export default function InstructionsPage() {
                 description="Direct count of partner companies that have adopted and implemented direct farmer reward mechanisms (e.g. premium payments, bonus schemes). Reported by company respondents." />
               <KpiRow code="S6.5" label="Companies with responsible procurement"  pathway="Market"     color={GREEN}  method="count"
                 description="Direct count of partner companies with responsible procurement policies in place. Scored on 5 criteria: policy document, SMART commitments, action plan, country coverage, third-party verification." />
-              <tr><td colSpan={5} style={{ background: '#111', color: '#FFC800', padding: '.3rem .7rem', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>REC Level Indicators — recorded in each project&rsquo;s Measurement Framework (Project&rsquo;s Progress; no KoboToolbox form)</td></tr>
+              <tr><td colSpan={5} style={{ background: '#111', color: '#FFC800', padding: '.3rem .7rem', fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>REC Level Indicators — recorded in each project&rsquo;s Measurement Framework (Projects&rsquo; Progress; no KoboToolbox form)</td></tr>
               <KpiRow code="REC01" label="Processors with reduced pollution"              pathway="Production" color={YELLOW} method="count"
                 description="Direct count of processors (mills, factories, aggregators) that have adopted verified pollution-reduction measures within the reporting year." />
               <KpiRow code="REC02" label="Workers under improved working conditions"      pathway="Production" color={YELLOW} method="count"
@@ -175,7 +175,7 @@ export default function InstructionsPage() {
             <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.7 }}>
               <strong>S2.5, S6.3, S6.4, S6.5</strong> are direct counts from KoboToolbox submissions.
               <strong> REC01–REC05</strong> are also direct counts, recorded every 6 months as indicators
-              REC01–REC05 in the project&rsquo;s Measurement Framework (Project&rsquo;s Progress → open the
+              REC01–REC05 in the project&rsquo;s Measurement Framework (Projects&rsquo; Progress → open the
               project) — no survey form or CSV upload is required for these.
               Cards show a <span style={{ background: '#e8e8e8', color: '#444', fontSize: '0.5rem', fontWeight: 800,
               textTransform: 'uppercase', padding: '0 .25rem', marginLeft: '.25rem' }}>count</span> badge.
@@ -186,7 +186,7 @@ export default function InstructionsPage() {
         <Card style={{ borderTop: `3px solid ${YELLOW}`, marginTop: '.7rem' }}>
           <div style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: '#888', marginBottom: '.4rem' }}>Measurement Framework (per project)</div>
           <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.7 }}>
-            Each project&rsquo;s window on <em>Project&rsquo;s Progress</em> shows its logframe indicators below the MASP IV
+            Each project&rsquo;s window on <em>Projects&rsquo; Progress</em> shows its logframe indicators below the MASP IV
             KPI targets. It replaces the former quarterly <em>Output</em> and <em>REC</em> sections.
             <ul style={{ margin: '.35rem 0 0', paddingLeft: '1.1rem' }}>
               <li><strong>Indicators</strong> — M&amp;E Officers and Admins add or edit each project&rsquo;s indicators: code, level
@@ -211,7 +211,7 @@ export default function InstructionsPage() {
             <Card>
               <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.6rem' }}>Farmer surveys (S6.1, S6.2, S2.1, S2.5)</div>
               <Step n={1} title="Sampling frame">
-                Project teams define the target population for each project (e.g. all registered farmers in the programme area). Targets are entered in the <em>Project&rsquo;s Progress</em> tab, disaggregated by KPI and gender where available. Under commodity-wise deployment, the extrapolation formula aggregates targets across all projects sharing the same commodity and country before estimating achievement.
+                Project teams define the target population for each project (e.g. all registered farmers in the programme area). Targets are entered in the <em>Projects&rsquo; Progress</em> tab, disaggregated by KPI and gender where available. Under commodity-wise deployment, the extrapolation formula aggregates targets across all projects sharing the same commodity and country before estimating achievement.
               </Step>
               <Step n={2} title="Sample design">
                 A random or systematic sample of farmers is drawn from the target population. Gender-stratified sampling is recommended so that female and male farmers are sampled in proportion to their share of the target.
@@ -415,12 +415,12 @@ export default function InstructionsPage() {
             <div style={{ fontSize: '0.65rem', color: '#555', lineHeight: 1.7 }}>
               <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
                 <li>Select <code>_commodity</code> first (e.g. Coffee) — this filters the project list automatically</li>
-                <li>Select <code>_project_code</code> from the filtered dropdown — use only codes listed in the Project&rsquo;s Progress table (e.g. <code>KE-COF-001</code>). Wrong codes will cause import failures.</li>
+                <li>Select <code>_project_code</code> from the filtered dropdown — use only codes listed in the Projects&rsquo; Progress table (e.g. <code>KE-COF-001</code>). Wrong codes will cause import failures.</li>
                 <li>Select <code>_survey_round</code> — Baseline (2026), Midline, Endline, or Annual monitoring</li>
                 <li>Confirm enumerators select the correct <code>_country</code> from the dropdown</li>
                 <li>Enable GPS on all devices before the first interview</li>
                 <li>Run a 3–5 farmer pilot; export and import the pilot CSV to validate before full deployment</li>
-                <li>Enter annual targets in <strong>Project&rsquo;s Progress</strong> before starting fieldwork so the extrapolation formula has a denominator</li>
+                <li>Enter annual targets in <strong>Projects&rsquo; Progress</strong> before starting fieldwork so the extrapolation formula has a denominator</li>
               </ul>
             </div>
           </Card>

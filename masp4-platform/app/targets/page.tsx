@@ -163,7 +163,7 @@ export default function TargetsPage() {
 
       {/* Header */}
       <div style={{ marginBottom: '.9rem' }}>
-        <div style={{ fontSize: '.9rem', fontWeight: 800, color: '#111' }}>Project&rsquo;s Progress</div>
+        <div style={{ fontSize: '.9rem', fontWeight: 800, color: '#111' }}>Projects&rsquo; Progress</div>
         <div style={{ fontSize: '.58rem', color: '#888', textTransform: 'uppercase', letterSpacing: '.8px', marginTop: 2 }}>
           Per-KPI annual targets from logframe · Achievement extrapolated from sample surveys
         </div>

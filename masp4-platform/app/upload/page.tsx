@@ -89,7 +89,7 @@ export default function UploadPage() {
                 </div>
                 <div style={{ marginTop: '.4rem', padding: '.4rem .6rem', background: '#f5f5f5', border: '1px solid #d0d0d0', fontSize: '.62rem', color: '#444' }}>
                   <strong>REC01–REC05</strong> (REC Level Indicators) are <strong>not uploaded here</strong>.
-                  Enter annual counts directly in the <a href="/targets" style={{ color: BLACK, fontWeight: 700 }}>Project&rsquo;s Progress</a> tab.
+                  Enter annual counts directly in the <a href="/targets" style={{ color: BLACK, fontWeight: 700 }}>Projects&rsquo; Progress</a> tab.
                 </div>
               </div>
             </div>
@@ -102,12 +102,12 @@ export default function UploadPage() {
             </div>
             <div style={{ padding: '.7rem .9rem' }}>
               {[
-                ['_commodity + _project_code', 'Select the commodity first (e.g. Coffee). The project list will filter automatically. Then select the project code matching your project (e.g. KE-COF-001). Wrong codes will cause import failures — use only codes listed in the Project’s Progress table.'],
+                ['_commodity + _project_code', 'Select the commodity first (e.g. Coffee). The project list will filter automatically. Then select the project code matching your project (e.g. KE-COF-001). Wrong codes will cause import failures — use only codes listed in the Projects’ Progress table.'],
                 ['_country', 'Confirm enumerators select the correct country value from the dropdown. Accepted: Kenya, Uganda, Tanzania, Ethiopia.'],
                 ['_survey_round', 'Select the data collection round: Baseline (2026), Midline, Endline, or Annual monitoring. This replaces the need for separate form versions per round.'],
                 ['GPS', 'Enable GPS on all enumerator devices before the first interview. The form records farm location automatically.'],
                 ['Pilot test', 'Run 3–5 pilot interviews before full deployment. Export the pilot CSV and check it imports cleanly before proceeding.'],
-                ['Sampling frame', 'Enter the target population in Project’s Progress first (target_total and gender disaggregation) so the extrapolation formula has a denominator.'],
+                ['Sampling frame', 'Enter the target population in Projects’ Progress first (target_total and gender disaggregation) so the extrapolation formula has a denominator.'],
               ].map(([label, desc]) => (
                 <div key={label as string} style={{ display: 'flex', gap: '.7rem', paddingBottom: '.55rem', marginBottom: '.55rem', borderBottom: '1px solid #f0f0f0' }}>
                   <div style={{ flexShrink: 0, background: YELLOW, color: BLACK, fontSize: '.52rem', fontWeight: 800, padding: '.1rem .4rem', height: 'fit-content', marginTop: 2, textTransform: 'uppercase', letterSpacing: '.4px' }}>
