@@ -99,7 +99,7 @@ Viewers are read-only consumers — country managers, programme leads, donor-rel
 Same as Admin/M&E Officer. New Google logins are auto-assigned **viewer**.
 
 ### C2. Reading the dashboard
-1. Go to **Dashboard** (the default landing page).
+1. Go to **Network KPIs** (the default landing page).
 2. Filter by country, project, year, or KPI.
 3. KPI cards show:
    - **Achievement** = current results.
@@ -132,4 +132,4 @@ Check:
 Click your avatar in the header → **Sign out**. This clears the `sb-access-token` cookie.
 
 ### D4. Help inside the app
-The **Instructions** page in the top navigation has step-by-step screenshots for the Kobo upload flow.
+The **Network KPI Measurement** page in the top navigation has step-by-step screenshots for the Kobo upload flow.

@@ -69,10 +69,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           height: 38,
         }}>
           {[
-            { href: '/instructions', label: 'Instructions'           },
-            { href: '/upload',       label: 'Import CSV'             },
-            { href: '/targets',      label: 'Targets & Achievements' },
-            { href: '/dashboard',    label: 'Dashboard'              },
+            { href: '/instructions', label: 'Network KPI Measurement' },
+            { href: '/targets',      label: "Project's Progress"      },
+            { href: '/dashboard',    label: 'Network KPIs'            },
           ].map(({ href, label }) => (
             <a key={href} href={href} className="nav-link">{label}</a>
           ))}
