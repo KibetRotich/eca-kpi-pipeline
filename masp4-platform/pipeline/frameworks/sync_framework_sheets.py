@@ -8,7 +8,7 @@ indicator x period) and mirror it into project_mf_sheet_values for that project
 Columns read by header name (extra columns are ignored):
   indicator_id, level, indicator, unit, baseline, end_target, cumulative (Y/N),
   period_end (YYYY-MM), period, total, male, female, youth, survival_rate_%, note
-  optional: target_direct, non_individual
+  optional: target_direct, non_individual, eop_achievement, eop_male, eop_female, eop_youth
 
 Auth: GOOGLE_CREDENTIALS (service account, as etl.yml) + NEXT_PUBLIC_SUPABASE_URL /
 SUPABASE_SERVICE_ROLE_KEY. A sheet the service account cannot open is skipped with
@@ -33,7 +33,9 @@ from fetch_framework import clean_rows, num                              # noqa:
 sys.path.insert(0, HERE)
 from iptt import parse_iptt, norm                                        # noqa: E402
 
-EXTRA_NUM = {"target_direct": "target_direct", "non_individual": "non_individual"}
+EXTRA_NUM = {"target_direct": "target_direct", "non_individual": "non_individual",
+             # end-of-project figure reported by the sheet (KE-CSV-001, Sprint 34): progress when years overlap
+             "eop_achievement": "eop_total", "eop_male": "eop_male", "eop_female": "eop_female", "eop_youth": "eop_youth"}
 # Option A layout: the four parts plus non_individual add up to total; male/female/youth are derived from them
 PARTS = ("male_adults", "female_adults", "male_youths", "female_youths")
 TABLE = "project_mf_sheet_values"
