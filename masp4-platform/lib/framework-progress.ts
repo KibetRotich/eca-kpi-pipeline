@@ -13,6 +13,7 @@ export interface FrameworkValueRow {
   total: number | null; male: number | null; female: number | null; youth: number | null
   eop_total?: number | null; eop_male?: number | null; eop_female?: number | null; eop_youth?: number | null
   overall_total?: number | null
+  target_period?: number | null   // target planned in the period (Sprint 43)
 }
 export interface Progress { total: number; male: number | null; female: number | null; youth: number | null; basis: string }
 
@@ -41,4 +42,18 @@ export function indicatorProgress(rowsIn: FrameworkValueRow[], upTo?: string): P
   if (!rep.length) return null
   if (perPeriod) return { total: add(rep, 'total') ?? 0, male: add(rep, 'male'), female: add(rep, 'female'), youth: add(rep, 'youth'), basis: 'sum of periods' }
   return { total: Number(latest.total), male: n(latest.male), female: n(latest.female), youth: n(latest.youth), basis: 'latest' }
+}
+
+/**
+ * Yearly view for the Network KPIs farmers timeline: the cumulative achievement to `upTo` built from
+ * the yearly values only (sum of per-period values, or the latest running total), never the sheet's
+ * EoP / overall figure; and the cumulative target (sum of target_period to `upTo`), null when the
+ * indicator has no yearly targets.
+ */
+export function cumulativeAchieved(rows: FrameworkValueRow[], upTo: string): number | null {
+  return indicatorProgress(rows.map(r => ({ ...r, eop_total: null, overall_total: null })), upTo)?.total ?? null
+}
+export function cumulativeTarget(rows: FrameworkValueRow[], upTo: string): number | null {
+  if (!rows.some(r => r.target_period != null)) return null
+  return rows.filter(r => r.period_end <= upTo).reduce((a, r) => a + (Number(r.target_period) || 0), 0)
 }

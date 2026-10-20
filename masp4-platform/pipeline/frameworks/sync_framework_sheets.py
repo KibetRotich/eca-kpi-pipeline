@@ -38,7 +38,11 @@ EXTRA_NUM = {"target_direct": "target_direct", "non_individual": "non_individual
              # end-of-project figure reported by the sheet (KE-CSV-001, Sprint 34): progress when years overlap
              "eop_achievement": "eop_total", "eop_male": "eop_male", "eop_female": "eop_female", "eop_youth": "eop_youth",
              # overall achievement so far reported by the sheet (UG-HAR-001, Sprint 37): progress where given
-             "overall_achievement": "overall_total"}
+             "overall_achievement": "overall_total",
+             # target planned in the period, for the Network KPIs farmers timeline (Sprint 43)
+             "target_period": "target_period"}
+# optional columns: a sheet without them keeps what is already in Supabase (e.g. P2P Tanzania, view-only)
+KEEP_IF_ABSENT = ("network_kpi", "target_period")
 # Option A layout: the four parts plus non_individual add up to total; male/female/youth are derived from them
 PARTS = ("male_adults", "female_adults", "male_youths", "female_youths")
 TABLE = "project_mf_sheet_values"
@@ -62,8 +66,9 @@ def to_rows(project_id, header, rows):
         b = dict(b)
         b.update(extra.get((b["indicator_id"], b["period_end"]), {k: None for k in EXTRA_NUM.values()}))
         b["project_id"] = project_id
-        if "network_kpi" not in idx:      # no tag column in this sheet: keep the tag already in Supabase
-            b.pop("network_kpi", None)
+        for col in KEEP_IF_ABSENT:
+            if col not in idx:
+                b.pop(col, None)
         out.append(b)
     return out
 

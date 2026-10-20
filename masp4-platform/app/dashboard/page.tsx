@@ -5,7 +5,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import DashboardClient from './DashboardClient'
-import { indicatorProgress, type FrameworkValueRow } from '@/lib/framework-progress'
+import { indicatorProgress, cumulativeAchieved, cumulativeTarget, type FrameworkValueRow } from '@/lib/framework-progress'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,7 +92,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       const vcols = 'period_end, cumulative, total, male, female, youth'
       let q = supabaseAdmin
         .from('project_mf_sheet_values')
-        .select(`project_id, indicator_id, ${vcols}, eop_total, eop_male, eop_female, eop_youth, overall_total, projects!inner(project_code, project_name, country, commodity)`)
+        .select(`project_id, indicator_id, ${vcols}, eop_total, eop_male, eop_female, eop_youth, overall_total, target_period, projects!inner(project_code, project_name, country, commodity)`)
         .eq('network_kpi', 'farmers_trained')
       if (country)   q = (q as any).eq('projects.country',   country)
       if (commodity) q = (q as any).eq('projects.commodity', commodity)
@@ -115,15 +115,19 @@ export default async function DashboardPage({ searchParams }: Props) {
           (groups[k] ??= { rows: [], projects: (saveLink[0] as any).projects }).rows.push(r)
         }
       }
-      // timeline: cumulative to the end of each year, from the first framework year to the selected / current year
+      // timeline: cumulative to the end of each year from the yearly values (no EoP / overall figure) and the
+      // cumulative yearly targets, from the first framework year to the selected / current year
       const lastYear = year ?? new Date().getFullYear()
       return Object.values(groups).flatMap(g => {
         const p = indicatorProgress(g.rows, upTo)
         if (!p) return []
-        const points: Record<string, number | null> = {}
-        for (let y = FIRST_FARMER_YEAR; y <= lastYear; y++) points[y] = indicatorProgress(g.rows, `${y}-12`)?.total ?? null
+        const points: Record<string, number | null> = {}, targets: Record<string, number | null> = {}
+        for (let y = FIRST_FARMER_YEAR; y <= lastYear; y++) {
+          points[y] = cumulativeAchieved(g.rows, `${y}-12`)
+          targets[y] = cumulativeTarget(g.rows, `${y}-12`)
+        }
         return [{ farmers_trained: p.total, female_count: p.female, male_count: p.male, youth_count: p.youth,
-                  projects: g.projects, points }]
+                  projects: g.projects, points, targets }]
       })
     })(),
     // REC records — responsible economy KPI counts, recorded as framework indicators
@@ -232,7 +236,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   const outputYouth  = sum(outputRaw, 'youth_count')
   // per-project series for the farmers-reached timeline (drop-down = projects)
   const farmerSeries = outputRaw.map((r: any) => ({
-    code: r.projects?.project_code ?? '', name: r.projects?.project_name ?? '', points: r.points,
+    code: r.projects?.project_code ?? '', name: r.projects?.project_name ?? '', points: r.points, targets: r.targets,
     total: Number(r.farmers_trained) || 0, female: Number(r.female_count) || 0, male: Number(r.male_count) || 0,
   })).sort((a: any, b: any) => a.code.localeCompare(b.code))
 
