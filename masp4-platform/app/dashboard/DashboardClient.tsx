@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import KpiCard from './KpiCard'
 import CountryTable from './CountryTable'
 import TrendChart from './TrendChart'
+import FarmersTimeline, { type FarmerSeries } from './FarmersTimeline'
 
 interface Props {
   kpis:             Record<string, any>
@@ -14,6 +15,7 @@ interface Props {
   outputFemale:     number
   outputMale:       number
   outputYouth:      number
+  farmerSeries:     FarmerSeries[]
   currentYear:      string
   currentCountry:   string
   currentCommodity: string
@@ -32,7 +34,7 @@ const YEARS = ['2026','2027','2028','2029','2030']
 
 export default function DashboardClient({
   kpis, byCountry, trendByYear, kpiTrends,
-  outputTotal, outputFemale, outputMale, outputYouth,
+  outputTotal, outputFemale, outputMale, outputYouth, farmerSeries,
   currentYear, currentCountry, currentCommodity,
   countries, commodities,
 }: Props) {
@@ -44,19 +46,6 @@ export default function DashboardClient({
     router.push('/dashboard?' + sp.toString())
   }
 
-  // Farmers trained / reached: cumulative to date, summed over the projects' measurement frameworks (one tagged indicator each)
-  const totalFarmers   = outputTotal
-  const totalFemale    = outputFemale
-  const totalYouth     = outputYouth
-  const totalCompanies = kpis.s64.count + kpis.s65.count
-
-  const summaryCards = [
-    { label: 'Farmers trained / reached (cumulative)', value: totalFarmers, color: '#FFC800', textColor: '#000' },
-    { label: 'Female (of farmers trained)', value: totalFemale,       color: '#111',    textColor: '#fff' },
-    { label: 'Youth ≤35 (of farmers trained)', value: totalYouth,    color: '#111',    textColor: '#fff' },
-    { label: 'Companies engaged',        value: totalCompanies,       color: '#111',    textColor: '#fff' },
-    { label: 'Regulations improved',     value: kpis.s63.count,       color: '#111',    textColor: '#fff' },
-  ]
 
   return (
     <div>
@@ -98,19 +87,8 @@ export default function DashboardClient({
         )}
       </div>
 
-      {/* Summary banner */}
-      <div className="g5" style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', gap: '.6rem', marginBottom: '.7rem' }}>
-        {summaryCards.map(({ label, value, color, textColor }) => (
-          <div key={label} className="cc" style={{ borderTop: `3px solid ${color}`, padding: '.5rem .7rem' }}>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color, lineHeight: 1, marginBottom: 3 }}>
-              {value.toLocaleString()}
-            </div>
-            <div style={{ fontSize: '.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.7px', color: '#888' }}>
-              {label}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Farmers trained / reached — timeline per year (drop-down = projects) with a gender pie; replaces the summary cards */}
+      <FarmersTimeline series={farmerSeries} total={outputTotal} female={outputFemale} male={outputMale} youth={outputYouth} />
 
       {/* KPI cards grouped by pathway — 4-column layout */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '.6rem', marginBottom: '.7rem' }}>

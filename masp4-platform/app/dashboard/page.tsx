@@ -16,6 +16,7 @@ interface Props {
 const COUNTRIES   = ['Ethiopia','Kenya','Tanzania','Uganda']
 const COMMODITIES = ['Cocoa','Coffee','Cotton','Dairy','Fashion','F&V','Gold','Leather','Palm Oil','Tea']
 const REC_CODES   = ['REC01','REC02','REC03','REC04','REC05'] as const
+const FIRST_FARMER_YEAR = 2022   // earliest year in the measurement frameworks
 
 /**
  * REC01–REC05 from the per-project Measurement Framework, shaped like the old
@@ -91,12 +92,12 @@ export default async function DashboardPage({ searchParams }: Props) {
       const vcols = 'period_end, cumulative, total, male, female, youth'
       let q = supabaseAdmin
         .from('project_mf_sheet_values')
-        .select(`project_id, indicator_id, ${vcols}, eop_total, eop_male, eop_female, eop_youth, overall_total, projects!inner(country, commodity)`)
+        .select(`project_id, indicator_id, ${vcols}, eop_total, eop_male, eop_female, eop_youth, overall_total, projects!inner(project_code, project_name, country, commodity)`)
         .eq('network_kpi', 'farmers_trained')
       if (country)   q = (q as any).eq('projects.country',   country)
       if (commodity) q = (q as any).eq('projects.commodity', commodity)
       // SAVE (KE-SVP-001) keeps its framework in save_mf_indicator_values
-      let sq = supabaseAdmin.from('project_mf_sheets').select('project_id, projects!inner(country, commodity)')
+      let sq = supabaseAdmin.from('project_mf_sheets').select('project_id, projects!inner(project_code, project_name, country, commodity)')
         .eq('source_table', 'save_mf_indicator_values')
       if (country)   sq = (sq as any).eq('projects.country',   country)
       if (commodity) sq = (sq as any).eq('projects.commodity', commodity)
@@ -114,9 +115,15 @@ export default async function DashboardPage({ searchParams }: Props) {
           (groups[k] ??= { rows: [], projects: (saveLink[0] as any).projects }).rows.push(r)
         }
       }
+      // timeline: cumulative to the end of each year, from the first framework year to the selected / current year
+      const lastYear = year ?? new Date().getFullYear()
       return Object.values(groups).flatMap(g => {
         const p = indicatorProgress(g.rows, upTo)
-        return p ? [{ farmers_trained: p.total, female_count: p.female, male_count: p.male, youth_count: p.youth, projects: g.projects }] : []
+        if (!p) return []
+        const points: Record<string, number | null> = {}
+        for (let y = FIRST_FARMER_YEAR; y <= lastYear; y++) points[y] = indicatorProgress(g.rows, `${y}-12`)?.total ?? null
+        return [{ farmers_trained: p.total, female_count: p.female, male_count: p.male, youth_count: p.youth,
+                  projects: g.projects, points }]
       })
     })(),
     // REC records — responsible economy KPI counts, recorded as framework indicators
@@ -223,6 +230,11 @@ export default async function DashboardPage({ searchParams }: Props) {
   const outputFemale = sum(outputRaw, 'female_count')
   const outputMale   = sum(outputRaw, 'male_count')
   const outputYouth  = sum(outputRaw, 'youth_count')
+  // per-project series for the farmers-reached timeline (drop-down = projects)
+  const farmerSeries = outputRaw.map((r: any) => ({
+    code: r.projects?.project_code ?? '', name: r.projects?.project_name ?? '', points: r.points,
+    total: Number(r.farmers_trained) || 0, female: Number(r.female_count) || 0, male: Number(r.male_count) || 0,
+  })).sort((a: any, b: any) => a.code.localeCompare(b.code))
 
   // ── Country breakdown ─────────────────────────────────────────────────────
   const byCountry = COUNTRIES.map(c => {
@@ -334,6 +346,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       outputFemale={outputFemale}
       outputMale={outputMale}
       outputYouth={outputYouth}
+      farmerSeries={farmerSeries}
       currentYear={year ? String(year) : ''}
       currentCountry={country}
       currentCommodity={commodity}
