@@ -62,6 +62,8 @@ def to_rows(project_id, header, rows):
         b = dict(b)
         b.update(extra.get((b["indicator_id"], b["period_end"]), {k: None for k in EXTRA_NUM.values()}))
         b["project_id"] = project_id
+        if "network_kpi" not in idx:      # no tag column in this sheet: keep the tag already in Supabase
+            b.pop("network_kpi", None)
         out.append(b)
     return out
 

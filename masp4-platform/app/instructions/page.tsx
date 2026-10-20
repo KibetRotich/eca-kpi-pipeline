@@ -195,8 +195,9 @@ export default function InstructionsPage() {
                 female, male and youth. Female + male cannot exceed the total.</li>
               <li><strong>Progress</strong> — running totals (cumulative = Y) use the latest value; per-period indicators (N) are
                 summed across periods. Values entered for a period that has not yet ended are marked <em>provisional</em>.</li>
-              <li><strong>Farmers / miners trained (OUT.1)</strong> feeds the dashboard&rsquo;s farmers-trained figure; the 2026
-                quarterly records were converted into June 2026 values.</li>
+              <li><strong>Farmers trained / reached</strong> on Network KPIs is cumulative to date and comes from each project&rsquo;s
+                measurement framework sheet: the one indicator tagged <code>farmers_trained</code> in the sheet&rsquo;s
+                <code>network_kpi</code> column, counted the same way as on the project&rsquo;s scorecard.</li>
               <li><strong>&ldquo;OUT.2 – OUT.6 (label to confirm)&rdquo;</strong> indicators were converted from earlier output counts —
                 please rename them with their proper indicator names.</li>
             </ul>

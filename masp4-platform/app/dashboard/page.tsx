@@ -5,6 +5,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import DashboardClient from './DashboardClient'
+import { indicatorProgress, type FrameworkValueRow } from '@/lib/framework-progress'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,32 +82,42 @@ export default async function DashboardPage({ searchParams }: Props) {
       const { data } = await q
       return data ?? []
     })(),
-    // Farmers trained / reached (direct headcount) — framework indicator OUT.1 (Sprint 28;
-    // converted from the old quarterly project_output_records). Per-period values are summed
-    // over the year; for an indicator marked as a running total only its latest value counts.
+    // Farmers trained / reached — cumulative to date, from each project's measurement framework:
+    // the one indicator per project tagged network_kpi = 'farmers_trained' in its dashboard_input
+    // sheet (Sprint 42), with progress worked out as on the /targets scorecard. With a year
+    // selected: cumulative to the end of that year.
     (async () => {
+      const upTo = year ? `${year}-12` : undefined
+      const vcols = 'period_end, cumulative, total, male, female, youth'
       let q = supabaseAdmin
-        .from('project_mf_values')
-        .select('period_end, total, female, male, youth, project_mf_indicators!inner(project_id, indicator_code, cumulative, projects!inner(country, commodity))')
-        .eq('project_mf_indicators.indicator_code', 'OUT.1')
-      if (year)      q = (q as any).like('period_end', `${year}-%`)
-      if (country)   q = (q as any).eq('project_mf_indicators.projects.country',   country)
-      if (commodity) q = (q as any).eq('project_mf_indicators.projects.commodity', commodity)
-      const { data } = await q
-      const rows = (data ?? []).filter((r: any) => r.total != null)
-      const latest: Record<string, any> = {}
-      const out: any[] = []
-      for (const r of rows as any[]) {
-        const ind = r.project_mf_indicators
-        if (ind?.cumulative === true) {
-          const k = `${ind.project_id}:${r.period_end.slice(0, 4)}`
-          if (!latest[k] || r.period_end > latest[k].period_end) latest[k] = r
-        } else out.push(r)
+        .from('project_mf_sheet_values')
+        .select(`project_id, indicator_id, ${vcols}, eop_total, eop_male, eop_female, eop_youth, overall_total, projects!inner(country, commodity)`)
+        .eq('network_kpi', 'farmers_trained')
+      if (country)   q = (q as any).eq('projects.country',   country)
+      if (commodity) q = (q as any).eq('projects.commodity', commodity)
+      // SAVE (KE-SVP-001) keeps its framework in save_mf_indicator_values
+      let sq = supabaseAdmin.from('project_mf_sheets').select('project_id, projects!inner(country, commodity)')
+        .eq('source_table', 'save_mf_indicator_values')
+      if (country)   sq = (sq as any).eq('projects.country',   country)
+      if (commodity) sq = (sq as any).eq('projects.commodity', commodity)
+      const [{ data }, { data: saveLink }] = await Promise.all([q, sq])
+      const groups: Record<string, { rows: FrameworkValueRow[]; projects: any }> = {}
+      for (const r of (data ?? []) as any[]) {
+        const k = `${r.project_id}:${r.indicator_id}`;
+        (groups[k] ??= { rows: [], projects: r.projects }).rows.push(r)
       }
-      return [...out, ...Object.values(latest)].map((r: any) => ({
-        farmers_trained: r.total, female_count: r.female, male_count: r.male, youth_count: r.youth,
-        projects: r.project_mf_indicators?.projects,
-      }))
+      if (saveLink?.length) {
+        const { data: save } = await supabaseAdmin.from('save_mf_indicator_values')
+          .select(`indicator_id, ${vcols}`).eq('network_kpi', 'farmers_trained')
+        for (const r of (save ?? []) as any[]) {
+          const k = `save:${r.indicator_id}`;
+          (groups[k] ??= { rows: [], projects: (saveLink[0] as any).projects }).rows.push(r)
+        }
+      }
+      return Object.values(groups).flatMap(g => {
+        const p = indicatorProgress(g.rows, upTo)
+        return p ? [{ farmers_trained: p.total, female_count: p.female, male_count: p.male, youth_count: p.youth, projects: g.projects }] : []
+      })
     })(),
     // REC records — responsible economy KPI counts, recorded as framework indicators
     // REC01–REC05 in each project's Measurement Framework (Sprint 28)

@@ -9,7 +9,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireEditor } from '@/lib/require-editor'
 import { NextRequest, NextResponse } from 'next/server'
 
-const KPI_CODES = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5','OUT.1','REC01','REC02','REC03','REC04','REC05'] as const
+const KPI_CODES = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5','REC01','REC02','REC03','REC04','REC05'] as const
 
 export async function GET(req: NextRequest) {
   const year = req.nextUrl.searchParams.get('year') ?? '2026'

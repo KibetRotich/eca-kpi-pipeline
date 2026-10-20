@@ -25,6 +25,7 @@ MONTHS = {m: i + 1 for i, m in enumerate("jan feb mar apr may jun jul aug sep oc
 NUM_COLS = {"baseline": "baseline", "end_target": "end_target", "total": "total", "male": "male",
             "female": "female", "youth": "youth", "survival_rate_%": "survival_pct"}
 TXT_COLS = {"indicator_id": "indicator_id", "level": "level", "indicator": "indicator", "unit": "unit",
+            "network_kpi": "network_kpi",   # Network KPI tag, e.g. farmers_trained (Sprint 42)
             "period": "period_label", "note": "note"}
 
 

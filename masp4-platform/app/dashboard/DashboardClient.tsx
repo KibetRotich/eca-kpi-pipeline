@@ -44,16 +44,16 @@ export default function DashboardClient({
     router.push('/dashboard?' + sp.toString())
   }
 
-  // Output KPI: direct headcount of farmers trained/reached (all delivery channels, quarterly total)
+  // Farmers trained / reached: cumulative to date, summed over the projects' measurement frameworks (one tagged indicator each)
   const totalFarmers   = outputTotal
   const totalFemale    = outputFemale
   const totalYouth     = outputYouth
   const totalCompanies = kpis.s64.count + kpis.s65.count
 
   const summaryCards = [
-    { label: 'Farmers trained / reached', value: totalFarmers,        color: '#FFC800', textColor: '#000' },
-    { label: 'Female (output)',           value: totalFemale,         color: '#111',    textColor: '#fff' },
-    { label: 'Youth ≤35 (output)',        value: totalYouth,          color: '#111',    textColor: '#fff' },
+    { label: 'Farmers trained / reached (cumulative)', value: totalFarmers, color: '#FFC800', textColor: '#000' },
+    { label: 'Female (of farmers trained)', value: totalFemale,       color: '#111',    textColor: '#fff' },
+    { label: 'Youth ≤35 (of farmers trained)', value: totalYouth,    color: '#111',    textColor: '#fff' },
     { label: 'Companies engaged',        value: totalCompanies,       color: '#111',    textColor: '#fff' },
     { label: 'Regulations improved',     value: kpis.s63.count,       color: '#111',    textColor: '#fff' },
   ]

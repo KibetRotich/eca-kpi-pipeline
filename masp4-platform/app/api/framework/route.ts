@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     .select('sheet_id, gid, tab, source_table, label, cadence, extras, last_synced_at, county_tabs').eq('project_id', projectId).maybeSingle()
   if (link.data) {
     const extras: string[] = link.data.extras ?? []
-    const cols = 'indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note, period_label'
+    const cols = 'indicator_id, period_end, level, indicator, unit, baseline, end_target, cumulative, total, male, female, youth, survival_pct, note, period_label, network_kpi'
     const rowsQ = link.data.source_table === 'save_mf_indicator_values'
       ? supabaseAdmin.from('save_mf_indicator_values').select(cols)
       : supabaseAdmin.from('project_mf_sheet_values').select(cols + ', target_direct, non_individual, eop_total, eop_male, eop_female, eop_youth, overall_total').eq('project_id', projectId)

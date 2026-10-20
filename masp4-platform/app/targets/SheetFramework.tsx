@@ -20,6 +20,7 @@ export interface SheetRow {
   baseline: number | null; end_target: number | null; cumulative: boolean | null
   total: number | null; male: number | null; female: number | null; youth: number | null
   survival_pct: number | null; note: string | null; period_label?: string | null
+  network_kpi?: string | null   // e.g. 'farmers_trained' — counted on Network KPIs (Sprint 42)
   target_direct?: number | null; non_individual?: number | null
   // end-of-project figure reported by the sheet (KE-CSV-001): the project total when yearly figures overlap
   eop_total?: number | null; eop_male?: number | null; eop_female?: number | null; eop_youth?: number | null
@@ -238,7 +239,9 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
               const byPe = Object.fromEntries(s.g.filter(r => r.total != null).map(r => [r.period_end, r.total as number]))
               return (
                 <tr key={s.id} style={{ background: i % 2 ? '#fafafa' : '#fff', verticalAlign: 'top' }}>
-                  <td><b>{s.id}</b> {s.indicator}{s.notes && <div style={{ ...small, color: '#8a6d00' }}>⚠ {s.notes}</div>}</td>
+                  <td><b>{s.id}</b> {s.indicator}
+                    {s.g.some(r => r.network_kpi === 'farmers_trained') && <div style={{ ...small, color: '#2e7d32', fontWeight: 700 }}>✓ Counts toward Network KPIs: farmers trained / reached</div>}
+                    {s.notes && <div style={{ ...small, color: '#8a6d00' }}>⚠ {s.notes}</div>}</td>
                   <td>{s.level}</td>
                   <td style={{ textAlign: 'right' }}>{s.tgt == null ? '–' : `${fmt(s.tgt)} ${s.unit}`}{s.direct != null && <div style={small}>direct {fmt(s.direct)}</div>}</td>
                   {cardPeriods.map(p => <td key={p} style={{ textAlign: 'right' }}>{fmt(byPe[p])}</td>)}
