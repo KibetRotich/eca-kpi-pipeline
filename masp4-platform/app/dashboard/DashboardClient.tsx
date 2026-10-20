@@ -2,14 +2,10 @@
 
 import { useRouter } from 'next/navigation'
 import KpiCard from './KpiCard'
-import CountryTable from './CountryTable'
-import TrendChart from './TrendChart'
 import FarmersTimeline, { type FarmerSeries } from './FarmersTimeline'
 
 interface Props {
   kpis:             Record<string, any>
-  byCountry:        any[]
-  trendByYear:      any[]
   kpiTrends:        Record<string, { year: number; target: number; achievement: number }[]>
   outputTotal:      number
   outputFemale:     number
@@ -33,7 +29,7 @@ const PATHWAY_COLORS: Record<string, string> = {
 const YEARS = ['2026','2027','2028','2029','2030']
 
 export default function DashboardClient({
-  kpis, byCountry, trendByYear, kpiTrends,
+  kpis, kpiTrends,
   outputTotal, outputFemale, outputMale, outputYouth, farmerSeries,
   currentYear, currentCountry, currentCommodity,
   countries, commodities,
@@ -109,12 +105,6 @@ export default function DashboardClient({
             </div>
           )
         })}
-      </div>
-
-      {/* Country table + trend chart */}
-      <div className="g2" style={{ marginTop: '.9rem' }}>
-        <CountryTable byCountry={byCountry} />
-        <TrendChart trendByYear={trendByYear} />
       </div>
 
     </div>

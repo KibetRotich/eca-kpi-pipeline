@@ -66,7 +66,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     return data ?? []
   }
 
-  const [s61, s62, s21, s25, s63, s64, s65, summaryRaw, outputRaw, recRaw] = await Promise.all([
+  const [s61, s62, s21, s25, s63, s64, s65, outputRaw, recRaw] = await Promise.all([
     queryKpi('v_s61_kpi'),
     queryKpi('v_s62_kpi'),
     queryKpi('v_s21_kpi'),
@@ -74,15 +74,6 @@ export default async function DashboardPage({ searchParams }: Props) {
     queryKpi('v_s63_kpi'),
     queryKpi('v_s64_kpi'),
     queryKpi('v_s65_kpi'),
-    // Summary view
-    (async () => {
-      let q = supabaseAdmin.from('v_kpi_summary').select('*')
-      if (year)      q = q.eq('survey_year', year)
-      if (country)   q = q.eq('country', country as any)
-      if (commodity) q = q.eq('commodity', commodity as any)
-      const { data } = await q
-      return data ?? []
-    })(),
     // Farmers trained / reached — cumulative to date, from each project's measurement framework:
     // the one indicator per project tagged network_kpi = 'farmers_trained' in its dashboard_input
     // sheet (Sprint 42), with progress worked out as on the /targets scorecard. With a year
@@ -240,48 +231,6 @@ export default async function DashboardPage({ searchParams }: Props) {
     total: Number(r.farmers_trained) || 0, female: Number(r.female_count) || 0, male: Number(r.male_count) || 0,
   })).sort((a: any, b: any) => a.code.localeCompare(b.code))
 
-  // ── Country breakdown ─────────────────────────────────────────────────────
-  const byCountry = COUNTRIES.map(c => {
-    const rows    = summaryRaw.filter((r: any) => r.country === c)
-    const recRows = recRaw.filter((r: any) => (r.projects as any)?.country === c)
-    function rc(code: string) {
-      return recRows.filter((r: any) => r.rec_code === code).reduce((a: number, r: any) => a + (Number(r.count) || 0), 0)
-    }
-    return {
-      country:       c,
-      s61_count:     sum(rows, 's61_count'),
-      s62_count:     sum(rows, 's62_count'),
-      s21_count:     sum(rows, 's21_count'),
-      s25_count:     sum(rows, 's25_count'),
-      s63_count:     sum(rows, 's63_count'),
-      s64_companies: sum(rows, 's64_companies'),
-      s65_companies: sum(rows, 's65_companies'),
-      rec01_count:   rc('REC01'),
-      rec02_count:   rc('REC02'),
-      rec03_count:   rc('REC03'),
-      rec04_count:   rc('REC04'),
-      rec05_count:   rc('REC05'),
-    }
-  })
-
-  // ── Year trend data (TrendChart — S6.1/S6.2/S2.1) ───────────────────────
-  const { data: trendRaw } = await supabaseAdmin
-    .from('v_kpi_summary')
-    .select('survey_year, s61_count, s62_count, s21_count')
-    .order('survey_year')
-
-  const trendByYear = Array.from(
-    (trendRaw ?? []).reduce((map, r: any) => {
-      const y = r.survey_year
-      if (!map.has(y)) map.set(y, { year: y, s61: 0, s62: 0, s21: 0 })
-      const e = map.get(y)
-      e.s61 += Number(r.s61_count) || 0
-      e.s62 += Number(r.s62_count) || 0
-      e.s21 += Number(r.s21_count) || 0
-      return map
-    }, new Map())
-  ).map(([, v]) => v)
-
   // ── Per-KPI 5-year trend bars ─────────────────────────────────────────────
   const CHART_YEARS = [2026, 2027, 2028, 2029, 2030]
   const KPI_CODES   = ['S6.1','S6.2','S2.1','S2.5','S6.3','S6.4','S6.5','REC01','REC02','REC03','REC04','REC05']
@@ -343,8 +292,6 @@ export default async function DashboardPage({ searchParams }: Props) {
   return (
     <DashboardClient
       kpis={kpis}
-      byCountry={byCountry}
-      trendByYear={trendByYear}
       kpiTrends={kpiTrends}
       outputTotal={outputTotal}
       outputFemale={outputFemale}
