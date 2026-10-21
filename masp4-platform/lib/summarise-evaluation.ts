@@ -8,7 +8,9 @@
  *      or the reason it failed (status 'failed').
  * A draft only becomes public when an admin / M&E officer publishes it (/api/evaluations/[id]/review).
  *
- * Needs ANTHROPIC_API_KEY in the environment (Vercel project settings).
+ * Needs ANTHROPIC_API_KEY in the environment (Vercel project settings). Without it — and for studies linked
+ * from Google Drive rather than uploaded — reports wait as 'queued' and their summaries are written from a
+ * Claude Code session instead (Option C, 2026-10-21); see canAutoSummarise().
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
@@ -40,6 +42,11 @@ Rules:
 - Keep the report's own distinctions: say when a finding applies only to a sub-group, region or year.
 - Write in plain, concise English for programme staff. No marketing language.`
 
+/** True when uploads can be summarised automatically on this deployment. */
+export function canAutoSummarise() {
+  return !!process.env.ANTHROPIC_API_KEY
+}
+
 /** Thrown for problems the uploader or reviewer should see verbatim. */
 class SummaryError extends Error {}
 
@@ -51,14 +58,17 @@ async function markFailed(id: string, message: string) {
 
 export async function summariseEvaluation(id: string): Promise<void> {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new SummaryError('Summarisation is not configured yet: ANTHROPIC_API_KEY is missing from the platform settings.')
+    if (!canAutoSummarise()) {
+      await supabaseAdmin.from('evaluation_reports')
+        .update({ status: 'queued', error: null, updated_at: new Date().toISOString() }).eq('id', id)
+      return
     }
 
     const { data: row, error } = await supabaseAdmin.from('evaluation_reports')
       .select('id, title, programme, country, period_start, period_end, tags, file_path, file_type')
       .eq('id', id).single()
     if (error || !row) throw new SummaryError('Report record not found.')
+    if (!row.file_path) throw new SummaryError('This study is linked from Google Drive; its summary is written from Claude Code.')
 
     const file = await supabaseAdmin.storage.from('reports').download(row.file_path)
     if (file.error || !file.data) throw new SummaryError('The uploaded file could not be read from storage.')

@@ -2,7 +2,7 @@
 
 /**
  * Review queue for /evaluation-insights — M&E Officers and Admins only.
- * Lists reports that are not yet public (in progress, drafts awaiting review, failures) and lets the
+ * Lists reports that are not yet public (awaiting summary, in progress, drafts awaiting review, failures) and lets the
  * reviewer read the AI summary, then Publish, Reject or Retry it. Refreshes every 20 s while any
  * report is being summarised.
  */
@@ -13,7 +13,7 @@ import SummaryView from './SummaryView'
 import styles from './evaluation.module.css'
 
 const LABEL: Record<string, string> = {
-  uploading: 'Uploading', processing: 'Summarising', draft: 'Awaiting review', failed: 'Failed',
+  uploading: 'Uploading', queued: 'Awaiting summary', processing: 'Summarising', draft: 'Awaiting review', failed: 'Failed',
 }
 
 export default function ReviewQueue() {
@@ -69,9 +69,14 @@ export default function ReviewQueue() {
               </div>
               <div className={styles.meta}>
                 {[r.programme, r.country, formatPeriod(r.period_start, r.period_end)].filter(Boolean).join(' · ')}
-                {' · '}uploaded by {r.uploaded_by} on {new Date(r.uploaded_at).toLocaleDateString('en-GB')}
-                {' · '}<a href={`/api/evaluations/${r.id}/file`}>{r.file_name}</a>
+                {r.evaluator ? ` · evaluated by ${r.evaluator}` : ''}
+                {' · '}{r.uploaded_by.includes('@') ? `uploaded by ${r.uploaded_by}` : r.uploaded_by}
+                {' on '}{new Date(r.uploaded_at).toLocaleDateString('en-GB')}
+                {' · '}<a href={r.source_url ?? `/api/evaluations/${r.id}/file`} target="_blank" rel="noopener noreferrer">
+                  {r.file_name}{r.source_url ? ' (Google Drive)' : ''}
+                </a>
               </div>
+              {r.review_note && <div className={styles.reviewNote}><strong>Check before publishing:</strong> {r.review_note}</div>}
               {r.status === 'failed' && r.error && <div className={styles.meta} style={{ color: 'var(--red)' }}>{r.error}</div>}
             </div>
             <div className={styles.reviewBtns}>
@@ -84,7 +89,7 @@ export default function ReviewQueue() {
                           onClick={() => act(r.id, 'publish')}>Publish</button>
                 </>
               )}
-              {(r.status === 'draft' || r.status === 'failed' || r.status === 'uploading') && (
+              {['draft', 'failed', 'uploading', 'queued'].includes(r.status) && (
                 <>
                   <button type="button" className={`${styles.small} ${styles.retry}`} disabled={busyId === r.id}
                           onClick={() => act(r.id, 'retry')}>Retry</button>

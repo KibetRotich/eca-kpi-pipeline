@@ -27,7 +27,12 @@ export const REPORT_TYPES: Record<string, 'pdf' | 'docx'> = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
 }
 
-export type EvaluationStatus = 'uploading' | 'processing' | 'draft' | 'failed' | 'published' | 'rejected'
+/** 'queued' = waiting for a summary (no ANTHROPIC_API_KEY: summaries are written from Claude Code instead). */
+export type EvaluationStatus = 'uploading' | 'queued' | 'processing' | 'draft' | 'failed' | 'published' | 'rejected'
+
+export type EvaluationFileType = 'pdf' | 'docx' | 'gdoc'
+
+export const FILE_TYPE_LABEL: Record<EvaluationFileType, string> = { pdf: 'PDF', docx: 'Word', gdoc: 'Google Doc' }
 
 /** What the summarisation pipeline stores in evaluation_reports.summary. */
 export interface EvaluationSummary {
@@ -49,7 +54,10 @@ export interface EvaluationReport {
   period_end: string | null
   tags: string[]
   file_name: string
-  file_type: 'pdf' | 'docx'
+  file_type: EvaluationFileType
+  source_url: string | null   // the report in Google Drive (studies linked rather than uploaded)
+  evaluator: string | null
+  review_note: string | null  // points the reviewer should check (conflicting figures, draft report, partial read)
   uploaded_by: string
   uploaded_at: string
   status: EvaluationStatus

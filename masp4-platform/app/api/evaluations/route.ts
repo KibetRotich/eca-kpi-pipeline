@@ -7,7 +7,8 @@
  *        to storage (Vercel caps request bodies at 4.5 MB), then calls POST /api/evaluations/<id>/process.
  *      Requires a signed-in @solidaridadnetwork.org account (requireStaff).
  *
- * GET  ?scope=review → every report not yet published (drafts, failures, in progress), newest first.
+ * GET  ?scope=review → every report not yet published (awaiting summary, drafts, failures, in progress),
+ *      newest first.
  *      Requires an M&E Officer or Admin.
  */
 
@@ -19,8 +20,8 @@ import { NextRequest, NextResponse } from 'next/server'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
-const LIST_COLS = 'id, title, programme, country, period_start, period_end, tags, file_name, file_type, ' +
-                  'uploaded_by, uploaded_at, status, summary, error, published_at'
+const LIST_COLS = 'id, title, programme, country, period_start, period_end, tags, file_name, file_type, source_url, ' +
+                  'evaluator, uploaded_by, uploaded_at, status, summary, error, review_note, published_at'
 
 /** Keeps the original name readable while making it safe as a storage object key. */
 function safeFileName(name: string, ext: string) {
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin.from('evaluation_reports')
     .select(LIST_COLS)
-    .in('status', ['uploading', 'processing', 'draft', 'failed'])
+    .in('status', ['uploading', 'queued', 'processing', 'draft', 'failed'])
     .order('uploaded_at', { ascending: false })
     .limit(100)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

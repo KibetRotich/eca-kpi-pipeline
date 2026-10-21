@@ -2,9 +2,10 @@
  * POST /api/evaluations/<id>/review { action } — M&E Officer / Admin review of an AI summary.
  *
  *   publish  draft → published   (appears on /evaluation-insights)
- *   reject   draft | failed | uploading → rejected   (kept, never shown)
- *   retry    draft | failed | uploading → processing (re-runs the summarisation pipeline; a report stuck
- *            in 'uploading' — browser closed before processing started — is recovered this way)
+ *   reject   draft | failed | uploading | queued → rejected   (kept, never shown)
+ *   retry    draft | failed | uploading | queued → processing (re-runs the summarisation pipeline; a report
+ *            stuck in 'uploading' — browser closed before processing started — is recovered this way;
+ *            without an API key the pipeline just puts it back in 'queued')
  */
 
 import { supabaseAdmin } from '@/lib/supabase'
@@ -18,8 +19,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const ALLOWED_FROM: Record<string, string[]> = {
   publish: ['draft'],
-  reject:  ['draft', 'failed', 'uploading'],
-  retry:   ['draft', 'failed', 'uploading'],
+  reject:  ['draft', 'failed', 'uploading', 'queued'],
+  retry:   ['draft', 'failed', 'uploading', 'queued'],
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -4,7 +4,7 @@
  */
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
-import { formatPeriod, type EvaluationSummary } from '@/lib/evaluations'
+import { FILE_TYPE_LABEL, formatPeriod, type EvaluationFileType, type EvaluationSummary } from '@/lib/evaluations'
 import SummaryView from '../SummaryView'
 import styles from '../evaluation.module.css'
 
@@ -15,11 +15,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 async function getStudy(id: string) {
   if (!UUID.test(id)) return null
   const { data } = await supabaseAdmin.from('evaluation_reports')
-    .select('id, title, programme, country, period_start, period_end, tags, file_type, summary, published_at')
+    .select('id, title, programme, country, period_start, period_end, tags, file_type, source_url, summary, published_at')
     .eq('id', id).eq('status', 'published').single()
   return data as (null | {
     id: string; title: string; programme: string; country: string; period_start: string | null
-    period_end: string | null; tags: string[]; file_type: string; summary: EvaluationSummary | null; published_at: string
+    period_end: string | null; tags: string[]; file_type: EvaluationFileType; source_url: string | null
+    summary: EvaluationSummary | null; published_at: string
   })
 }
 
@@ -49,10 +50,17 @@ export default async function StudyPage({ params }: { params: Promise<{ id: stri
               </div>
             )}
           </div>
-          <a href={`/api/evaluations/${study.id}/file`} className={styles.download}
-             title="Signed-in Solidaridad staff only">
-            Full report ({study.file_type.toUpperCase()}) <span aria-hidden="true">↓</span>
-          </a>
+          {study.source_url ? (
+            <a href={study.source_url} className={styles.download} target="_blank" rel="noopener noreferrer"
+               title="Opens in Google Drive for Solidaridad staff with access to the folder">
+              Full report ({FILE_TYPE_LABEL[study.file_type]}, Google Drive) <span aria-hidden="true">↗</span>
+            </a>
+          ) : (
+            <a href={`/api/evaluations/${study.id}/file`} className={styles.download}
+               title="Signed-in Solidaridad staff only">
+              Full report ({FILE_TYPE_LABEL[study.file_type]}) <span aria-hidden="true">↓</span>
+            </a>
+          )}
         </div>
         {study.summary && <SummaryView summary={study.summary} />}
       </article>

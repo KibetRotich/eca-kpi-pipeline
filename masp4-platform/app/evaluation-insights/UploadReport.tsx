@@ -49,7 +49,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
   const [tags, setTags] = useState<string[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState<null | 'processing' | 'queued'>(null)
   const firstField = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -117,7 +117,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
       const processed = await fetch(`/api/evaluations/${id}/process`, { method: 'POST' })
       if (!processed.ok) throw new Error(await errorText(processed))
 
-      setDone(true)
+      setDone((await processed.json()).status === 'queued' ? 'queued' : 'processing')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -136,8 +136,9 @@ function UploadModal({ onClose }: { onClose: () => void }) {
         {done ? (
           <div className={styles.done}>
             <p role="status">
-              Your report has been received and will appear on this page within a few minutes, once an
-              M&amp;E officer has reviewed its summary.
+              {done === 'queued'
+                ? 'Your report has been received. Its key insights will be summarised, and the study will appear on this page once an M&E officer has reviewed them.'
+                : 'Your report has been received and will appear on this page within a few minutes, once an M&E officer has reviewed its summary.'}
             </p>
             <div className={styles.actions}>
               <button type="button" className={styles.primary} onClick={() => window.location.reload()}>Done</button>

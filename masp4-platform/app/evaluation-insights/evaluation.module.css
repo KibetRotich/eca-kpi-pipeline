@@ -150,6 +150,16 @@
 .b_uploading, .b_processing { background: #e3f2fd; color: #1565c0; }
 .b_draft { background: #fff3e0; color: var(--amber, #e65100); }
 .b_failed { background: #ffebee; color: var(--red, #c62828); }
+.b_queued { background: #ede7f6; color: #4527a0; }
+.reviewNote {
+  font-size: .62rem;
+  color: #6d4c00;
+  background: #fff8e1;
+  border-left: 3px solid #ffb300;
+  padding: .25rem .5rem;
+  margin-top: .3rem;
+  max-width: 820px;
+}
 .reviewBtns { display: flex; gap: .35rem; flex-wrap: wrap; }
 .small { font-size: .56rem; padding: .3rem .6rem; border-radius: 4px; }
 .publish { background: var(--green, #2e7d32); color: #fff; border: 0; }
