@@ -76,7 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a key={href} href={href} className="nav-link">{label}</a>
           ))}
 
-          {/* Output Insights — hub for Kobo-form analytics (Climate Heroes / REAP, etc.) */}
+          {/* Granular Data — Output Insights hub of Kobo-form analytics (Climate Heroes / REAP, etc.) */}
           <a
             href="/output-insights"
             target="_blank"
@@ -100,13 +100,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
             }}
           >
-            Learning Insights <span aria-hidden="true">↗</span>
+            Granular Data <span aria-hidden="true">↗</span>
           </a>
 
-          {/* P2P Project Dashboard — Pathways to Prosperity, embedded in the
-              platform chrome at /p2p-dashboard (iframe over /public/p2p) */}
+          {/* Evaluation Insights — key insights from studies carried out by projects (placeholder hub) */}
           <a
-            href="/p2p-dashboard"
+            href="/evaluation-insights"
             style={{
               marginRight: '.5rem',
               display: 'inline-flex',
@@ -125,7 +124,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
             }}
           >
-            P2P Project Dashboard
+            Evaluation Insights
           </a>
 
           {/* MASP III Dashboard — opens the standalone legacy dashboard in a new browser page */}
