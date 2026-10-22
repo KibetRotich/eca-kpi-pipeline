@@ -2,15 +2,14 @@
  * /evaluation-insights — Evaluation Insights hub (Sprint 47).
  *
  * Brings together the studies carried out by projects (baselines, midlines, endlines, thematic and
- * impact studies) with the key insights pulled out of each. Every published report is one tile,
- * using the same tile grid as /output-insights, linking to /evaluation-insights/<id>.
+ * impact studies) with the key insights pulled out of each. Every published report is one compact tile
+ * (sized like the Projects' Progress project tiles) linking to /evaluation-insights/<id>.
  *
  * Signed-in staff see an "Upload Report" button (UploadReport); uploads are summarised by the Claude
  * API into drafts, which M&E Officers / Admins review in the queue (ReviewQueue) before they appear here.
  */
 import { supabaseAdmin } from '@/lib/supabase'
 import { formatPeriod, type EvaluationSummary } from '@/lib/evaluations'
-import tiles from '../output-insights/page.module.css'
 import styles from './evaluation.module.css'
 import UploadReport from './UploadReport'
 import ReviewQueue from './ReviewQueue'
@@ -32,30 +31,18 @@ type Study = {
   summary: EvaluationSummary | null
 }
 
-const MAX_VISIBLE_CHIPS = 3
-
 function StudyTile({ s }: { s: Study }) {
-  const chips = [s.country, formatPeriod(s.period_start, s.period_end), ...s.tags].filter(Boolean)
-  const visible = chips.slice(0, MAX_VISIBLE_CHIPS)
-  const hidden = chips.slice(MAX_VISIBLE_CHIPS)
+  const kicker = [s.country, s.tags[0]].filter(Boolean).join(' · ')
   const blurb = s.summary?.headline ?? ''
   return (
-    <a href={`/evaluation-insights/${s.id}`} className={tiles.tile}>
-      <h2 className={tiles.title}>{s.title}</h2>
-      <p className={tiles.summary} title={blurb}>{blurb}</p>
-      <div className={tiles.tags}>
-        {visible.map((c) => (
-          <span key={c} className={tiles.tag}>{c}</span>
-        ))}
-        {hidden.length > 0 && (
-          <span className={tiles.more} aria-hidden="true" title={hidden.join(', ')}>
-            +{hidden.length} more
-          </span>
-        )}
-      </div>
-      <span className={tiles.srOnly}>{s.programme}. Topics: {chips.join(', ')}.</span>
-      <span className={tiles.cta}>
-        Read insights <span aria-hidden="true">→</span>
+    <a href={`/evaluation-insights/${s.id}`} className={styles.studyTile}
+       title={[s.programme, s.tags.join(', ')].filter(Boolean).join(' — ')}>
+      <span className={styles.studyKicker}>{kicker}</span>
+      <h2 className={styles.studyTitle}>{s.title}</h2>
+      {blurb && <p className={styles.studyHeadline}>{blurb}</p>}
+      <span className={styles.studyFoot}>
+        <span>{formatPeriod(s.period_start, s.period_end)}</span>
+        <span>Read insights <span aria-hidden="true">→</span></span>
       </span>
     </a>
   )
@@ -91,7 +78,7 @@ export default async function EvaluationInsightsPage() {
           study type and period, a short summary of its key insights, and a link to the full study.
         </div>
       ) : (
-        <div className={tiles.grid}>
+        <div className={styles.studyGrid}>
           {studies.map((s) => (
             <StudyTile key={s.id} s={s} />
           ))}
