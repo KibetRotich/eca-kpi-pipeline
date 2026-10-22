@@ -58,6 +58,7 @@ export default function TargetsPage() {
   const [filterProject,    setFilterProject]    = useState('')
   const [search,           setSearch]           = useState('')
   const gridScroll = useRef(0)                                     // scroll position of the project grid
+  const openedAtLength = useRef<number | null>(null)               // history.length right after a project was opened
 
   const load = useCallback(async (yr: string) => {
     setLoading(true)
@@ -76,7 +77,8 @@ export default function TargetsPage() {
   useEffect(() => { load(year) }, [year, load])
 
   // Project view <-> URL (?project=CODE). Opening a project pushes a history entry,
-  // so both the "Back to projects" button and the browser Back button return to the grid.
+  // so both the "Back to projects" button and the browser Back button return to the grid
+  // (see backToProjects for the embedded-sheet case).
   useEffect(() => {
     const fromUrl = () => setFilterProject(new URLSearchParams(window.location.search).get('project') ?? '')
     fromUrl()
@@ -90,13 +92,20 @@ export default function TargetsPage() {
   function openProject(code: string) {
     if (!filterProject) gridScroll.current = window.scrollY
     window.history.pushState({ project: code }, '', `?project=${encodeURIComponent(code)}`)
+    openedAtLength.current = window.history.length
     setFilterProject(code)
     window.scrollTo(0, 0)
   }
 
+  // history.back() is only safe when nothing has been added to the history since the project opened.
+  // The embedded Google Sheet (SheetFramework iframe) adds its own entries when a signed-in user clicks
+  // inside it, and back() would then rewind the sheet instead of this page — so fall back to going to the
+  // grid directly.
   function backToProjects() {
-    if (window.history.state?.project) window.history.back()       // popstate restores the grid
+    const nothingAdded = openedAtLength.current === window.history.length
+    if (window.history.state?.project && nothingAdded) window.history.back()   // popstate restores the grid
     else { window.history.replaceState(null, '', window.location.pathname); setFilterProject('') }
+    openedAtLength.current = null
   }
 
   function cellKey(code: string, kpi: string) { return `${code}:${kpi}` }
