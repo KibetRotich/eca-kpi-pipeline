@@ -1,15 +1,15 @@
 /**
- * /output-insights — Output Insights hub.
+ * /output-insights — Output Insights hub (the "Granular Data" nav button).
  *
- * Compact tile grid of Kobo-form dashboards (5 columns on desktop, degrading to
- * 3 / 2 / 1 on narrower viewports). Each tile is a single link to a dashboard;
+ * Compact tile grid of Kobo-form dashboards, sized like the Projects' Progress project
+ * tiles (as many 230px+ columns as fit). Each tile is a single link to a dashboard;
  * the full description and complete tag list are preserved in the markup
  * (visually condensed via line-clamp / a "+N more" chip, fully available to
  * screen readers). Styling lives in ./page.module.css and reuses the global
  * design tokens (app/globals.css) — no other page is affected.
  *
  * To add a dashboard: append an entry to DASHBOARDS below. The grid grows
- * downward automatically (5 per row).
+ * downward automatically.
  */
 import styles from './page.module.css'
 
