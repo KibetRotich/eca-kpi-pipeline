@@ -274,18 +274,3 @@
   padding: .45rem .8rem;
 }
 .download:hover { text-decoration: none; background: #24497a; }
-
-/* ── Hub filters ── */
-.filterBar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin-bottom: .6rem; }
-.filterBar label { display: grid; gap: .15rem; font-size: .6rem; font-weight: 700; color: #555; }
-.filterBar select {
-  font: inherit;
-  font-size: .68rem;
-  font-weight: 400;
-  border: 1px solid var(--border, #d0d0d0);
-  border-radius: 4px;
-  padding: .25rem .4rem;
-  background: #fff;
-}
-.filterCount { font-size: .62rem; color: #666; margin-left: auto; display: inline-flex; gap: .5rem; align-items: center; }
-.filterCount button { background: none; border: 0; color: var(--navy, #1a3557); text-decoration: underline; font-size: .62rem; padding: 0; letter-spacing: 0; text-transform: none; }
