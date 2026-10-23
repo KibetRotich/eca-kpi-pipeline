@@ -127,11 +127,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Evaluation Insights
           </a>
 
-          {/* MASP III Dashboard — opens the standalone legacy dashboard in a new browser page */}
+          {/* Thematic Insights — cross-study syntheses by theme (replaced the MASP III Dashboard tab, Sprint 49) */}
           <a
-            href="/ECA_Dashboard.html"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/thematic-insights"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -149,7 +147,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)',
             }}
           >
-            MASP III Dashboard <span aria-hidden="true">↗</span>
+            Thematic Insights
           </a>
         </nav>
 
