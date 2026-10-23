@@ -139,3 +139,113 @@
 .timeline li { display: grid; grid-template-columns: 110px 1fr; gap: .5rem; font-size: .68rem; }
 @media (max-width: 479px) { .timeline li { grid-template-columns: 1fr; gap: .1rem; } }
 .stage { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #6a1b9a; }
+
+/* ── Charts ("In figures") — one unit per chart; light surface only (the platform has no dark theme) ── */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: .8rem; }
+@media (max-width: 479px) { .charts { grid-template-columns: 1fr; } }
+.chart {
+  margin: 0;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: .6rem .75rem .55rem;
+  background: #fcfcfb;
+  --c-before: #a9c8ef;          /* series-1 blue, lighter step: earlier measurement */
+  --c-after: #2a78d6;           /* series-1 blue: later measurement / bar */
+  --c-ref: #52514e;             /* text-secondary: reference / target line */
+}
+.chart figcaption { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; margin-bottom: .35rem; }
+.chartTitle { font-size: .7rem; font-weight: 700; color: #111; }
+.chartUnit { font-size: .56rem; color: #777; white-space: nowrap; }
+.chartNote { font-size: .58rem; color: #777; margin-top: .35rem; }
+.chartFoot { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; margin-top: .4rem; flex-wrap: wrap; }
+
+.legend { display: flex; flex-wrap: wrap; gap: .25rem .75rem; font-size: .56rem; color: #52514e; margin-bottom: .35rem; }
+.legend span { display: inline-flex; align-items: center; gap: .25rem; }
+.legend .dotBefore, .legend .dotAfter { position: static; transform: none; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.refKey { display: inline-block; width: 12px; border-top: 2px dashed var(--c-ref); }
+
+.chartRow, .axisRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 34%) 1fr 74px;
+  gap: .5rem;
+  align-items: center;
+}
+.chartRow { min-height: 26px; outline: none; }
+.chartRow:focus-visible { outline: 2px solid var(--c-after); outline-offset: 2px; border-radius: 3px; }
+.rowLabel { font-size: .6rem; color: #333; line-height: 1.2; }
+.rowValue { font-size: .58rem; color: #52514e; text-align: right; white-space: nowrap; }
+.rowValue b { color: #111; }
+
+.track { position: relative; height: 22px; }
+.grid { position: absolute; top: 0; bottom: 0; border-left: 1px solid #ececec; }
+.refLine { position: absolute; top: -3px; bottom: -3px; border-left: 2px dashed var(--c-ref); z-index: 1; }
+
+.connector { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: #c9c9c9; }
+.dotBefore, .dotAfter {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px #fcfcfb;   /* 2px surface ring where marks overlap */
+  z-index: 2;
+}
+.dotBefore { background: var(--c-before); display: inline-block; }
+.dotAfter { background: var(--c-after); display: inline-block; }
+
+.bar {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  height: 10px;
+  background: var(--c-after);
+  border-radius: 0 4px 4px 0;      /* rounded data end, square on the baseline */
+}
+
+.stack { display: flex; height: 22px; gap: 2px; grid-column: 2 / 4; }
+.segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2px;
+  outline: none;
+}
+.segment:first-child { border-radius: 4px 0 0 4px; }
+.segment:last-child { border-radius: 0 4px 4px 0; }
+.segment:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
+.segLabel { font-size: .54rem; font-weight: 700; color: #fff; text-shadow: 0 0 2px rgba(0, 0, 0, .55); }
+
+/* Tooltip: shown on hover or keyboard focus of a row / segment */
+.tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f1f1f;
+  color: #fff;
+  font-size: .58rem;
+  line-height: 1.35;
+  padding: .3rem .45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 5;
+  pointer-events: none;
+}
+.chartRow:hover .tip, .chartRow:focus-visible .tip,
+.segment:hover .tip, .segment:focus-visible .tip { display: block; }
+
+.axis { position: relative; height: 14px; border-top: 1px solid #d6d6d6; }
+.axis span { position: absolute; top: 2px; transform: translateX(-50%); font-size: .5rem; color: #888; }
+.axis span:first-child { transform: none; }
+.axis span:last-child { transform: translateX(-100%); }
+.axisUnit { font-size: .5rem; color: #888; text-align: right; }
+
+.tableView { font-size: .56rem; }
+.tableView summary { cursor: pointer; color: var(--navy, #1a3557); text-decoration: underline; }
+.tableView table { border-collapse: collapse; margin-top: .3rem; }
+.tableView th, .tableView td { border: 1px solid #e5e5e5; padding: .15rem .35rem; text-align: left; font-weight: 400; }
+.tableView th { background: #f5f5f5; font-weight: 700; }

@@ -2,30 +2,14 @@
 
 /**
  * Renders one theme synthesis (used by the theme page and the review queue).
- * Every point lists the studies it is drawn from; the Country and Stage filters narrow the points to those
- * backed by at least one matching study, so readers can see e.g. only the Kenya endline evidence.
+ * Every point lists the studies it is drawn from; the Country and Stage filters narrow the points (and chart rows)
+ * to those backed by at least one matching study, so readers can see e.g. only the Kenya endline evidence.
  */
 import { useMemo, useState } from 'react'
 import { studyStage, type CitedPoint, type SourceStudy, type ThemeSynthesis } from '@/lib/themes'
+import Sources from './Sources'
+import ThemeCharts from './ThemeCharts'
 import styles from './themes.module.css'
-
-function Sources({ ids, studies }: { ids: string[]; studies: Record<string, SourceStudy> }) {
-  const known = ids.filter(id => studies[id])
-  if (!known.length) return null
-  return (
-    <span className={styles.sources}>
-      {known.map(id => {
-        const s = studies[id]
-        const year = s.period_end?.slice(0, 4)
-        return (
-          <a key={id} href={`/evaluation-insights/${id}`} className={styles.source} title={s.title}>
-            {[s.programme.replace(/^.*\(([^)]+)\)\s*$/, '$1'), studyStage(s.tags), year].filter(Boolean).join(' · ')}
-          </a>
-        )
-      })}
-    </span>
-  )
-}
 
 function Points({ title, items, studies }: { title: string; items: CitedPoint[]; studies: Record<string, SourceStudy> }) {
   if (!items.length) return null
@@ -100,6 +84,10 @@ export default function ThemeView({ synthesis, studies, filterable = true }: {
       {nothing && <p className={styles.none}>No evidence in this theme matches the filters.</p>}
 
       <Points title="Key evidence" items={evidence} studies={studies} />
+
+      {synthesis.charts && synthesis.charts.length > 0 && (
+        <ThemeCharts charts={synthesis.charts} studies={studies} keep={id => (country || stage) ? matches(id) : true} />
+      )}
 
       {trends.length > 0 && (
         <section>

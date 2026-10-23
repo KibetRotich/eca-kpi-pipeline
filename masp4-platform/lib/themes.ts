@@ -28,10 +28,28 @@ export interface ChangeOverTime {
   points: { stage: string; year: string; finding: string; source: string }[]
 }
 
+/**
+ * A chart of figures quoted in the synthesis. Every chart has ONE unit, so only like-for-like figures share an axis
+ * (figures in different units go in separate charts). Each row cites the study it comes from.
+ *   dumbbell — before → after per item (e.g. baseline vs endline yield), optional target line
+ *   bar      — one value per item, optional reference line (e.g. potential yield, living wage)
+ *   stacked  — part-to-whole shares per item (values in the same order as `categories`)
+ */
+export type ThemeChart =
+  | { type: 'dumbbell'; title: string; unit: string; note?: string
+      rows: { label: string; before: number; after: number; beforeLabel: string; afterLabel: string; source: string }[]
+      target?: { value: number; label: string } }
+  | { type: 'bar'; title: string; unit: string; note?: string
+      rows: { label: string; value: number; source: string }[]
+      reference?: { value: number; label: string } }
+  | { type: 'stacked'; title: string; unit: string; note?: string; categories: string[]
+      rows: { label: string; values: number[]; source: string }[] }
+
 /** What the synthesis step stores in theme_insights.synthesis. */
 export interface ThemeSynthesis {
   headline: string
   key_evidence: CitedPoint[]
+  charts?: ThemeChart[]
   change_over_time: ChangeOverTime[]
   what_works: CitedPoint[]
   barriers: CitedPoint[]

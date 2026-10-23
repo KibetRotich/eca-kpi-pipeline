@@ -1,6 +1,7 @@
 """Step 3 of "synthesise themes" (Sprint 49): load syntheses.json into theme_insights as DRAFTS.
 
 syntheses.json is a list of {theme_key, evidence_rating, review_note, synthesis: ThemeSynthesis}.
+Charts (synthesis.charts, optional) are checked too: one unit each, every row citing a published study.
 Every cited source must be a PUBLISHED study, or the load stops. Each theme's existing draft is replaced;
 published syntheses are untouched until a reviewer publishes the new draft on /thematic-insights.
 
@@ -41,6 +42,12 @@ for it in items:
             cited.update(p['sources'])
     for c in syn['change_over_time']:
         cited.update(p['source'] for p in c['points'])
+    for ch in syn.get('charts') or []:
+        if ch['type'] not in ('dumbbell', 'bar', 'stacked') or not ch.get('unit') or not ch['rows']:
+            errors.append(f"{key}: chart '{ch.get('title')}' needs a known type, a unit and rows")
+        if ch['type'] == 'stacked' and any(len(r['values']) != len(ch['categories']) for r in ch['rows']):
+            errors.append(f"{key}: chart '{ch['title']}' has rows that do not match its categories")
+        cited.update(r['source'] for r in ch['rows'])
     for sid in cited - published:
         errors.append(f'{key}: cites {sid}, which is not a published study')
     rows.append({'theme_key': key, 'status': 'draft', 'synthesis': syn, 'evidence_rating': it['evidence_rating'],
