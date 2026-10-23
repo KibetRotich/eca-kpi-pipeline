@@ -234,14 +234,6 @@
 .toggle { background: none; border: 0; color: var(--navy, #1a3557); padding: 0; font-size: .58rem; text-decoration: underline; }
 
 /* ── Summary (shared by review preview and detail page) ─────────────────── */
-.aiNote {
-  font-size: .62rem;
-  color: #6d4c00;
-  background: #fff8e1;
-  border: 1px solid #ffe082;
-  border-radius: 4px;
-  padding: .35rem .55rem;
-}
 .summary { display: grid; gap: .65rem; font-size: .74rem; color: #333; margin-top: .55rem; }
 .summary h3 { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--navy, #1a3557); margin-bottom: .2rem; }
 .summary ul { padding-left: 1.1rem; display: grid; gap: .2rem; }

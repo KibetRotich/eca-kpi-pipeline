@@ -16,9 +16,6 @@ function List({ title, items }: { title: string; items: string[] }) {
 export default function SummaryView({ summary }: { summary: EvaluationSummary }) {
   return (
     <div className={styles.summary}>
-      <p className={styles.aiNote}>
-        AI-generated summary, reviewed by the M&amp;E team. Check important figures against the full report before using them.
-      </p>
       <p className={styles.headline}>{summary.headline}</p>
       <section>
         <h3>Overview</h3>

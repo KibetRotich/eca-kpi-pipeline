@@ -89,14 +89,6 @@
 .synthesis { display: grid; gap: .75rem; font-size: .74rem; color: #333; margin-top: .7rem; }
 .synthesis h3 { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--navy, #1a3557); margin-bottom: .25rem; }
 .synthesis ul { padding-left: 1.1rem; display: grid; gap: .35rem; }
-.aiNote {
-  font-size: .62rem;
-  color: #6d4c00;
-  background: #fff8e1;
-  border: 1px solid #ffe082;
-  border-radius: 4px;
-  padding: .35rem .55rem;
-}
 .headline { font-size: .88rem; font-weight: 700; color: #111; }
 
 .filters { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }

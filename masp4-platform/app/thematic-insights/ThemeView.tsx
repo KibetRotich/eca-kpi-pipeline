@@ -53,10 +53,6 @@ export default function ThemeView({ synthesis, studies, filterable = true }: {
 
   return (
     <div className={styles.synthesis}>
-      <p className={styles.aiNote}>
-        AI-generated synthesis of the published studies, reviewed by the M&amp;E team. Findings come from studies with
-        different designs and years, so they are reported side by side, not added up. Check figures against the source study.
-      </p>
       <p className={styles.headline}>{synthesis.headline}</p>
 
       {filterable && (
