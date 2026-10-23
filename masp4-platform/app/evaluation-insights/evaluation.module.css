@@ -275,20 +275,8 @@
 }
 .download:hover { text-decoration: none; background: #24497a; }
 
-/* ── Hub overview: headline numbers, clickable distributions, coverage grid ── */
+/* ── Hub overview: clickable distributions and coverage grid ── */
 .overview { margin-bottom: .9rem; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .6rem; margin-bottom: .6rem; }
-.stats > div {
-  background: #fff;
-  border: 1px solid var(--border, #d0d0d0);
-  border-left: 4px solid #2a78d6;
-  border-radius: 4px;
-  padding: .45rem .7rem;
-  display: grid;
-}
-.stats b { font-size: 1.25rem; font-weight: 800; color: #0b0b0b; line-height: 1.1; }
-.stats span { font-size: .58rem; color: #52514e; text-transform: uppercase; letter-spacing: .6px; }
-
 .ovGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .6rem; }
 .ovCard { overflow-x: auto; margin: 0; background: #fcfcfb; border: 1px solid #e6e6e6; border-radius: 6px; padding: .55rem .7rem; }
 .ovCard figcaption { font-size: .66rem; font-weight: 800; color: #111; margin-bottom: .35rem; }

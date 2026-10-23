@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Evaluation Insights hub body: an overview of the published studies (headline numbers, studies by stage,
- * country and theme, and a country × stage coverage grid) above the study tiles.
+ * Evaluation Insights hub body: an overview of the published studies (studies by stage, country and theme,
+ * and a country × stage coverage grid) above the study tiles.
  * Clicking a bar or a grid cell filters the tiles; the Stage / Country / Theme selects do the same.
  * All counts come from the published studies passed in — nothing is estimated.
  */
@@ -79,15 +79,12 @@ export default function StudyBrowser({ studies }: { studies: Study[] }) {
     const byStage = tally(studies.map(s => studyStage(s.tags)))
     const byCountry = tally(studies.map(s => s.country))
     const byTheme = tally(studies.flatMap(s => s.tags.filter(t => (THEME_TAGS as string[]).includes(t))))
-    const years = studies.flatMap(s => [s.period_start, s.period_end]).filter(Boolean).map(d => Number(d!.slice(0, 4)))
     const stageOrder = [...STAGES, 'Study'].filter(st => byStage.has(st))
     const countries = [...byCountry.keys()].sort((a, b) => (byCountry.get(b)! - byCountry.get(a)!) || a.localeCompare(b))
     return {
       stages: stageOrder.map(st => [st, byStage.get(st)!] as [string, number]),
       countries: countries.map(c => [c, byCountry.get(c)!] as [string, number]),
       themes: [...byTheme.entries()].sort((a, b) => b[1] - a[1]),
-      endlines: byStage.get('Endline') ?? 0,
-      span: years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '—',
       grid: countries.map(c => ({
         country: c,
         cells: stageOrder.map(st => studies.filter(s => s.country === c && studyStage(s.tags) === st).length),
@@ -104,13 +101,6 @@ export default function StudyBrowser({ studies }: { studies: Study[] }) {
   return (
     <>
       <section className={styles.overview} aria-label="Overview of published studies">
-        <div className={styles.stats}>
-          <div><b>{studies.length}</b><span>published studies</span></div>
-          <div><b>{overview.countries.length}</b><span>countries / regional</span></div>
-          <div><b>{overview.endlines}</b><span>endline evaluations</span></div>
-          <div><b>{overview.span}</b><span>project periods covered</span></div>
-        </div>
-
         <div className={styles.ovGrid}>
           <BarList title="Studies by stage" counts={overview.stages} selected={stage} onPick={setStage} />
           <BarList title="Studies by country" counts={overview.countries} selected={country} onPick={setCountry} />
