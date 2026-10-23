@@ -140,9 +140,10 @@
   border-radius: 6px;
   padding: .6rem .75rem .55rem;
   background: #fcfcfb;
-  --c-before: #a9c8ef;          /* series-1 blue, lighter step: earlier measurement */
-  --c-after: #2a78d6;           /* series-1 blue: later measurement / bar */
-  --c-ref: #52514e;             /* text-secondary: reference / target line */
+  --c-before: #111111;          /* earlier measurement: deep black */
+  --c-after: #f2b600;           /* later measurement: deep yellow (outlined in black for contrast) */
+  --c-line: #111111;            /* connectors, target / reference lines and axis baseline */
+  --c-bar: #2a78d6;             /* single-value bars */
 }
 .chart figcaption { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; margin-bottom: .35rem; }
 .chartTitle { font-size: .7rem; font-weight: 700; color: #111; }
@@ -154,7 +155,7 @@
 .legend span { display: inline-flex; align-items: center; gap: .25rem; }
 .legend .dotBefore, .legend .dotAfter { position: static; transform: none; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
-.refKey { display: inline-block; width: 12px; border-top: 2px dashed var(--c-ref); }
+.refKey { display: inline-block; width: 14px; border-top: 2px dashed var(--c-line); }
 
 .chartRow, .axisRow {
   display: grid;
@@ -163,35 +164,35 @@
   align-items: center;
 }
 .chartRow { min-height: 26px; outline: none; }
-.chartRow:focus-visible { outline: 2px solid var(--c-after); outline-offset: 2px; border-radius: 3px; }
+.chartRow:focus-visible { outline: 2px solid var(--c-line); outline-offset: 2px; border-radius: 3px; }
 .rowLabel { font-size: .6rem; color: #333; line-height: 1.2; }
 .rowValue { font-size: .58rem; color: #52514e; text-align: right; white-space: nowrap; }
 .rowValue b { color: #111; }
 
 .track { position: relative; height: 22px; }
 .grid { position: absolute; top: 0; bottom: 0; border-left: 1px solid #ececec; }
-.refLine { position: absolute; top: -3px; bottom: -3px; border-left: 2px dashed var(--c-ref); z-index: 1; }
+.refLine { position: absolute; top: -3px; bottom: -3px; border-left: 2px dashed var(--c-line); z-index: 1; }
 
-.connector { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: #c9c9c9; }
+.connector { position: absolute; top: 50%; height: 3px; margin-top: -1.5px; background: var(--c-line); border-radius: 2px; }
 .dotBefore, .dotAfter {
   position: absolute;
   top: 50%;
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px #fcfcfb;   /* 2px surface ring where marks overlap */
   z-index: 2;
 }
 .dotBefore { background: var(--c-before); display: inline-block; }
-.dotAfter { background: var(--c-after); display: inline-block; }
+.dotAfter { background: var(--c-after); display: inline-block; border: 2px solid var(--c-line); box-sizing: border-box; }
 
 .bar {
   position: absolute;
   left: 0;
   top: 6px;
   height: 10px;
-  background: var(--c-after);
+  background: var(--c-bar);
   border-radius: 0 4px 4px 0;      /* rounded data end, square on the baseline */
 }
 
@@ -229,7 +230,7 @@
 .chartRow:hover .tip, .chartRow:focus-visible .tip,
 .segment:hover .tip, .segment:focus-visible .tip { display: block; }
 
-.axis { position: relative; height: 14px; border-top: 1px solid #d6d6d6; }
+.axis { position: relative; height: 14px; border-top: 2px solid var(--c-line); }
 .axis span { position: absolute; top: 2px; transform: translateX(-50%); font-size: .5rem; color: #888; }
 .axis span:first-child { transform: none; }
 .axis span:last-child { transform: translateX(-100%); }
