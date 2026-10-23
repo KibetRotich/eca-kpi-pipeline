@@ -63,7 +63,6 @@
   border-top: 3px solid #6a1b9a;
   border-radius: 6px;
   padding: 1rem 1.2rem;
-  max-width: 960px;
 }
 .detailHead { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
 .detailHead h1 { font-size: 1rem; font-weight: 800; margin: 0; }
