@@ -1,5 +1,6 @@
 /** Renders an AI-generated evaluation summary (used by the review queue and the study page). */
 import type { EvaluationSummary } from '@/lib/evaluations'
+import ThemeCharts from '../thematic-insights/ThemeCharts'
 import styles from './evaluation.module.css'
 
 function List({ title, items }: { title: string; items: string[] }) {
@@ -24,6 +25,9 @@ export default function SummaryView({ summary }: { summary: EvaluationSummary })
         <p>{summary.overview}</p>
       </section>
       <List title="Key findings" items={summary.key_findings} />
+      {summary.charts && summary.charts.length > 0 && (
+        <ThemeCharts charts={summary.charts} studies={{}} keep={() => true} />
+      )}
       <List title="Recommendations" items={summary.recommendations} />
       <List title="Lessons learned" items={summary.lessons_learned} />
       <section>

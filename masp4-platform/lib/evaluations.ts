@@ -3,6 +3,8 @@
  * Safe to import from client and server code (no secrets, no server-only imports).
  */
 
+import type { ThemeChart } from '@/lib/themes'
+
 /** Only signed-in accounts on this domain may upload reports. */
 export const STAFF_DOMAIN = 'solidaridadnetwork.org'
 
@@ -34,7 +36,10 @@ export type EvaluationFileType = 'pdf' | 'docx' | 'gdoc'
 
 export const FILE_TYPE_LABEL: Record<EvaluationFileType, string> = { pdf: 'PDF', docx: 'Word', gdoc: 'Google Doc' }
 
-/** What the summarisation pipeline stores in evaluation_reports.summary. */
+/**
+ * What the summarisation pipeline stores in evaluation_reports.summary.
+ * `charts` (optional) chart the study's own figures; each row's `source` is the study's id.
+ */
 export interface EvaluationSummary {
   headline: string
   overview: string
@@ -43,6 +48,7 @@ export interface EvaluationSummary {
   lessons_learned: string[]
   methodology: string
   limitations: string[]
+  charts?: ThemeChart[]
 }
 
 export interface EvaluationReport {
