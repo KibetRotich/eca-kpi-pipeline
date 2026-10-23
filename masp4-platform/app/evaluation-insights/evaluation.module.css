@@ -254,7 +254,6 @@
   border-top: 3px solid var(--green, #2e7d32);
   border-radius: 6px;
   padding: 1rem 1.2rem;
-  max-width: 900px;
 }
 .back { font-size: .66rem; display: inline-block; margin-bottom: .6rem; }
 .detailHead { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
