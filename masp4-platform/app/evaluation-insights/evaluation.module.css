@@ -275,70 +275,7 @@
 }
 .download:hover { text-decoration: none; background: #24497a; }
 
-/* ── Hub overview: clickable distributions and coverage grid ── */
-.overview { margin-bottom: .9rem; }
-.ovGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .6rem; }
-.ovCard { overflow-x: auto; margin: 0; background: #fcfcfb; border: 1px solid #e6e6e6; border-radius: 6px; padding: .55rem .7rem; }
-.ovCard figcaption { font-size: .66rem; font-weight: 800; color: #111; margin-bottom: .35rem; }
-.ovNote { font-size: .54rem; color: #888; margin-top: .3rem; }
-
-.barRow {
-  display: grid;
-  grid-template-columns: minmax(80px, 42%) 1fr 26px;
-  gap: .45rem;
-  align-items: center;
-  width: 100%;
-  background: none;
-  border: 0;
-  padding: .12rem .2rem;
-  border-radius: 3px;
-  text-align: left;
-  cursor: pointer;
-  letter-spacing: 0;
-  text-transform: none;
-  font-weight: 400;
-}
-.barRow:hover { background: #eef4fc; }
-.barRow:focus-visible { outline: 2px solid #2a78d6; outline-offset: 1px; }
-.barLabel { font-size: .6rem; color: #333; line-height: 1.2; }
-.barTrack { position: relative; height: 10px; }
-.barFill { position: absolute; left: 0; top: 0; bottom: 0; background: #2a78d6; border-radius: 0 4px 4px 0; transition: opacity .15s ease; }
-.barNum { font-size: .6rem; font-weight: 700; color: #111; text-align: right; }
-.barOn { background: #e3eefb; }
-.barOn .barLabel { font-weight: 700; color: #111; }
-.barDim .barFill { opacity: .35; }
-@media (prefers-reduced-motion: reduce) { .barFill { transition: none; } }
-
-.matrix { border-collapse: separate; border-spacing: 2px; width: 100%; font-size: .58rem; }
-.matrix th {
-  font-weight: 700;
-  font-size: .56rem;
-  color: #52514e;
-  text-align: center;
-  padding: 0 .1rem .15rem;
-  background: none;
-  border: 0;
-  text-transform: none;   /* override the global table header style */
-  letter-spacing: 0;
-}
-.matrix tbody th { text-align: left; font-weight: 400; color: #333; white-space: nowrap; }
-.matrix td { text-align: center; padding: 0; }
-.cell {
-  width: 100%;
-  min-width: 28px;
-  height: 22px;
-  border: 0;
-  border-radius: 3px;
-  font-size: .6rem;
-  font-weight: 700;
-  cursor: pointer;
-  letter-spacing: 0;
-  padding: 0;
-}
-.cell:hover, .cell:focus-visible { outline: 2px solid #0b0b0b; outline-offset: 1px; }
-.cellOn { outline: 2px solid #0b0b0b; outline-offset: 1px; }
-.cellEmpty { color: #ccc; }
-
+/* ── Hub filters ── */
 .filterBar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin-bottom: .6rem; }
 .filterBar label { display: grid; gap: .15rem; font-size: .6rem; font-weight: 700; color: #555; }
 .filterBar select {
