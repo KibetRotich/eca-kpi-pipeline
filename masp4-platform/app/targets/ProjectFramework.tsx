@@ -228,7 +228,16 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
         ) : (<>
           {/* Scorecard + selected year's 6-monthly values */}
           <div style={{ padding: '0 .9rem .5rem', overflowX: 'auto' }}>
-            <table style={{ fontSize: '.64rem', background: '#fff', minWidth: 760 }}>
+            {/* Fixed layout: Indicator takes ~a fifth of the width so the progress and % columns get the room */}
+            <table style={{ fontSize: '.64rem', background: '#fff', minWidth: 760, width: '100%', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '22%' }} />
+                <col />
+                {periods.map(p => <col key={p} />)}
+                <col /><col />
+                <col style={{ width: '15%' }} />
+                {canEdit && <col style={{ width: 48 }} />}
+              </colgroup>
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left' }}>Indicator</th>
@@ -236,8 +245,8 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
                   {periods.map(p => <th key={p} style={th}>{plab(p)}</th>)}
                   <th style={th}>End target</th>
                   <th style={th}>Progress to date</th>
-                  <th style={{ width: 120 }}>% of end target</th>
-                  {canEdit && <th style={{ width: 40 }} />}
+                  <th>% of end target</th>
+                  {canEdit && <th />}
                 </tr>
               </thead>
               <tbody>
@@ -246,7 +255,7 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
                   const yv = yearValue(i, valsOf(i.id), year)
                   return (
                     <tr key={i.id} style={{ background: ri % 2 ? '#fafafa' : '#fff', verticalAlign: 'top' }}>
-                      <td>
+                      <td style={{ overflowWrap: 'anywhere' }}>
                         <span style={{ fontSize: '.5rem', fontWeight: 800, color: '#b8a800', marginRight: 4 }}>{i.indicator_code}</span>
                         <span style={{ fontWeight: 600, color: '#333' }}>{i.indicator}</span>
                         <div style={small}>

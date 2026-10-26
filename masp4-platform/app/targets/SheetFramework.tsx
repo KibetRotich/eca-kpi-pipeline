@@ -221,7 +221,13 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
       {/* Scorecard */}
       <div style={{ ...card, overflowX: 'auto' }}>
         <div style={{ fontSize: '.62rem', fontWeight: 700, marginBottom: '.35rem' }}>Progress against end-of-project targets</div>
-        <table style={{ fontSize: '.62rem', minWidth: 720 }}>
+        {/* Fixed layout: Indicator takes ~a fifth of the width so the progress and % columns get the room */}
+        <table style={{ fontSize: '.62rem', minWidth: 720, width: '100%', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '22%' }} /><col style={{ width: '8%' }} /><col style={{ width: '11%' }} />
+            {cardPeriods.map(p => <col key={p} />)}
+            <col style={{ width: '15%' }} />
+          </colgroup>
           <thead><tr>
             <th style={{ textAlign: 'left' }}>Indicator</th><th style={{ textAlign: 'left' }}>Level</th>
             <th style={{ textAlign: 'right' }}>End target</th>
@@ -230,7 +236,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
                 Progress {annual ? 'year' : 'period'} {k + 1}<div style={{ ...small, fontWeight: 400 }}>{periodName(p)}</div>
               </th>
             ))}
-            <th style={{ textAlign: 'right', width: 120 }}>% of target</th>
+            <th style={{ textAlign: 'right' }}>% of target</th>
           </tr></thead>
           <tbody>
             {cardRows.map((s, i) => {
@@ -239,7 +245,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
               const byPe = Object.fromEntries(s.g.filter(r => r.total != null).map(r => [r.period_end, r.total as number]))
               return (
                 <tr key={s.id} style={{ background: i % 2 ? '#fafafa' : '#fff', verticalAlign: 'top' }}>
-                  <td><b>{s.id}</b> {s.indicator}
+                  <td style={{ overflowWrap: 'anywhere' }}><b>{s.id}</b> {s.indicator}
                     {s.g.some(r => r.network_kpi === 'farmers_trained') && <div style={{ ...small, color: '#2e7d32', fontWeight: 700 }}>✓ Counts toward Network KPIs: farmers trained / reached</div>}
                     {s.notes && <div style={{ ...small, color: '#8a6d00' }}>⚠ {s.notes}</div>}</td>
                   <td>{s.level}</td>
