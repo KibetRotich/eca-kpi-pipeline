@@ -214,7 +214,7 @@ function show(id){
 function build(){
   const g=DATA.global;
   document.getElementById("hdr-sub").textContent =
-    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} delivered (${g.fulfil_pct}% of 2025+ applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
+    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} delivered (${g.fulfil_pct}% of applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
   const nav=document.getElementById("nav"), main=document.getElementById("main");
 
   // Exec section first
@@ -242,7 +242,7 @@ const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
 function buildExec(){
   const sd=el("div","section"); sd.id="exec";
   sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
-  sd.appendChild(el("div","sec-desc","Live KPIs filterable by region, project and month, including delivery from the Distribution form (fulfilment counts 2025+ applications only — there were no distributions for the 2023–24 rounds). Below: regional health scorecard (RAG) and monthly executive summary."));
+  sd.appendChild(el("div","sec-desc","Live KPIs filterable by region, project and month, including delivery from the Distribution form (fulfilment counts all applications; the 2023–24 rounds had no distributions, so they count as not served). Below: regional health scorecard (RAG) and monthly executive summary."));
 
   // filters
   const fb=el("div","filters");
@@ -266,7 +266,7 @@ function buildExec(){
   // health scorecard
   const hb=el("div","block full"); hb.appendChild(el("h3",null,"Regional Health Scorecard (RAG)"));
   const cols=["region","applications","avg_seedlings","cost_per_seedling","enum_productivity","all_photos_pct"];
-  const t=el("table"); const head=el("tr"); ["Region","Applications","Fulfilment % (2025+)","Avg seedlings","UGX/seedling","Enum productivity","All-photos %"].forEach((c,i)=>head.appendChild(el("th",i>0?"num":null,c))); t.appendChild(head);
+  const t=el("table"); const head=el("tr"); ["Region","Applications","Fulfilment %","Avg seedlings","UGX/seedling","Enum productivity","All-photos %"].forEach((c,i)=>head.appendChild(el("th",i>0?"num":null,c))); t.appendChild(head);
   EX.health.sort((a,b)=>b.applications-a.applications).forEach(h=>{
     const tr=el("tr");
     tr.appendChild(el("td",null,h.region));
@@ -302,7 +302,7 @@ function applyExec(){
   [["Applications",fmt(n)],["Seedlings",fmt(seed)],["Total cost (UGX)",fmt(cost)],
    ["Seedling unit price (UGX)",seed?("UGX "+(scost/seed).toFixed(0)):"–"],
    ["Avg seedlings/farmer",n?(seed/n).toFixed(1):"–"],
-   ["Applications served",fmt(served)],["Fulfilment (2025+)",era.length?(served/era.length*100).toFixed(1)+"%":"–"],
+   ["Applications served",fmt(served)],["Fulfilment",era.length?(served/era.length*100).toFixed(1)+"%":"–"],
    ["Seedlings delivered",fmt(given)]]
    .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
 

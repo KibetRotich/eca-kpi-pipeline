@@ -186,9 +186,10 @@ def vc_block(series, title, top=None, horizontal=True, note="", axis="count"):
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION 0 — Distribution & Fulfilment (application → distribution form)
 # ════════════════════════════════════════════════════════════════════════════
-# There were no distributions for the 2023–24 application rounds, so fulfilment is
-# measured on applications from DIST_ERA onwards. "Awaiting" includes applications
-# not (yet) approved — approval happens outside Kobo.
+# Fulfilment is measured on ALL applications. There were no distributions for the
+# 2023–24 application rounds, so those count as not served; DIST_ERA only splits them
+# out in the by-year view. "Awaiting" includes applications not (yet) approved —
+# approval happens outside Kobo.
 DIST_ERA = pd.Timestamp("2025-01-01", tz="UTC")
 m["served"] = m["is_distributed"].fillna(False).astype(bool)
 m["given_n"] = num(m["seedlings_given"])
@@ -196,7 +197,7 @@ m["days_n"] = num(m["days_to_distribution"])
 m["dist_dt"] = pd.to_datetime(m["first_distributed_at"], errors="coerce", utc=True)
 m["era"] = m["sub_dt"] >= DIST_ERA
 mc = m[~m["impl"]].copy()              # re-derive so the cleaned main carries the delivery columns
-era = m[m["era"]].copy()
+era = m.copy()                         # all applications (2023–24 included, unserved)
 era["seed_clean"] = era["total_seedlings_n"].where(~era["impl"])   # implausible (>10k) excluded, as elsewhere
 NOW = pd.Timestamp.now(tz="UTC").floor("D")
 era["age_days"] = (NOW - era["sub_dt"]).dt.days
@@ -215,13 +216,15 @@ n_era, n_srv = len(era), int(era["served"].sum())
 FULFIL = n_srv / n_era * 100 if n_era else 0
 DELIVERED = int(m["given_n"].sum())
 MED_DAYS = float(era["days_n"].median()) if era["days_n"].notna().any() else None
+n_era_only, n_srv_era = int(m["era"].sum()), int(m.loc[m["era"], "served"].sum())
+FULFIL_ERA = n_srv_era / n_era_only * 100 if n_era_only else 0
 
 s = sec("s0", "0 · Distribution & Fulfilment",
         "What farmers received, joined from the Distribution form to each application. "
-        "Fulfilment = applications from 2025 onwards with a recorded delivery.")
+        "Fulfilment = share of all applications (2023 onwards) with a recorded delivery.")
 
-add(s, {"type": "kpi", "title": "Applications → distribution (2025 onwards)",
-        "cards": [{"label": "Applications (2025+)", "value": f"{n_era:,}"},
+add(s, {"type": "kpi", "title": "Applications → distribution (all applications)",
+        "cards": [{"label": "Applications (all)", "value": f"{n_era:,}"},
                   {"label": "Served (seedlings delivered)", "value": f"{n_srv:,}"},
                   {"label": "Fulfilment rate", "value": f"{FULFIL:.1f}%"},
                   {"label": "Awaiting / not approved", "value": f"{len(wait):,}"},
@@ -236,13 +239,24 @@ add(s, {"type": "kpi", "title": "Applications → distribution (2025 onwards)",
                 "not per seedling."})
 
 add(s, {"type": "note", "title": "Scope",
-        "text": f"<b>{int((~m['era']).sum()):,}</b> applications from 2023–24 are excluded from fulfilment: "
-                "no distributions took place for those rounds. <b>Awaiting</b> mixes applications not yet "
+        "text": f"Fulfilment covers all applications. The <b>{int((~m['era']).sum()):,}</b> applications from "
+                f"2023–24 are included and count as not served — no distributions took place for those rounds. "
+                f"Applications from 2025 onwards alone: <b>{FULFIL_ERA:.1f}%</b> served "
+                f"({n_srv_era:,} of {n_era_only:,}). <b>Awaiting</b> mixes applications not yet "
                 "delivered with ones that were not approved — the approved list is kept outside Kobo."})
+
+yr = (era.dropna(subset=["sub_dt"]).groupby(era["sub_dt"].dt.year)
+      .agg(n=("_id", "size"), served=("served", "sum")).sort_index())
+add(s, {"type": "stacked", "title": "Served vs awaiting, by application year",
+        "labels": [str(int(y)) for y in yr.index],
+        "series": [{"label": "served", "data": [int(x) for x in yr["served"]]},
+                   {"label": "awaiting / not approved", "data": [int(x) for x in yr["n"] - yr["served"]]}],
+        "note": " · ".join(f"{int(y)}: {r.served / r.n * 100:.1f}% served" for y, r in yr.iterrows())
+                + " — no distributions took place for the 2023–24 rounds"})
 
 reg_f = (era.groupby("region_norm").agg(served=("served", "sum"), n=("_id", "size"))
          .sort_values("n", ascending=False))
-add(s, {"type": "stacked", "title": "Served vs awaiting, by region (2025+ applications)",
+add(s, {"type": "stacked", "title": "Served vs awaiting, by region (all applications)",
         "labels": list(reg_f.index),
         "series": [{"label": "served", "data": [int(x) for x in reg_f["served"]]},
                    {"label": "awaiting / not approved", "data": [int(x) for x in reg_f["n"] - reg_f["served"]]}]})
@@ -251,13 +265,13 @@ dist_f = (era[era["district"] != ""].groupby("district")
           .agg(served=("served", "sum"), n=("_id", "size")).query("n >= 30"))
 dist_f["pct"] = dist_f["served"] / dist_f["n"] * 100
 dist_f = dist_f.sort_values("pct", ascending=False)
-add(s, {"type": "bar", "title": f"Fulfilment rate by district (% of 2025+ applications served, {len(dist_f)} districts)",
+add(s, {"type": "bar", "title": f"Fulfilment rate by district (% of all applications served, {len(dist_f)} districts)",
         "labels": list(dist_f.index), "values": [round(float(x), 1) for x in dist_f["pct"]],
         "horizontal": True, "axisLabel": "% served", "tall": True,
-        "note": "districts with at least 30 applications since 2025"})
+        "note": "districts with at least 30 applications"})
 
 coh = (era.dropna(subset=["ym"]).groupby("ym").agg(n=("_id", "size"), served=("served", "sum")).sort_index())
-add(s, {"type": "line", "title": "Applications vs served, by application month (2025+)",
+add(s, {"type": "line", "title": "Applications vs served, by application month",
         "labels": list(coh.index),
         "series": [{"label": "applications", "data": [int(x) for x in coh["n"]]},
                    {"label": "served", "data": [int(x) for x in coh["served"]]}],
@@ -266,7 +280,7 @@ add(s, {"type": "line", "title": "Applications vs served, by application month (
 ap_m = era.dropna(subset=["ym"]).groupby("ym")["seed_clean"].sum()
 dl_m = m.dropna(subset=["dist_dt"]).groupby(m["dist_dt"].dt.strftime("%Y-%m"))["given_n"].sum()
 months = sorted(set(ap_m.index) | set(dl_m.index))
-add(s, {"type": "line", "title": "Cumulative seedlings: applied for vs delivered (2025+)",
+add(s, {"type": "line", "title": "Cumulative seedlings: applied for vs delivered",
         "labels": months,
         "series": [{"label": "applied for", "data": [int(x) for x in ap_m.reindex(months, fill_value=0).cumsum()]},
                    {"label": "delivered", "data": [int(x) for x in dl_m.reindex(months, fill_value=0).cumsum()]}],
@@ -286,12 +300,14 @@ add(s, {"type": "bar", "title": "Median days to delivery, by region",
         "horizontal": True, "axisLabel": "days"})
 
 bl = (wait[wait["district"] != ""].groupby(["region_norm", "district"])
-      .agg(awaiting=("_id", "size"), over90=("age_days", lambda x: int((x > 90).sum())),
+      .agg(awaiting=("_id", "size"), pre25=("era", lambda x: int((~x).sum())),
+           over90=("age_days", lambda x: int((x > 90).sum())),
            oldest=("age_days", "max"), seedlings=("seed_clean", "sum"))
       .reset_index().sort_values("awaiting", ascending=False))
-add(s, {"type": "table", "title": "Backlog: applications awaiting delivery, by district (2025+)",
-        "columns": ["region", "district", "awaiting", "waiting >90 days", "oldest (days)", "seedlings applied for"],
-        "rows": [[r.region_norm, r.district, int(r.awaiting), int(r.over90), int(r.oldest),
+add(s, {"type": "table", "title": "Backlog: applications awaiting delivery, by district",
+        "columns": ["region", "district", "awaiting", "of which 2023–24", "waiting >90 days", "oldest (days)",
+                    "seedlings applied for"],
+        "rows": [[r.region_norm, r.district, int(r.awaiting), int(r.pre25), int(r.over90), int(r.oldest),
                   int(r.seedlings) if not pd.isna(r.seedlings) else 0] for r in bl.head(30).itertuples()],
         "note": f"{len(bl)} districts with applications awaiting; top 30 shown. Includes applications not approved."})
 
@@ -307,7 +323,7 @@ sp["status"] = np.where(sp["_id"].isin(srv_ids), "served", "awaiting")
 sp_s = sp.pivot_table(index="advance_item", columns="status", values="qty", aggfunc="sum", fill_value=0)
 sp_s = sp_s.reindex(columns=["served", "awaiting"], fill_value=0)
 sp_s = sp_s.loc[sp_s.sum(axis=1).sort_values(ascending=False).index]
-add(s, {"type": "stacked", "title": "Species in served vs awaiting applications (seedlings, 2025+)",
+add(s, {"type": "stacked", "title": "Species in served vs awaiting applications (seedlings)",
         "labels": list(sp_s.index),
         "series": [{"label": c, "data": [int(x) for x in sp_s[c]]} for c in sp_s.columns],
         "note": "estimated from the species applied for — the Distribution form records totals only, not species"})
@@ -319,7 +335,7 @@ ev_pts = evr[pd.to_numeric(evr["lat"], errors="coerce").between(*UG_LAT)
              & pd.to_numeric(evr["lon"], errors="coerce").between(*UG_LON)]
 ax.scatter(pd.to_numeric(ev_pts["lon"]), pd.to_numeric(ev_pts["lat"]), s=6, alpha=0.5,
            color="#e65100", label="distribution event")
-ax.set_title("Applications (2025+) and distribution events"); ax.set_xlabel("Longitude"); ax.set_ylabel("Latitude")
+ax.set_title("Applications and distribution events"); ax.set_xlabel("Longitude"); ax.set_ylabel("Latitude")
 ax.legend(markerscale=4, fontsize=8, loc="upper right"); ax.grid(alpha=0.3)
 add(s, {"type": "image", "title": "Where seedlings were requested vs delivered (GPS)", "src": b64fig(fig)})
 
@@ -405,7 +421,7 @@ add(s, {"type": "choropleth",
                     {"key": "seedlings", "label": "Seedlings"},
                     {"key": "disbursed", "label": "Disbursed (UGX)"},
                     {"key": "served", "label": "Applications served"},
-                    {"key": "fulfilment", "label": "Fulfilment % (2025+)"}],
+                    {"key": "fulfilment", "label": "Fulfilment % (all applications)"}],
         "note": ("Uganda district boundaries: geoBoundaries gbHumanitarian ADM2. "
                  + (f"Unmatched data districts (excluded from the map): {', '.join(unmatched)}."
                     if unmatched else "All data districts matched to a boundary."))})
@@ -797,7 +813,7 @@ EXEC = {
     "records": records,
     "fields": ["region", "district", "project", "ym", "seedlings", "cost", "coop_type", "seedlings_cost",
                "served", "given"],
-    "dist_era": DIST_ERA.strftime("%Y-%m"),
+    "dist_era": "0000-00",           # fulfilment counts all applications
     "regions": sorted(rec["region_norm"].unique().tolist()),
     "projects": sorted(rec["proj"].unique().tolist()),
     "months": sorted(rec["ym"].unique().tolist()),
