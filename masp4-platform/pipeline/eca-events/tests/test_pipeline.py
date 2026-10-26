@@ -282,3 +282,13 @@ def test_commodity_backfilled_from_single_project_value():
     # conflicting (b) or none recorded (c) -> left blank
     assert df.loc[4, "project_commodity_category_label"] == "" and not df.loc[4, "commodity_inferred"]
     assert df.loc[5, "project_commodity_category_label"] == ""
+
+
+def test_commodity_override_for_never_recorded_project():
+    cols = ["project_commodity_category", "project_commodity_category_label",
+            "project_commodity_specific", "project_commodity_specific_label"]
+    df = pd.DataFrame([dict(project="save_ke", real_test="real", **dict(zip(cols, [None, "", None, ""])))])
+    _backfill_commodity(df)
+    assert df.loc[0, "project_commodity_category"] == "crop"
+    assert df.loc[0, "project_commodity_specific"] == "fruits_vegetables"
+    assert df.loc[0, "commodity_inferred"]

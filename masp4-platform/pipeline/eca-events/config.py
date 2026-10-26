@@ -64,6 +64,15 @@ REAL_TEST_FIELD = "real_test"
 # Records collected before this field existed have no value -> treated as REAL.
 REAL_TEST_MISSING_IS_REAL = True
 
+
+# Commodity for projects that have never recorded one on the form (confirmed by
+# M&E, 2026-10-26). Codes from the form's commodity choice lists. Projects that
+# have recorded a single commodity are backfilled from their own data instead.
+PROJECT_COMMODITY_OVERRIDES = {
+    "save_ke": ("crop", "fruits_vegetables"),
+    "acting_now_ke": ("crop", "fruits_vegetables"),
+}
+
 # ── Country-conditional administrative-level labels ───────────────────────────
 # Used as a fallback when the form's calculated ``admin_level_N_title`` fields
 # are absent (older versions). When present in the data, those calc values win.

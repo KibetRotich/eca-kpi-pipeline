@@ -24,6 +24,7 @@ from config import (
     ADMIN_LEVELS,
     DEFAULT_ADMIN_LEVELS,
     MULTISELECT_FIELDS,
+    PROJECT_COMMODITY_OVERRIDES,
     REAL_TEST_FIELD,
     REAL_TEST_MISSING_IS_REAL,
     YOUTH_MAX_AGE,
@@ -71,13 +72,14 @@ _COMMODITY_COLS = ["project_commodity_category", "project_commodity_category_lab
                    "project_commodity_specific", "project_commodity_specific_label"]
 
 
-def _backfill_commodity(df: pd.DataFrame) -> None:
+def _backfill_commodity(df: pd.DataFrame, decoder: Decoder | None = None) -> None:
     """Fill blank commodity fields from the project's own recorded commodity.
 
     The commodity questions were added to the form in late 2025, so earlier
     submissions leave them blank. A project whose real records carry exactly ONE
     commodity (category + specific) gets that value on its blank rows; projects
-    with none recorded, or with conflicting values, stay blank (Unspecified).
+    with conflicting values stay blank (Unspecified); projects with none recorded
+    take PROJECT_COMMODITY_OVERRIDES (confirmed by M&E) when listed there.
     """
     blank = lambda s: s.isna() | s.astype("string").str.strip().fillna("").eq("")
     has = ~blank(df["project_commodity_category"])
@@ -88,7 +90,15 @@ def _backfill_commodity(df: pd.DataFrame) -> None:
     fill = blank(df["project_commodity_category"]) & df["project"].isin(single.index)
     for col in _COMMODITY_COLS:
         df.loc[fill, col] = df.loc[fill, "project"].map(single[col])
-    df["commodity_inferred"] = fill
+    left = blank(df["project_commodity_category"]) & df["project"].isin(PROJECT_COMMODITY_OVERRIDES)
+    decoder = decoder or get_decoder()
+    for proj, (cat, spec) in PROJECT_COMMODITY_OVERRIDES.items():
+        rows = left & df["project"].eq(proj)
+        df.loc[rows, "project_commodity_category"] = cat
+        df.loc[rows, "project_commodity_category_label"] = decoder.label("project_commodity_category", cat)
+        df.loc[rows, "project_commodity_specific"] = spec
+        df.loc[rows, "project_commodity_specific_label"] = decoder.label("project_commodity_specific", spec)
+    df["commodity_inferred"] = fill | left
 
 def enrich_events(events: pd.DataFrame, decoder: Decoder | None = None) -> pd.DataFrame:
     decoder = decoder or get_decoder()
@@ -123,7 +133,7 @@ def enrich_events(events: pd.DataFrame, decoder: Decoder | None = None) -> pd.Da
     # -- decode coded fields ---------------------------------------------------
     for field in _CODED_EVENT_FIELDS:
         df[f"{field}_label"] = df[field].map(lambda c, f=field: decoder.label(f, c))
-    _backfill_commodity(df)
+    _backfill_commodity(df, decoder)
 
     # -- dates -----------------------------------------------------------------
     df["training_date"] = pd.to_datetime(df["training_date"], errors="coerce")
