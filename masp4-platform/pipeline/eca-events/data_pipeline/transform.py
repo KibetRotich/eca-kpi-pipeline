@@ -67,6 +67,29 @@ def _split_codes(value) -> list[str]:
 
 # ── Event transforms ──────────────────────────────────────────────────────────
 
+_COMMODITY_COLS = ["project_commodity_category", "project_commodity_category_label",
+                   "project_commodity_specific", "project_commodity_specific_label"]
+
+
+def _backfill_commodity(df: pd.DataFrame) -> None:
+    """Fill blank commodity fields from the project's own recorded commodity.
+
+    The commodity questions were added to the form in late 2025, so earlier
+    submissions leave them blank. A project whose real records carry exactly ONE
+    commodity (category + specific) gets that value on its blank rows; projects
+    with none recorded, or with conflicting values, stay blank (Unspecified).
+    """
+    blank = lambda s: s.isna() | s.astype("string").str.strip().fillna("").eq("")
+    has = ~blank(df["project_commodity_category"])
+    if REAL_TEST_FIELD in df.columns:
+        has &= ~df[REAL_TEST_FIELD].astype("string").str.strip().str.lower().eq("test").fillna(False)
+    known = df.loc[has & ~blank(df["project"]), ["project"] + _COMMODITY_COLS].drop_duplicates()
+    single = known.groupby("project").filter(lambda g: len(g) == 1).set_index("project")
+    fill = blank(df["project_commodity_category"]) & df["project"].isin(single.index)
+    for col in _COMMODITY_COLS:
+        df.loc[fill, col] = df.loc[fill, "project"].map(single[col])
+    df["commodity_inferred"] = fill
+
 def enrich_events(events: pd.DataFrame, decoder: Decoder | None = None) -> pd.DataFrame:
     decoder = decoder or get_decoder()
     df = events.copy()
@@ -100,6 +123,7 @@ def enrich_events(events: pd.DataFrame, decoder: Decoder | None = None) -> pd.Da
     # -- decode coded fields ---------------------------------------------------
     for field in _CODED_EVENT_FIELDS:
         df[f"{field}_label"] = df[field].map(lambda c, f=field: decoder.label(f, c))
+    _backfill_commodity(df)
 
     # -- dates -----------------------------------------------------------------
     df["training_date"] = pd.to_datetime(df["training_date"], errors="coerce")

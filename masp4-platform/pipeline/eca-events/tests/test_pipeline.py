@@ -16,6 +16,7 @@ import pytest
 from data_pipeline.decode import Decoder, humanize
 from data_pipeline.flatten import canonical_name, flatten_submissions
 from data_pipeline.transform import (
+    _backfill_commodity,
     enrich_events,
     enrich_participants,
     explode_multiselect,
@@ -266,3 +267,18 @@ def test_participant_youth_flag(old_submission):
     above = parts[parts["age_group"] == "above_35"]
     assert below["is_youth"].all()
     assert not above["is_youth"].any()
+
+
+def test_commodity_backfilled_from_single_project_value():
+    cols = ["project_commodity_category", "project_commodity_category_label",
+            "project_commodity_specific", "project_commodity_specific_label"]
+    rows = [("a", ["crop", "Crop", "coffee", "Coffee"]), ("a", [None, "", None, ""]),
+            ("b", ["crop", "Crop", "maize", "Maize"]), ("b", ["dairy", "Dairy", "dairy", "Dairy"]),
+            ("b", [None, "", None, ""]), ("c", [None, "", None, ""])]
+    df = pd.DataFrame([dict(project=p, real_test="real", **dict(zip(cols, v))) for p, v in rows])
+    _backfill_commodity(df)
+    # single recorded commodity -> filled and flagged
+    assert df.loc[1, "project_commodity_specific_label"] == "Coffee" and df.loc[1, "commodity_inferred"]
+    # conflicting (b) or none recorded (c) -> left blank
+    assert df.loc[4, "project_commodity_category_label"] == "" and not df.loc[4, "commodity_inferred"]
+    assert df.loc[5, "project_commodity_category_label"] == ""

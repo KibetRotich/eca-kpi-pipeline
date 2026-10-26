@@ -43,6 +43,8 @@ export default async function DataQualityPage(
               it is captured as individual records ({d.reconciliation.individualRecords.toLocaleString()}), which are then deduplicated.</li>
             <li><strong>% female / % youth</strong> are of reported reach. Youth = ≤35 years.</li>
             <li>Unique-farmer counts are approximate where identity rests on typed names rather than a farmer ID.</li>
+            <li><strong>Commodity</strong> was added to the form in late 2025. Earlier events take the commodity their
+              project has recorded since; projects that have never recorded one (SAVE KE, Acting Now KE) show as Unspecified.</li>
             <li>Admin-2 and organisation names are free text, so spellings vary.</li>
             <li>No personal data is shown: the dashboard reads only PII-free views.</li>
             <li>Source: KoboToolbox form <code>aCt5s6EGUnE7UxJVeuXjpY</code>, refreshed every 3 hours (time shown in the header).</li>
