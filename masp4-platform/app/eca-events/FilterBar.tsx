@@ -26,7 +26,6 @@ export default function FilterBar({ options }: { options: FilterOptions }) {
   const country = get('country')
   const admin1 = get('admin1')
   const a1Opts = country ? (options.admin1ByCountry[country] ?? []) : []
-  const a2Opts = admin1 ? (options.admin2ByAdmin1[admin1] ?? []) : []
   const hasFilter = ['from', 'to', 'country', 'admin1', 'admin2', 'project', 'commodity',
     'eventType', 'trainingType', 'includeTest'].some(k => get(k))
 
@@ -58,18 +57,9 @@ export default function FilterBar({ options }: { options: FilterOptions }) {
       </div>
       {/* Cascade: changing country/admin1 clears the dependent level(s). */}
       <Select k="country" label="Country" opts={options.countries} extra={{ admin1: '', admin2: '' }} />
-      <Select k="admin1" label="Admin 1" opts={a1Opts} extra={{ admin2: '' }} />
-      <Select k="admin2" label="Admin 2" opts={a2Opts} />
+      <Select k="admin1" label="Admin 1" opts={a1Opts} />
       <Select k="project" label="Project" opts={options.projects} />
       <Select k="commodity" label="Commodity" opts={options.commodities} />
-      <Select k="eventType" label="Event type" opts={options.eventTypes} />
-      <Select k="trainingType" label="Training type" opts={options.trainingTypes} />
-
-      <label style={{ display: 'flex', alignItems: 'center', gap: '.3rem', fontSize: '.62rem', color: '#555', fontWeight: 600 }}>
-        <input type="checkbox" checked={get('includeTest') === '1'}
-          onChange={e => set({ includeTest: e.target.checked ? '1' : '' })} />
-        Include test records
-      </label>
 
       {hasFilter && (
         <button className="btn-secondary" style={{ marginLeft: 'auto' }}

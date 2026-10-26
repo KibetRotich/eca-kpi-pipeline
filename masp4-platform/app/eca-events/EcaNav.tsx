@@ -2,20 +2,15 @@
 
 import { usePathname, useSearchParams } from 'next/navigation'
 
-// Tab order = the dashboard priority order.
+// Tab order = the dashboard priority order (management view).
 const TABS = [
   { href: '/eca-events', label: 'Overview' },
-  { href: '/eca-events/geography', label: 'Geography' },
-  { href: '/eca-events/gender-youth', label: 'Gender & Youth' },
-  { href: '/eca-events/projects', label: 'Projects & Commodities' },
-  { href: '/eca-events/curriculum', label: 'Curriculum' },
-  { href: '/eca-events/beneficiaries', label: 'Beneficiaries' },
-  { href: '/eca-events/facilitators', label: 'Facilitators' },
+  { href: '/eca-events/where-who', label: 'Where & Who' },
+  { href: '/eca-events/delivery', label: 'What Was Delivered' },
   { href: '/eca-events/farmers', label: 'Farmer Depth' },
-  { href: '/eca-events/data-quality', label: 'Data Quality' },
-  { href: '/eca-events/time-planning', label: 'Time & Planning' },
-  { href: '/eca-events/dictionary', label: 'Data Dictionary' },
 ]
+// M&E detail, kept out of the main tab row.
+const DQ = { href: '/eca-events/data-quality', label: 'Data quality & notes →' }
 
 export default function EcaNav() {
   const pathname = usePathname()
@@ -38,6 +33,10 @@ export default function EcaNav() {
           }}>{t.label}</a>
         )
       })}
+      <a href={DQ.href + suffix} style={{
+        marginLeft: 'auto', alignSelf: 'center', fontSize: '.6rem', fontWeight: 600,
+        color: pathname === DQ.href ? '#111' : '#888', textDecoration: pathname === DQ.href ? 'none' : 'underline',
+      }}>{DQ.label}</a>
     </div>
   )
 }

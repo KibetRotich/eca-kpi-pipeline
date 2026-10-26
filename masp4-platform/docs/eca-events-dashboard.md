@@ -12,11 +12,13 @@ Kobo ──(MCP interactive │ REST cron)──► pipeline/eca-events ──�
 ```
 
 ## Pages (`app/eca-events/`)
-Overview · Geography · Gender & Youth · Projects & Commodities · Curriculum ·
-Beneficiary Segments · Facilitators · Farmer Depth · Data Quality & M&E ·
-Time & Planning · Data Dictionary. A persistent filter bar (date range,
-country→admin1→admin2 cascade, project/commodity, event/training type,
-include-test toggle) applies across every page via URL params, and an **Export
+Management view (slimmed 2026-10-26 from 11 tabs): Overview · Where & Who ·
+What Was Delivered · Farmer Depth, plus a "Data quality & notes" link (M&E
+detail + condensed methodology). Old tab URLs redirect (`next.config.ts`). A
+persistent filter bar (date range, country→admin1 cascade, project/commodity)
+applies across every page via URL params; test records are always excluded
+(admin2 / event-type / training-type / includeTest URL params still work but
+have no controls), and an **Export
 CSV** button downloads the currently-filtered (PII-free) events.
 
 ## Architecture

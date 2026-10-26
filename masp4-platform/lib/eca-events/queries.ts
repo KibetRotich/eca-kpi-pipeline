@@ -398,32 +398,6 @@ export async function getDataQuality(f: Filters) {
   }
 }
 
-// ── j) Time & Planning ────────────────────────────────────────────────────────
-
-export async function getTimePlanning(f: Filters) {
-  const rows = await fetchAll('v_eca_events_safe',
-    'month,year,training_date,next_training_date,project_label,project_commodity_category_label', f)
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-  const season = new Array(12).fill(0)
-  const cadence = new Map<string, number>()
-  const upcoming: { date: string; project: string; commodity: string }[] = []
-  const today = new Date().toISOString().slice(0, 10)
-  for (const r of rows) {
-    if (r.training_date) { const mo = Number(r.training_date.slice(5, 7)) - 1; if (mo >= 0 && mo < 12) season[mo]++ }
-    if (r.month) cadence.set(r.month, (cadence.get(r.month) ?? 0) + 1)
-    if (r.next_training_date && r.next_training_date >= today)
-      upcoming.push({ date: r.next_training_date, project: r.project_label || '—', commodity: r.project_commodity_category_label || '—' })
-  }
-  upcoming.sort((a, b) => a.date.localeCompare(b.date))
-  return {
-    seasonality: MONTHS.map((m, i) => ({ month: m, events: season[i] })),
-    cadence: Array.from(cadence.entries()).sort().map(([month, events]) => ({ month, events })),
-    upcoming: upcoming.slice(0, 50),
-    upcomingCount: upcoming.length,
-    totalEvents: rows.length,
-  }
-}
-
 /** Last data refresh (from eca_sync_meta). */
 export async function getSyncMeta() {
   const { data } = await supabase
