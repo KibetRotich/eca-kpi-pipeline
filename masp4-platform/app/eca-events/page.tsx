@@ -1,10 +1,10 @@
 /**
  * Overview (management view) — headline KPIs, reach/events trend, female/youth
- * share and the project league table. Reads the PII-free Supabase views via
+ * share, reach by commodity and the project league table. Reads the PII-free Supabase views via
  * the query layer.
  */
 import { parseFilters, getOverview, getProjects, getFarmerDepth, getGenderYouth } from '@/lib/eca-events/queries'
-import { Kpi, Card, LineChart, Caption } from './charts'
+import { Kpi, Card, BarChart, LineChart, Caption } from './charts'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +33,7 @@ export default async function OverviewPage(
         recorded individually, deduplicated — see the Farmer Depth tab. Demographic %s are of reported reach.
       </Caption>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', gap: '.7rem', marginTop: '.8rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '.7rem', marginTop: '.8rem' }}>
         <Card title="Reach & events by month" height={240}
           note={`Monthly reported reach and event count. n=${o.totalEvents.toLocaleString()} events.`}>
           <LineChart labels={months} series={[
@@ -48,6 +48,11 @@ export default async function OverviewPage(
             { label: '% Female', data: gy.byMonth.map(m => m.pctFemale ?? 0), color: '#FFC800' },
             { label: '% Youth', data: gy.byMonth.map(m => m.pctYouth ?? 0), color: '#111' },
           ]} />
+        </Card>
+
+        <Card title="Reach by commodity" height={240}
+          note="Reported reach by commodity. Events from before late 2025 take their project's commodity (see Data quality & notes).">
+          <BarChart horizontal labels={p.byCommodity.map(c => c.commodity)} series={[{ label: 'Reach', data: p.byCommodity.map(c => c.reach) }]} />
         </Card>
       </div>
 

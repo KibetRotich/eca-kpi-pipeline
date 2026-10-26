@@ -227,7 +227,7 @@ export async function getGenderYouth(f: Filters) {
 
 export async function getProjects(f: Filters) {
   const rows = await fetchAll('v_eca_events_safe',
-    'project_label,project_commodity_category_label,country_label,total_participants,female_participants,youth_participants', f)
+    'project_label,project_commodity_category_label,project_commodity_specific_label,country_label,total_participants,female_participants,youth_participants', f)
   const pj = new Map<string, { events: number; reach: number; female: number; youth: number; countries: Set<string> }>()
   const cm = new Map<string, { events: number; reach: number }>()
   for (const r of rows) {
@@ -236,7 +236,7 @@ export async function getProjects(f: Filters) {
     const e = pj.get(p) ?? { events: 0, reach: 0, female: 0, youth: 0, countries: new Set() }
     e.events++; e.reach += t; e.female += num(r.female_participants); e.youth += num(r.youth_participants)
     if (r.country_label) e.countries.add(r.country_label); pj.set(p, e)
-    const c = r.project_commodity_category_label || 'Unspecified'
+    const c = r.project_commodity_specific_label || r.project_commodity_category_label || 'Unspecified'
     const cc = cm.get(c) ?? { events: 0, reach: 0 }; cc.events++; cc.reach += t; cm.set(c, cc)
   }
   return {
