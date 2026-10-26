@@ -136,14 +136,14 @@
 @media (max-width: 479px) { .charts { grid-template-columns: 1fr; } }
 .chart {
   margin: 0;
-  border: 1px solid #eee;
+  border: 2px solid #f2b600;     /* yellow chart boundary */
   border-radius: 6px;
   padding: .6rem .75rem .55rem;
   background: #fcfcfb;
   --c-before: #111111;          /* earlier measurement: deep black */
   --c-after: #f2b600;           /* later measurement: deep yellow (outlined in black for contrast) */
   --c-line: #111111;            /* connectors, target / reference lines and axis baseline */
-  --c-bar: #2a78d6;             /* single-value bars */
+  --c-bar: #f2b600;             /* single-value bars: deep yellow */
 }
 .chart figcaption { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; margin-bottom: .35rem; }
 .chartTitle { font-size: .7rem; font-weight: 700; color: #111; }
