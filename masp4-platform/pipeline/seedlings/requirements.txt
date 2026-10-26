@@ -1,5 +1,5 @@
 # Dependencies for the UG Tree Seedlings dashboard pipeline
-# (fetch_seedlings_json.py + build_dashboard.py)
+# (fetch_seedlings_json.py → transform.py → load_supabase.py → build_dashboard.py)
 httpx
 pandas
 numpy

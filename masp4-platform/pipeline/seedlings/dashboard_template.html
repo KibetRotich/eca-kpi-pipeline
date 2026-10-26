@@ -214,7 +214,7 @@ function show(id){
 function build(){
   const g=DATA.global;
   document.getElementById("hdr-sub").textContent =
-    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
+    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} delivered (${g.fulfil_pct}% of 2025+ applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
   const nav=document.getElementById("nav"), main=document.getElementById("main");
 
   // Exec section first
@@ -229,7 +229,7 @@ function build(){
     const grid=el("div","grid");
     sc.blocks.forEach(b=>grid.appendChild(renderBlock(b)));
     sd.appendChild(grid);
-    sd.appendChild(el("div","footer","Source: KoBoToolbox form a5rJdqQGuy2DtTXvEx3cpq · implausible quantities (>10k) excluded from all totals."));
+    sd.appendChild(el("div","footer","Source: KoBoToolbox forms a5rJdqQGuy2DtTXvEx3cpq (applications) + aGXzNqEgZhjXazLmLPVpMn (distribution), via Supabase · implausible quantities (>10k) excluded from all totals."));
     main.appendChild(sd);
   });
   show("exec");
@@ -242,7 +242,7 @@ const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
 function buildExec(){
   const sd=el("div","section"); sd.id="exec";
   sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
-  sd.appendChild(el("div","sec-desc","Live KPIs filterable by region, project and month. Below: regional health scorecard (RAG) and monthly executive summary."));
+  sd.appendChild(el("div","sec-desc","Live KPIs filterable by region, project and month, including delivery from the Distribution form (fulfilment counts 2025+ applications only — there were no distributions for the 2023–24 rounds). Below: regional health scorecard (RAG) and monthly executive summary."));
 
   // filters
   const fb=el("div","filters");
@@ -266,11 +266,12 @@ function buildExec(){
   // health scorecard
   const hb=el("div","block full"); hb.appendChild(el("h3",null,"Regional Health Scorecard (RAG)"));
   const cols=["region","applications","avg_seedlings","cost_per_seedling","enum_productivity","all_photos_pct"];
-  const t=el("table"); const head=el("tr"); ["Region","Applications","Avg seedlings","UGX/seedling","Enum productivity","All-photos %"].forEach((c,i)=>head.appendChild(el("th",i>0?"num":null,c))); t.appendChild(head);
+  const t=el("table"); const head=el("tr"); ["Region","Applications","Fulfilment % (2025+)","Avg seedlings","UGX/seedling","Enum productivity","All-photos %"].forEach((c,i)=>head.appendChild(el("th",i>0?"num":null,c))); t.appendChild(head);
   EX.health.sort((a,b)=>b.applications-a.applications).forEach(h=>{
     const tr=el("tr");
     tr.appendChild(el("td",null,h.region));
     tr.appendChild(el("td","num",fmt(h.applications)));
+    tr.appendChild(el("td","num "+(h.fulfil_pct==null?"":h.fulfil_pct<50?"rag-r":h.fulfil_pct<75?"rag-a":"rag-g"),h.fulfil_pct==null?"–":h.fulfil_pct+"%"));
     tr.appendChild(el("td","num",h.avg_seedlings));
     const cps=el("td","num "+(h.cost_per_seedling>1100?"rag-r":h.cost_per_seedling>1010?"rag-a":"rag-g"),fmt(h.cost_per_seedling)); tr.appendChild(cps);
     tr.appendChild(el("td","num",h.enum_productivity));
@@ -281,7 +282,7 @@ function buildExec(){
 
   // monthly exec summary
   const mb=el("div","block full"); mb.appendChild(el("h3",null,"Monthly Executive Summary"));
-  mb.appendChild(buildTable(["Month","Applications","Seedlings","Disbursed (UGX)"],EX.monthly));
+  mb.appendChild(buildTable(["Month","Applications","Seedlings","Disbursed (UGX)","Served","Seedlings delivered"],EX.monthly));
   sd.appendChild(mb);
 
   setTimeout(()=>{["f-region","f-project","f-from","f-to"].forEach(i=>document.getElementById(i).onchange=applyExec); applyExec();},0);
@@ -295,10 +296,14 @@ function applyExec(){
   const rows=EX.records.filter(x=>(!r||x[IDX.region]==r)&&(!p||x[IDX.project]==p)&&(!from||x[IDX.ym]>=from)&&(!to||x[IDX.ym]<=to));
   const n=rows.length, seed=rows.reduce((a,x)=>a+x[IDX.seedlings],0), cost=rows.reduce((a,x)=>a+x[IDX.cost],0),
         scost=rows.reduce((a,x)=>a+x[IDX.seedlings_cost],0);
+  const era=rows.filter(x=>x[IDX.ym]>=EX.dist_era), served=era.reduce((a,x)=>a+x[IDX.served],0),
+        given=rows.reduce((a,x)=>a+x[IDX.given],0);
   const kc=document.getElementById("exec-kpis"); kc.innerHTML="";
   [["Applications",fmt(n)],["Seedlings",fmt(seed)],["Total cost (UGX)",fmt(cost)],
    ["Seedling unit price (UGX)",seed?("UGX "+(scost/seed).toFixed(0)):"–"],
-   ["Avg seedlings/farmer",n?(seed/n).toFixed(1):"–"]]
+   ["Avg seedlings/farmer",n?(seed/n).toFixed(1):"–"],
+   ["Applications served",fmt(served)],["Fulfilment (2025+)",era.length?(served/era.length*100).toFixed(1)+"%":"–"],
+   ["Seedlings delivered",fmt(given)]]
    .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
 
   const byReg={}, byMon={};

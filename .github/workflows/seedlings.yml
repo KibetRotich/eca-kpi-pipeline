@@ -1,9 +1,11 @@
 name: Seedlings Dashboard Refresh
 
 # Keeps masp4-platform/public/Seedlings_Dashboard.html (served at
-# /Seedlings_Dashboard.html) in sync with the live Kobo form. Re-pulls ALL
-# submissions from KoBoToolbox and rebuilds the self-contained dashboard, then
-# commits it — which triggers a Vercel deploy of ecadata.solidaridadnetwork.org.
+# /Seedlings_Dashboard.html) in sync with the live Kobo forms. Pipeline (Supabase is
+# the source of truth, Sprint 47):
+#   Kobo API (Application + Distribution) → transform (join + served flags) →
+#   Supabase ug_seed_* tables → dashboard built FROM Supabase → commit → Vercel
+#   deploy of ecadata.solidaridadnetwork.org.
 #
 # MIGRATED from solidaridad-eca/masp4-platform (2026-08-14). This repo is the one
 # Vercel actually deploys from, so the rebuilt dashboard now reaches production
@@ -17,9 +19,12 @@ name: Seedlings Dashboard Refresh
 #   2. On push to the pipeline source files (rebuild after a code change)
 #   3. Manual run from the Actions tab (Actions → Run workflow)
 #
-# Required secret:  KOBO_TOKEN  (Settings → Secrets and variables → Actions)
-#   KoBoToolbox API token for the form (UID a5rJdqQGuy2DtTXvEx3cpq).
-#   Until it is set, the job skips cleanly (green) instead of failing nightly.
+# Required secrets (Settings → Secrets and variables → Actions):
+#   KOBO_TOKEN                    KoBoToolbox token with access to a5rJdqQGuy2DtTXvEx3cpq
+#                                 (application) and aGXzNqEgZhjXazLmLPVpMn (distribution)
+#   NEXT_PUBLIC_SUPABASE_URL      Supabase project URL (MASPIV_Platform)
+#   SUPABASE_SERVICE_ROLE_KEY     Supabase service role key (server-side only)
+#   Until all three are set, the job skips cleanly (green) instead of failing nightly.
 on:
   schedule:
     - cron: "0 3 * * *"      # 03:00 UTC daily
@@ -35,26 +40,28 @@ concurrency:
 
 jobs:
   refresh:
-    name: Fetch Kobo data → rebuild dashboard
+    name: Fetch Kobo → Supabase → rebuild dashboard
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
     env:
       KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      # Gate the job on the secret being present so pushes don't fail before it is
-      # configured. Secrets can't be used in a job-level `if`, so steps are gated
+      # Gate the job on the secrets being present so pushes don't fail before they
+      # are configured. Secrets can't be used in a job-level `if`, so steps are gated
       # on this output instead. No working-directory here: this runs before
       # checkout, when masp4-platform/ does not yet exist.
       - name: Check required secrets
         id: check
         run: |
-          if [ -n "$KOBO_TOKEN" ]; then
+          if [ -n "$KOBO_TOKEN" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::Seedlings refresh skipped — KOBO_TOKEN not set."
+            echo "::notice::Seedlings refresh skipped — KOBO_TOKEN / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not all set."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -75,23 +82,36 @@ jobs:
         working-directory: masp4-platform
         run: pip install -r pipeline/seedlings/requirements.txt
 
-      # 1. Pull every submission into pipeline/seedlings/seedlings_*.csv
-      #    (gitignored — rebuilt every run, never committed)
+      # 1. Pull every application + distribution submission (PII stripped) into
+      #    pipeline/seedlings/seedlings_*.csv (gitignored — rebuilt every run)
       - name: Fetch Kobo submissions
         if: steps.check.outputs.ready == 'true'
         working-directory: masp4-platform
         run: python pipeline/seedlings/fetch_seedlings_json.py
 
-      # 2. Rebuild the dashboard into masp4-platform/public/. Species & district
-      #    lists are data-driven, so new species / districts flow through
-      #    automatically. Any district name that fails to match a boundary is
-      #    printed here.
+      # 2. Join distribution → application, derive served / repeat / legacy flags
+      #    -> clean_*.json
+      - name: Transform
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/seedlings/transform.py
+
+      # 3. Upsert into Supabase ug_seed_* tables and prune rows deleted in Kobo
+      - name: Load Supabase
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/seedlings/load_supabase.py
+
+      # 4. Rebuild the dashboard into masp4-platform/public/ reading FROM Supabase.
+      #    Species & district lists are data-driven, so new species / districts
+      #    flow through automatically. Any district name that fails to match a
+      #    boundary is printed here.
       - name: Rebuild dashboard
         if: steps.check.outputs.ready == 'true'
         working-directory: masp4-platform
         run: python pipeline/seedlings/build_dashboard.py
 
-      # 3. Commit the regenerated dashboard. Only commits when the file actually
+      # 5. Commit the regenerated dashboard. Only commits when the file actually
       #    changed (quiet days → no commit/deploy). Rebase-and-retry on push so a
       #    concurrent commit to main (e.g. the ETL run) doesn't fail the run with a
       #    non-fast-forward. The push triggers Vercel to redeploy the platform.

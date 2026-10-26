@@ -1,5 +1,10 @@
 """Build a single self-contained interactive HTML dashboard for the UG Tree
-Seedlings Request dataset (NPL & REAP), covering all 9 insight sections.
+Seedlings Request dataset (NPL & REAP), covering all 9 insight sections plus
+Distribution & Fulfilment (application → distribution).
+
+Reads the ug_seed_* tables from Supabase (loaded nightly by load_supabase.py), so
+Supabase is the single source of truth: the application↔distribution join and the
+served / repeat / legacy flags come from transform.py via the database.
 
 Computation is done in pandas; results are emitted as a JSON blob of typed
 "blocks" rendered client-side by generic JS + Chart.js. The Executive section
@@ -8,7 +13,8 @@ maps are matplotlib PNGs embedded as base64.
 
 Output: <repo>/public/Seedlings_Dashboard.html  (served by Next.js at /Seedlings_Dashboard.html)
 """
-import os, io, json, base64, html, re
+import os, io, sys, json, base64, html, re
+import httpx
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -19,7 +25,8 @@ import matplotlib.pyplot as plt
 # in CI. HERE = pipeline/seedlings; REPO_ROOT = the masp4-platform repo root.
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-DDIR = os.environ.get("SEEDLINGS_DATA_DIR", HERE)   # where the fetched CSVs live
+sys.path.insert(0, HERE)
+from load_supabase import _load_env, select_all  # noqa: E402  (same env + paging helpers)
 OUT_HTML = os.environ.get("SEEDLINGS_OUT",
                           os.path.join(REPO_ROOT, "public", "Seedlings_Dashboard.html"))
 os.makedirs(os.path.dirname(OUT_HTML), exist_ok=True)
@@ -67,13 +74,36 @@ def to_native(o):
     return o
 
 
-# ── Load & clean ──────────────────────────────────────────────────────────────
-print("Loading...")
-m = pd.read_csv(os.path.join(DDIR, "seedlings_main.csv"), dtype=str, keep_default_na=False)
-it = pd.read_csv(os.path.join(DDIR, "seedlings_items.csv"), dtype=str, keep_default_na=False)
+# ── Load from Supabase ────────────────────────────────────────────────────────
+# Supabase is the single source of truth (loaded nightly by load_supabase.py);
+# columns are renamed back to the Kobo field names the sections below use.
+print("Loading from Supabase...")
+url, key = _load_env()
+with httpx.Client(timeout=180) as c:
+    m = pd.DataFrame(select_all(c, url, key, "ug_seed_applications", "*"))
+    it = pd.DataFrame(select_all(c, url, key, "ug_seed_application_items",
+                                 "application_kobo_id,item_no,species,quantity,other_species_name,line_cost"))
+    dev = pd.DataFrame(select_all(c, url, key, "ug_seed_dist_events", "*"))
+    den = pd.DataFrame(select_all(c, url, key, "ug_seed_dist_entries", "*"))
+if m.empty:
+    sys.exit("ug_seed_applications is empty — run fetch → transform → load first")
+# PostgREST row order is not guaranteed — sort so identical data gives an identical file
+m = m.sort_values("kobo_id").reset_index(drop=True)
+it = it.sort_values(["application_kobo_id", "item_no"]).reset_index(drop=True)
+m = m.rename(columns={"kobo_id": "_id", "submitted_at": "_submission_time",
+                      "started_at": "application_start", "ended_at": "application_end",
+                      "already_applied": "farmer__already_applied", "comments": "comments_questions_001"})
+it = it.rename(columns={"application_kobo_id": "_id", "species": "advance_item"})
+txt = ["region", "district", "cooperative", "project", "have_farmer_id", "farmer_id", "manual_farmer_id",
+       "no_farmer_id_reason", "farmer__already_applied", "enumerator_name", "suggested_seedlings",
+       "comments_questions_001", "witness_date"]
+m[txt] = m[txt].fillna("").astype(str)
+# later form versions capitalise district codes ('Lira' vs 'lira') — fold them
+m["district"] = m["district"].str.strip().str.lower()
+it[["advance_item", "other_species_name"]] = it[["advance_item", "other_species_name"]].fillna("").astype(str)
 N = len(m)
 
-num = lambda s: pd.to_numeric(s.replace("", np.nan), errors="coerce")
+num = lambda s: pd.to_numeric(s, errors="coerce")
 for c in ["total_seedlings", "total_seedlings_cost", "facilitation_cost",
           "transport_cost", "grand_total"]:
     m[c + "_n"] = num(m[c])
@@ -82,8 +112,8 @@ for c in ["total_seedlings", "total_seedlings_cost", "facilitation_cost",
 # REGION_FIX. Keeps charts clean while still letting genuinely new species appear.
 it["advance_item"] = it["advance_item"].map(
     lambda s: re.sub(r"\s*__\w+$", "", str(s).strip().lower()).strip())
-it["qty"] = num(it["advance_item_quantity"])
-it["line_cost"] = num(it["total_line_cost"])
+it["qty"] = num(it["quantity"])
+it["line_cost"] = num(it["line_cost"])
 it["implausible"] = it["qty"] > QTY_CAP
 itc = it[~it["implausible"]].copy()
 
@@ -109,13 +139,11 @@ m["wit_dt"] = pd.to_datetime(m["witness_date"], errors="coerce", utc=True)
 m["wit_delay"] = (m["wit_dt"] - m["start_dt"].dt.floor("D")).dt.days
 
 # GPS
-loc = m["application_location"].str.split(expand=True)
-m["lat"] = num(loc[0]); m["lon"] = num(loc[1])
+m["lat"] = num(m["lat"]); m["lon"] = num(m["lon"])
 m["in_ug"] = m["lat"].between(*UG_LAT) & m["lon"].between(*UG_LON)
 
-# enumerator identity
-m["enum"] = m["enumarator_names"].where(~m["enumarator_names"].apply(miss), m["enumarator_names_other"])
-m["enum"] = m["enum"].where(~m["enum"].apply(miss), np.nan)
+# enumerator identity (resolved select-list / typed name, from transform.py)
+m["enum"] = m["enumerator_name"].where(~m["enumerator_name"].apply(miss), np.nan)
 
 mc = m[~m["impl"]].copy()              # cleaned main for sums (after all derived cols)
 
@@ -154,6 +182,157 @@ def vc_block(series, title, top=None, horizontal=True, note="", axis="count"):
             "values": [int(x) for x in v.values], "horizontal": horizontal,
             "axisLabel": axis, "note": note}
 
+
+# ════════════════════════════════════════════════════════════════════════════
+# SECTION 0 — Distribution & Fulfilment (application → distribution form)
+# ════════════════════════════════════════════════════════════════════════════
+# There were no distributions for the 2023–24 application rounds, so fulfilment is
+# measured on applications from DIST_ERA onwards. "Awaiting" includes applications
+# not (yet) approved — approval happens outside Kobo.
+DIST_ERA = pd.Timestamp("2025-01-01", tz="UTC")
+m["served"] = m["is_distributed"].fillna(False).astype(bool)
+m["given_n"] = num(m["seedlings_given"])
+m["days_n"] = num(m["days_to_distribution"])
+m["dist_dt"] = pd.to_datetime(m["first_distributed_at"], errors="coerce", utc=True)
+m["era"] = m["sub_dt"] >= DIST_ERA
+mc = m[~m["impl"]].copy()              # re-derive so the cleaned main carries the delivery columns
+era = m[m["era"]].copy()
+era["seed_clean"] = era["total_seedlings_n"].where(~era["impl"])   # implausible (>10k) excluded, as elsewhere
+NOW = pd.Timestamp.now(tz="UTC").floor("D")
+era["age_days"] = (NOW - era["sub_dt"]).dt.days
+wait = era[~era["served"]]
+
+dev["is_test"] = dev["is_test"].fillna(False).astype(bool)
+dev["ev_dt"] = pd.to_datetime(dev["started_at"].fillna(dev["submitted_at"]), errors="coerce", utc=True)
+ev_test = set(dev.loc[dev["is_test"], "kobo_id"])
+den["real"] = ~den["event_kobo_id"].isin(ev_test)
+for c in ["matched", "is_legacy", "is_repeat"]:
+    den[c] = den[c].fillna(False).astype(bool)
+dreal = den[den["real"]]
+evr = dev[~dev["is_test"] & dev["kobo_id"].isin(set(dreal.loc[~dreal["is_legacy"], "event_kobo_id"]))]
+
+n_era, n_srv = len(era), int(era["served"].sum())
+FULFIL = n_srv / n_era * 100 if n_era else 0
+DELIVERED = int(m["given_n"].sum())
+MED_DAYS = float(era["days_n"].median()) if era["days_n"].notna().any() else None
+
+s = sec("s0", "0 · Distribution & Fulfilment",
+        "What farmers received, joined from the Distribution form to each application. "
+        "Fulfilment = applications from 2025 onwards with a recorded delivery.")
+
+add(s, {"type": "kpi", "title": "Applications → distribution (2025 onwards)",
+        "cards": [{"label": "Applications (2025+)", "value": f"{n_era:,}"},
+                  {"label": "Served (seedlings delivered)", "value": f"{n_srv:,}"},
+                  {"label": "Fulfilment rate", "value": f"{FULFIL:.1f}%"},
+                  {"label": "Awaiting / not approved", "value": f"{len(wait):,}"},
+                  {"label": "Seedlings delivered", "value": f"{DELIVERED:,}"},
+                  {"label": "Median days: application → delivery",
+                   "value": f"{MED_DAYS:.0f}" if MED_DAYS is not None else "–"},
+                  {"label": "Distribution events", "value": f"{len(evr):,}"},
+                  {"label": "Avg farmers per event",
+                   "value": f"{(dreal['is_legacy'] == False).sum() / len(evr):.1f}" if len(evr) else "–"}],
+        "note": "Seedlings delivered counts each application's first delivery only (repeat entries excluded). "
+                "The form requires seedlings given = seedlings applied for, so fulfilment is per application, "
+                "not per seedling."})
+
+add(s, {"type": "note", "title": "Scope",
+        "text": f"<b>{int((~m['era']).sum()):,}</b> applications from 2023–24 are excluded from fulfilment: "
+                "no distributions took place for those rounds. <b>Awaiting</b> mixes applications not yet "
+                "delivered with ones that were not approved — the approved list is kept outside Kobo."})
+
+reg_f = (era.groupby("region_norm").agg(served=("served", "sum"), n=("_id", "size"))
+         .sort_values("n", ascending=False))
+add(s, {"type": "stacked", "title": "Served vs awaiting, by region (2025+ applications)",
+        "labels": list(reg_f.index),
+        "series": [{"label": "served", "data": [int(x) for x in reg_f["served"]]},
+                   {"label": "awaiting / not approved", "data": [int(x) for x in reg_f["n"] - reg_f["served"]]}]})
+
+dist_f = (era[era["district"] != ""].groupby("district")
+          .agg(served=("served", "sum"), n=("_id", "size")).query("n >= 30"))
+dist_f["pct"] = dist_f["served"] / dist_f["n"] * 100
+dist_f = dist_f.sort_values("pct", ascending=False)
+add(s, {"type": "bar", "title": f"Fulfilment rate by district (% of 2025+ applications served, {len(dist_f)} districts)",
+        "labels": list(dist_f.index), "values": [round(float(x), 1) for x in dist_f["pct"]],
+        "horizontal": True, "axisLabel": "% served", "tall": True,
+        "note": "districts with at least 30 applications since 2025"})
+
+coh = (era.dropna(subset=["ym"]).groupby("ym").agg(n=("_id", "size"), served=("served", "sum")).sort_index())
+add(s, {"type": "line", "title": "Applications vs served, by application month (2025+)",
+        "labels": list(coh.index),
+        "series": [{"label": "applications", "data": [int(x) for x in coh["n"]]},
+                   {"label": "served", "data": [int(x) for x in coh["served"]]}],
+        "note": "recent months are naturally lower: delivery follows application by weeks to months"})
+
+ap_m = era.dropna(subset=["ym"]).groupby("ym")["seed_clean"].sum()
+dl_m = m.dropna(subset=["dist_dt"]).groupby(m["dist_dt"].dt.strftime("%Y-%m"))["given_n"].sum()
+months = sorted(set(ap_m.index) | set(dl_m.index))
+add(s, {"type": "line", "title": "Cumulative seedlings: applied for vs delivered (2025+)",
+        "labels": months,
+        "series": [{"label": "applied for", "data": [int(x) for x in ap_m.reindex(months, fill_value=0).cumsum()]},
+                   {"label": "delivered", "data": [int(x) for x in dl_m.reindex(months, fill_value=0).cumsum()]}],
+        "note": "applied for by application month; delivered by distribution month"})
+
+dd = era["days_n"].dropna()
+edges = [0, 15, 30, 60, 90, 120, 180, 270, 365, 10_000]
+lbl = ["0–14", "15–29", "30–59", "60–89", "90–119", "120–179", "180–269", "270–364", "365+"]
+add(s, {"type": "bar", "title": "Days from application to delivery",
+        "labels": lbl, "values": [int(x) for x in pd.cut(dd, edges, right=False, labels=lbl).value_counts().reindex(lbl)],
+        "horizontal": False, "axisLabel": "applications served",
+        "note": f"median {dd.median():.0f} days; 90th percentile {dd.quantile(.9):.0f} days" if len(dd) else ""})
+
+md_r = era.groupby("region_norm")["days_n"].median().dropna().sort_values(ascending=False)
+add(s, {"type": "bar", "title": "Median days to delivery, by region",
+        "labels": list(md_r.index), "values": [round(float(x), 0) for x in md_r.values],
+        "horizontal": True, "axisLabel": "days"})
+
+bl = (wait[wait["district"] != ""].groupby(["region_norm", "district"])
+      .agg(awaiting=("_id", "size"), over90=("age_days", lambda x: int((x > 90).sum())),
+           oldest=("age_days", "max"), seedlings=("seed_clean", "sum"))
+      .reset_index().sort_values("awaiting", ascending=False))
+add(s, {"type": "table", "title": "Backlog: applications awaiting delivery, by district (2025+)",
+        "columns": ["region", "district", "awaiting", "waiting >90 days", "oldest (days)", "seedlings applied for"],
+        "rows": [[r.region_norm, r.district, int(r.awaiting), int(r.over90), int(r.oldest),
+                  int(r.seedlings) if not pd.isna(r.seedlings) else 0] for r in bl.head(30).itertuples()],
+        "note": f"{len(bl)} districts with applications awaiting; top 30 shown. Includes applications not approved."})
+
+ev_m = evr.dropna(subset=["ev_dt"]).groupby(evr["ev_dt"].dt.strftime("%Y-%m")).size()
+add(s, {"type": "bar", "title": "Distribution events per month",
+        "labels": list(ev_m.index), "values": [int(x) for x in ev_m.values],
+        "horizontal": False, "axisLabel": "events"})
+
+srv_ids = set(era.loc[era["served"], "_id"])
+era_ids = set(era["_id"])
+sp = itc[itc["_id"].isin(era_ids) & itc["advance_item"].isin(SPECIES_DYN)].copy()
+sp["status"] = np.where(sp["_id"].isin(srv_ids), "served", "awaiting")
+sp_s = sp.pivot_table(index="advance_item", columns="status", values="qty", aggfunc="sum", fill_value=0)
+sp_s = sp_s.reindex(columns=["served", "awaiting"], fill_value=0)
+sp_s = sp_s.loc[sp_s.sum(axis=1).sort_values(ascending=False).index]
+add(s, {"type": "stacked", "title": "Species in served vs awaiting applications (seedlings, 2025+)",
+        "labels": list(sp_s.index),
+        "series": [{"label": c, "data": [int(x) for x in sp_s[c]]} for c in sp_s.columns],
+        "note": "estimated from the species applied for — the Distribution form records totals only, not species"})
+
+fig, ax = plt.subplots(figsize=(7, 7))
+ap_pts = era[era["in_ug"]]
+ax.scatter(ap_pts["lon"], ap_pts["lat"], s=2, alpha=0.15, color="#888888", label="application")
+ev_pts = evr[pd.to_numeric(evr["lat"], errors="coerce").between(*UG_LAT)
+             & pd.to_numeric(evr["lon"], errors="coerce").between(*UG_LON)]
+ax.scatter(pd.to_numeric(ev_pts["lon"]), pd.to_numeric(ev_pts["lat"]), s=6, alpha=0.5,
+           color="#e65100", label="distribution event")
+ax.set_title("Applications (2025+) and distribution events"); ax.set_xlabel("Longitude"); ax.set_ylabel("Latitude")
+ax.legend(markerscale=4, fontsize=8, loc="upper right"); ax.grid(alpha=0.3)
+add(s, {"type": "image", "title": "Where seedlings were requested vs delivered (GPS)", "src": b64fig(fig)})
+
+flag_given = int((dreal["already_given"].fillna("").str.lower() == "yes").sum())
+add(s, {"type": "kpi", "title": "Distribution data quality",
+        "cards": [{"label": "Farmer entries (real events)", "value": f"{len(dreal):,}"},
+                  {"label": "Linked to an application", "value": f"{int(dreal['matched'].sum()):,}"},
+                  {"label": "Repeat entries (same application)", "value": f"{int(dreal['is_repeat'].sum()):,}"},
+                  {"label": "Flagged 'already given' by the form", "value": f"{flag_given:,}"},
+                  {"label": "Legacy trial entries (no seedlings)", "value": f"{int(dreal['is_legacy'].sum()):,}"},
+                  {"label": "Test events excluded", "value": f"{len(ev_test):,}"}],
+        "note": "Repeats are later entries for an application already served; only the first delivery counts. "
+                "Legacy entries are mostly 2023–24 form trials with no seedlings or lookup values."})
 
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — Regional & Geographic
@@ -199,9 +378,14 @@ mc_d["dkey"] = mc_d["district"].map(norm_dist)
 dm = (mc_d[mc_d["dkey"] != ""].groupby("dkey")
       .agg(applications=("_id", "size"), seedlings=("total_seedlings_n", "sum"),
            disbursed=("grand_total_n", "sum")))
+era_d = era.assign(dkey=era["district"].map(norm_dist))
+fm = era_d[era_d["dkey"] != ""].groupby("dkey").agg(n=("_id", "size"), served=("served", "sum"))
 metric_lookup = {k: {"applications": int(r.applications),
                      "seedlings": int(r.seedlings) if not pd.isna(r.seedlings) else 0,
-                     "disbursed": int(r.disbursed) if not pd.isna(r.disbursed) else 0}
+                     "disbursed": int(r.disbursed) if not pd.isna(r.disbursed) else 0,
+                     "served": int(fm.loc[k, "served"]) if k in fm.index else 0,
+                     "fulfilment": round(float(fm.loc[k, "served"] / fm.loc[k, "n"] * 100), 1)
+                                   if k in fm.index else None}
                  for k, r in dm.iterrows()}
 shape_keys = {ft["properties"]["name"].strip().lower() for ft in geo["features"]}
 matched = 0
@@ -215,11 +399,13 @@ print(f"  choropleth: {matched} districts matched to boundaries; "
       f"{len(unmatched)} unmatched: {unmatched}")
 
 add(s, {"type": "choropleth",
-        "title": "District choropleth — applications · seedlings · disbursement",
+        "title": "District choropleth — applications · seedlings · disbursement · fulfilment",
         "geojson": geo,
         "metrics": [{"key": "applications", "label": "Applications"},
                     {"key": "seedlings", "label": "Seedlings"},
-                    {"key": "disbursed", "label": "Disbursed (UGX)"}],
+                    {"key": "disbursed", "label": "Disbursed (UGX)"},
+                    {"key": "served", "label": "Applications served"},
+                    {"key": "fulfilment", "label": "Fulfilment % (2025+)"}],
         "note": ("Uganda district boundaries: geoBoundaries gbHumanitarian ADM2. "
                  + (f"Unmatched data districts (excluded from the map): {', '.join(unmatched)}."
                     if unmatched else "All data districts matched to a boundary."))})
@@ -489,7 +675,7 @@ add(s, {"type": "table", "title": "Top cooperatives: farmers vs seedling volume 
                  for r in coop_tbl.itertuples()],
         "note": "low seedlings/farmer at high membership = re-engagement opportunity"})
 
-nid = (~m["farmer_national_id"].apply(miss))
+nid = m["has_national_id"].fillna(False).astype(bool)
 add(s, {"type": "kpi", "title": "National ID verification coverage",
         "cards": [{"label": "Has national ID", "value": f"{nid.mean()*100:.1f}%"},
                   {"label": "Missing / placeholder", "value": f"{(~nid).mean()*100:.1f}%"},
@@ -506,9 +692,8 @@ add(s, {"type": "stacked", "title": "Project × region (where project recorded)"
 s = sec("s7", "7 · Data Quality & Integrity", "Completeness, evidence capture, and outlier/control checks.")
 
 gt_pos = m[m["grand_total_n"] > 0]
-miss_wit = gt_pos[gt_pos["witness_names"].apply(miss) | gt_pos["witness_national_id"].apply(miss)]
-photo_all = m[["form_photo_page_1", "form_photo_page_2", "form_photo_page_3", "form_photo_page_4"]].apply(
-    lambda r: sum(not miss(x) for x in r), axis=1)
+miss_wit = gt_pos[~gt_pos["has_witness"].fillna(False).astype(bool)]
+photo_all = m["n_form_photos"].fillna(0).astype(int)
 add(s, {"type": "kpi", "title": "Completeness & evidence",
         "cards": [{"label": "Missing witness (grand_total>0)", "value": f"{len(miss_wit):,}"},
                   {"label": "All 4 photos", "value": f"{(photo_all==4).mean()*100:.1f}%"},
@@ -579,10 +764,11 @@ for r, g in mc.groupby("region_norm"):
     uptake = g["total_seedlings_n"].mean()
     cps_r = (g["total_seedlings_cost_n"].sum() / g["total_seedlings_n"].sum()) if g["total_seedlings_n"].sum() else np.nan
     enum_prod = m[(m["region_norm"] == r) & m["enum"].notna()].groupby("enum").size().mean()
-    photos = m[m["region_norm"] == r][["form_photo_page_1", "form_photo_page_2", "form_photo_page_3", "form_photo_page_4"]].apply(
-        lambda x: sum(not miss(v) for v in x), axis=1)
+    photos = m.loc[m["region_norm"] == r, "n_form_photos"].fillna(0)
     dq = (photos == 4).mean() * 100
+    ge_r = era[era["region_norm"] == r]
     health_rows.append({"region": r, "applications": int(subs),
+                        "fulfil_pct": round(float(ge_r["served"].mean() * 100), 1) if len(ge_r) else None,
                         "avg_seedlings": round(float(uptake), 1),
                         "cost_per_seedling": round(float(cps_r), 0) if not pd.isna(cps_r) else None,
                         "enum_productivity": round(float(enum_prod), 1) if not pd.isna(enum_prod) else None,
@@ -591,22 +777,27 @@ for r, g in mc.groupby("region_norm"):
 # Monthly executive summary
 monthly = (mc.dropna(subset=["ym"]).groupby("ym")
            .agg(applications=("_id", "size"), seedlings=("total_seedlings_n", "sum"),
-                disbursed=("grand_total_n", "sum")).reset_index().sort_values("ym"))
-monthly_rows = [[r.ym, int(r.applications), int(r.seedlings), int(r.disbursed)] for r in monthly.itertuples()]
+                disbursed=("grand_total_n", "sum"), served=("served", "sum"),
+                given=("given_n", "sum")).reset_index().sort_values("ym"))
+monthly_rows = [[r.ym, int(r.applications), int(r.seedlings), int(r.disbursed), int(r.served), int(r.given)]
+                for r in monthly.itertuples()]
 
 # Record-level array for client-side filtering (trim to essentials)
 rec = mc[["region_norm", "district", "proj", "ym", "total_seedlings_n",
-          "grand_total_n", "coop_type", "total_seedlings_cost_n"]].copy()
+          "grand_total_n", "coop_type", "total_seedlings_cost_n", "served", "given_n"]].copy()
 rec = rec.dropna(subset=["ym"])
 records = [[r.region_norm, r.district or "(blank)", r.proj, r.ym,
             int(r.total_seedlings_n) if not pd.isna(r.total_seedlings_n) else 0,
             int(r.grand_total_n) if not pd.isna(r.grand_total_n) else 0, r.coop_type,
-            int(r.total_seedlings_cost_n) if not pd.isna(r.total_seedlings_cost_n) else 0]
+            int(r.total_seedlings_cost_n) if not pd.isna(r.total_seedlings_cost_n) else 0,
+            int(r.served), int(r.given_n) if not pd.isna(r.given_n) else 0]
            for r in rec.itertuples()]
 
 EXEC = {
     "records": records,
-    "fields": ["region", "district", "project", "ym", "seedlings", "cost", "coop_type", "seedlings_cost"],
+    "fields": ["region", "district", "project", "ym", "seedlings", "cost", "coop_type", "seedlings_cost",
+               "served", "given"],
+    "dist_era": DIST_ERA.strftime("%Y-%m"),
     "regions": sorted(rec["region_norm"].unique().tolist()),
     "projects": sorted(rec["proj"].unique().tolist()),
     "months": sorted(rec["ym"].unique().tolist()),
@@ -623,6 +814,7 @@ GLOBAL = {
     "enumerators": int(m["enum"].nunique()),
     "date_min": str(mc["date"].dropna().min()), "date_max": str(mc["date"].dropna().max()),
     "excluded": int(it["implausible"].sum()),
+    "served": n_srv, "fulfil_pct": round(FULFIL, 1), "delivered": DELIVERED,
 }
 
 DATA = to_native({"sections": SECTIONS, "exec": EXEC, "global": GLOBAL})
