@@ -10,7 +10,7 @@ Reads transform outputs (clean_*.json), upserts into the ug_seed_* tables
 Env (from masp4-platform/.env.local or the CI environment):
   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 """
-import os, json, sys, datetime
+import os, json, sys, datetime, time
 import httpx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -64,8 +64,15 @@ def upsert(c, url, key, table, rows, on_conflict):
 def select_all(c, url, key, table, cols):
     out, start = [], 0
     while True:
-        r = c.get(f"{url}/rest/v1/{table}?select={cols}&order=id",
-                  headers={**_hdr(key, "count=none"), "Range": f"{start}-{start + 999}"})
+        for attempt in range(4):        # retry dropped connections (WinError 10054 / resets)
+            try:
+                r = c.get(f"{url}/rest/v1/{table}?select={cols}&order=id",
+                          headers={**_hdr(key, "count=none"), "Range": f"{start}-{start + 999}"})
+                break
+            except httpx.TransportError:
+                if attempt == 3:
+                    raise
+                time.sleep(2 ** attempt)
         if r.status_code >= 300:
             sys.exit(f"{table} select failed [{r.status_code}]: {r.text[:400]}")
         page = r.json()

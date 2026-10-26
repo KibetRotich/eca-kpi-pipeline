@@ -259,8 +259,8 @@ function buildExec(){
   const kp=el("div","block full"); kp.appendChild(el("h3",null,"Key indicators (filtered)")); const kc=el("div","kpis"); kc.id="exec-kpis"; kp.appendChild(kc); sd.appendChild(kp);
 
   const grid=el("div","grid");
-  const c1=el("div","block"); c1.appendChild(el("h3",null,"Applications by region (filtered)")); const cb1=el("div","chartbox"); const cv1=el("canvas"); cv1.id="exec-reg"; cb1.appendChild(cv1); c1.appendChild(cb1); grid.appendChild(c1);
-  const c2=el("div","block"); c2.appendChild(el("h3",null,"Seedlings by month (filtered)")); const cb2=el("div","chartbox"); const cv2=el("canvas"); cv2.id="exec-mon"; cb2.appendChild(cv2); c2.appendChild(cb2); grid.appendChild(c2);
+  const c1=el("div","block"); c1.appendChild(el("h3",null,"Applications vs served, by region (filtered)")); const cb1=el("div","chartbox"); const cv1=el("canvas"); cv1.id="exec-reg"; cb1.appendChild(cv1); c1.appendChild(cb1); grid.appendChild(c1);
+  const c2=el("div","block"); c2.appendChild(el("h3",null,"Seedlings applied for vs delivered, by month (filtered)")); const cb2=el("div","chartbox"); const cv2=el("canvas"); cv2.id="exec-mon"; cb2.appendChild(cv2); c2.appendChild(cb2); grid.appendChild(c2);
   sd.appendChild(grid);
 
   // health scorecard
@@ -306,16 +306,24 @@ function applyExec(){
    ["Seedlings delivered",fmt(given)]]
    .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
 
-  const byReg={}, byMon={};
-  rows.forEach(x=>{byReg[x[IDX.region]]=(byReg[x[IDX.region]]||0)+1; byMon[x[IDX.ym]]=(byMon[x[IDX.ym]]||0)+x[IDX.seedlings];});
-  const rl=Object.keys(byReg).sort((a,b)=>byReg[b]-byReg[a]); const ml=Object.keys(byMon).sort();
+  // region: applications vs served. month: applied by application month, delivered by
+  // delivery month (deliveries matched on region/project, and on delivery month for the month filter)
+  const byReg={}, srvReg={}, byMon={}, dlMon={};
+  rows.forEach(x=>{byReg[x[IDX.region]]=(byReg[x[IDX.region]]||0)+1; srvReg[x[IDX.region]]=(srvReg[x[IDX.region]]||0)+x[IDX.served];
+                   byMon[x[IDX.ym]]=(byMon[x[IDX.ym]]||0)+x[IDX.seedlings];});
+  EX.records.forEach(x=>{const d=x[IDX.dym]; if(!d||(r&&x[IDX.region]!=r)||(p&&x[IDX.project]!=p)||(from&&d<from)||(to&&d>to)) return;
+                   dlMon[d]=(dlMon[d]||0)+x[IDX.given];});
+  const rl=Object.keys(byReg).sort((a,b)=>byReg[b]-byReg[a]); const ml=[...new Set([...Object.keys(byMon),...Object.keys(dlMon)])].sort();
+  const lg={display:true,position:"bottom",labels:{boxWidth:10,font:{size:10}}};
   execCharts.forEach(c=>c.destroy()); execCharts=[];
   execCharts.push(new Chart(document.getElementById("exec-reg"),{type:"bar",
-    data:{labels:rl,datasets:[{data:rl.map(k=>byReg[k]),backgroundColor:PAL[0]}]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:9}}}}}}));
+    data:{labels:rl,datasets:[{label:"applications",data:rl.map(k=>byReg[k]),backgroundColor:PAL[0]},
+                              {label:"served (delivered)",data:rl.map(k=>srvReg[k]||0),backgroundColor:PAL[1]}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:lg},scales:{y:{ticks:{font:{size:9}}}}}}));
   execCharts.push(new Chart(document.getElementById("exec-mon"),{type:"line",
-    data:{labels:ml,datasets:[{data:ml.map(k=>byMon[k]),borderColor:PAL[1],backgroundColor:PAL[1]+"33",borderWidth:1.6,pointRadius:0,tension:.25}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:12,font:{size:9}}}}}}));
+    data:{labels:ml,datasets:[{label:"applied for (application month)",data:ml.map(k=>byMon[k]||0),borderColor:PAL[0],backgroundColor:PAL[0]+"33",borderWidth:1.6,pointRadius:0,tension:.25},
+                              {label:"delivered (delivery month)",data:ml.map(k=>dlMon[k]||0),borderColor:PAL[1],backgroundColor:PAL[1]+"33",borderWidth:1.6,pointRadius:0,tension:.25}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:lg},scales:{x:{ticks:{maxTicksLimit:12,font:{size:9}}}}}}));
 }
 
 build();

@@ -800,19 +800,20 @@ monthly_rows = [[r.ym, int(r.applications), int(r.seedlings), int(r.disbursed), 
 
 # Record-level array for client-side filtering (trim to essentials)
 rec = mc[["region_norm", "district", "proj", "ym", "total_seedlings_n",
-          "grand_total_n", "coop_type", "total_seedlings_cost_n", "served", "given_n"]].copy()
+          "grand_total_n", "coop_type", "total_seedlings_cost_n", "served", "given_n", "dist_dt"]].copy()
 rec = rec.dropna(subset=["ym"])
 records = [[r.region_norm, r.district or "(blank)", r.proj, r.ym,
             int(r.total_seedlings_n) if not pd.isna(r.total_seedlings_n) else 0,
             int(r.grand_total_n) if not pd.isna(r.grand_total_n) else 0, r.coop_type,
             int(r.total_seedlings_cost_n) if not pd.isna(r.total_seedlings_cost_n) else 0,
-            int(r.served), int(r.given_n) if not pd.isna(r.given_n) else 0]
+            int(r.served), int(r.given_n) if not pd.isna(r.given_n) else 0,
+            r.dist_dt.strftime("%Y-%m") if not pd.isna(r.dist_dt) else ""]
            for r in rec.itertuples()]
 
 EXEC = {
     "records": records,
     "fields": ["region", "district", "project", "ym", "seedlings", "cost", "coop_type", "seedlings_cost",
-               "served", "given"],
+               "served", "given", "dym"],
     "dist_era": "0000-00",           # fulfilment counts all applications
     "regions": sorted(rec["region_norm"].unique().tolist()),
     "projects": sorted(rec["proj"].unique().tolist()),
