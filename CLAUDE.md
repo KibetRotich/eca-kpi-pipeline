@@ -76,7 +76,9 @@ SUPABASE_SERVICE_ROLE_KEY=    # server-side only, never exposed to client
 
 ### Architecture
 
-**Auth flow:** Google OAuth via Supabase → `/auth/callback` exchanges code for session → sets `sb-access-token` cookie → redirect to `/dashboard`
+**Auth flow:** Google OAuth via Supabase → `/auth/callback` exchanges code for session → sets `sb-access-token` cookie → back to the page that sent the user to `/signin` (default `/targets`)
+
+**Staff-only gate (Sprint 50):** `proxy.ts` verifies the `sb-access-token` JWT (ES256, `getClaims`) on every request — pages, API routes and the static dashboards in `public/`. No valid @solidaridadnetwork.org session → pages redirect to `/signin?next=…`, APIs return 401. Only `/signin`, `/auth/callback` and the assets they need are open. In the DB, `anon` has no privileges in schema `public` and open RLS policies use `public.is_staff()`; server code reads with `supabaseAdmin`. Nothing on the platform is public.
 
 **Role system** (3 tiers):
 - `admin` — full access: create/edit targets, approve submissions, manage users

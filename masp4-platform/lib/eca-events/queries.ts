@@ -1,14 +1,14 @@
 /**
  * Query layer for the ECA Trainings & Events dashboard.
  *
- * Reads ONLY the PII-free `v_eca_*_safe` / KPI views (granted to anon) via the
- * anon Supabase client — never the RLS-locked base tables. Global filters map to
+ * Reads ONLY the PII-free `v_eca_*_safe` / KPI views via the server-side client
+ * (anon lost access to them in Sprint 50) — never the RLS-locked base tables. Global filters map to
  * PostgREST filters on the safe event view; because the dataset is small (~6.7k
  * events) we fetch the filtered rows (paged past PostgREST's 1000-row cap) and
  * aggregate in TS, which keeps every page correct under arbitrary filters. The
  * pre-aggregated KPI views remain available for unfiltered fast paths.
  */
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase'
 import { type Filters, EQ_COLUMNS, parseFilters, filtersToQuery } from './filters'
 
 export { parseFilters, filtersToQuery }

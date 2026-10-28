@@ -4,11 +4,19 @@
  * /auth/callback
  * Supabase redirects here after Google OAuth.
  * Handles both PKCE (?code=) and implicit (#access_token=) flows.
- * Uses hard navigation to /dashboard so AuthButton re-runs getSession() fresh.
+ * Uses hard navigation back to the page /signin was asked for (default /targets) so AuthButton
+ * re-runs getSession() fresh.
  */
 
 import { useEffect, useState } from 'react'
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
+import { safeNext, setAuthCookie, NEXT_KEY } from '@/lib/auth-cookie'
+
+function returnTo() {
+  const next = safeNext(sessionStorage.getItem(NEXT_KEY))
+  sessionStorage.removeItem(NEXT_KEY)
+  return next
+}
 
 export default function AuthCallbackPage() {
   const [authError, setAuthError] = useState<string | null>(null)
@@ -36,11 +44,9 @@ export default function AuthCallbackPage() {
           setAuthError(error.message)
           return
         }
-        if (data.session?.access_token) {
-          document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=3600; SameSite=Lax`
-        }
+        if (data.session?.access_token) setAuthCookie(data.session.access_token)
         // Hard navigation forces AuthButton to re-run getSession() on a clean mount
-        window.location.href = '/dashboard'
+        window.location.href = returnTo()
       })
       return
     }
@@ -55,16 +61,14 @@ export default function AuthCallbackPage() {
           setAuthError(error.message)
           return
         }
-        if (data.session?.access_token) {
-          document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=3600; SameSite=Lax`
-        }
-        window.location.href = '/dashboard'
+        if (data.session?.access_token) setAuthCookie(data.session.access_token)
+        window.location.href = returnTo()
       })
       return
     }
 
-    // Nothing recognisable — send home
-    window.location.href = '/'
+    // Nothing recognisable — back to sign-in
+    window.location.href = '/signin'
   }, [])
 
   if (authError) {
@@ -74,7 +78,7 @@ export default function AuthCallbackPage() {
           <strong style={{ display: 'block', marginBottom: '.4rem' }}>Sign-in failed</strong>
           {authError}
         </div>
-        <a href="/" style={{ fontSize: '.7rem', color: '#1a3557', fontWeight: 700 }}>Try again</a>
+        <a href="/signin" style={{ fontSize: '.7rem', color: '#1a3557', fontWeight: 700 }}>Try again</a>
       </div>
     )
   }

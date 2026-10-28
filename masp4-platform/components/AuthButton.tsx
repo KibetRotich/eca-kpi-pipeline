@@ -3,17 +3,10 @@
 import { useEffect, useState } from 'react'
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
+import { setAuthCookie, clearAuthCookie } from '@/lib/auth-cookie'
 
 const YELLOW = '#FFC800'
 const BLACK  = '#111'
-
-function setAuthCookie(token: string) {
-  document.cookie = `sb-access-token=${token}; path=/; max-age=3600; SameSite=Lax`
-}
-
-function clearAuthCookie() {
-  document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax'
-}
 
 export default function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
@@ -37,18 +30,15 @@ export default function AuthButton() {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function signIn() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
+  function signIn() {
+    window.location.href = `/signin?next=${encodeURIComponent(window.location.pathname + window.location.search)}`
   }
 
   async function signOut() {
     clearAuthCookie()
     await supabase.auth.signOut()
-    // Reload so RoleProvider re-fetches /api/me and shows viewer state
-    window.location.reload()
+    // Every page needs a session (proxy.ts), so go to the sign-in page
+    window.location.href = '/signin'
   }
 
   if (loading) return null
