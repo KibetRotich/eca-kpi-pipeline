@@ -12,6 +12,10 @@ name: Project Measurement Frameworks Sync
 # Secrets: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CREDENTIALS.
 # Each sheet must be shared (Viewer) with the GOOGLE_CREDENTIALS service account;
 # an unshared sheet is skipped with a warning and keeps its last copy.
+#
+# Safeguards (Sprint 51): a sheet with a missing required column, no rows, or more than 20% of its
+# rows gone is NOT synced and the run fails (GitHub emails the owner) after every other sheet is
+# done. For an intended restructure, run manually with allow_prune = the project code(s).
 on:
   schedule:
     - cron: "40 3 * * *"
@@ -20,6 +24,11 @@ on:
       - "masp4-platform/pipeline/frameworks/**"
       - ".github/workflows/frameworks.yml"
   workflow_dispatch:
+    inputs:
+      allow_prune:
+        description: "Project code(s) allowed to lose many rows this run, comma-separated (e.g. KE-P2P-001)"
+        required: false
+        default: ""
 
 concurrency:
   group: frameworks-sync
@@ -34,6 +43,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      FRAMEWORK_ALLOW_PRUNE: ${{ inputs.allow_prune }}
     steps:
       - name: Check required secrets
         id: check

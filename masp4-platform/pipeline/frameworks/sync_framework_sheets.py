@@ -23,6 +23,14 @@ project_mf_sheets.last_error — one unshared sheet never fails the others.
 
 County tabs (project_mf_sheets.county_tabs, Sprint 32) are IPTT-format tabs, one per county;
 they are parsed by iptt.parse_iptt and mirrored into project_mf_sheet_county_values.
+
+Safeguards (Sprint 51) — the sheets are editable by many people, so a damaged sheet must not wipe
+a framework. Nothing is written for a project when its tab is missing a required column, returns no
+rows, or would delete more than MAX_PRUNE_SHARE of the project's rows (and more than MIN_PRUNE
+rows) in one run; the error is stored in project_mf_sheets.last_error and the run fails at the end
+(after every other sheet is synced) so GitHub emails the owner. An intended restructure is let
+through with FRAMEWORK_ALLOW_PRUNE=CODE[,CODE] (workflow_dispatch input allow_prune). End-target
+changes are listed as warnings; every change is kept in project_mf_sheet_values_history.
 """
 import os, sys, csv, json, datetime
 import httpx
@@ -46,6 +54,22 @@ KEEP_IF_ABSENT = ("network_kpi", "target_period")
 # Option A layout: the four parts plus non_individual add up to total; male/female/youth are derived from them
 PARTS = ("male_adults", "female_adults", "male_youths", "female_youths")
 TABLE = "project_mf_sheet_values"
+REQUIRED = ("indicator_id", "indicator", "period_end", "total")
+MAX_PRUNE_SHARE, MIN_PRUNE = 0.2, 2
+ALLOW_PRUNE = {c.strip() for c in os.environ.get("FRAMEWORK_ALLOW_PRUNE", "").split(",") if c.strip()}
+# tags every write so project_mf_sheet_values_history records where a change came from
+SOURCE_HEADER = {"x-change-source": "framework-sync"}
+
+
+class Safeguard(RuntimeError):
+    """The sheet looks damaged; nothing was written for this project."""
+
+
+def check_header(header):
+    names = {h.strip() for h in header}
+    missing = [h for h in REQUIRED if h not in names]
+    if missing:
+        raise Safeguard(f"required column(s) missing from the tab: {', '.join(missing)} — was a header renamed or deleted?")
 COUNTY_TABLE = "project_mf_sheet_county_values"
 
 
@@ -123,16 +147,32 @@ def county_rows(tabs_values, indicator_rows):
     return out, report
 
 
-def mirror(c, url, key, project_id, rows):
-    """Upsert this project's rows and prune indicator-periods no longer in the sheet."""
+def mirror(c, url, key, project_id, rows, code):
+    """Upsert this project's rows and prune indicator-periods no longer in the sheet — unless the
+    change looks like sheet damage (see Safeguards in the module docstring)."""
+    existing = select_all(c, url, key, TABLE, f"indicator_id,period_end,end_target&project_id=eq.{project_id}")
+    if not rows:
+        if existing:
+            raise Safeguard(f"the tab returned no indicator rows but {len(existing)} are in the platform — was it cleared?")
+        return 0, 0
+    live = {(r["indicator_id"], r["period_end"]) for r in rows}
+    gone = [r for r in existing if (r["indicator_id"], r["period_end"]) not in live]
+    if len(gone) > max(MIN_PRUNE, MAX_PRUNE_SHARE * len(existing)) and code not in ALLOW_PRUNE:
+        ids = sorted({r["indicator_id"] for r in gone})
+        raise Safeguard(f"{len(gone)} of {len(existing)} indicator-periods would be deleted "
+                        f"({', '.join(ids[:8])}{' …' if len(ids) > 8 else ''}) — rows deleted or IDs changed? "
+                        f"If intended, re-run with allow_prune={code}")
+    before = {(r["indicator_id"], r["period_end"]): r.get("end_target") for r in existing}
+    changed = [f"{r['indicator_id']} {r['period_end']}: {before[k]} -> {r.get('end_target')}"
+               for r in rows if (k := (r["indicator_id"], r["period_end"])) in before
+               and before[k] is not None and r.get("end_target") is not None
+               and float(before[k]) != float(r["end_target"])]
+    if changed:
+        print(f"::warning::{code} end target changed — " + "; ".join(changed[:10]) + (" …" if len(changed) > 10 else ""))
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     for r in rows:
         r["updated_at"] = now
-    if rows:
-        upsert(c, url, key, TABLE, rows, "project_id,indicator_id,period_end")
-    live = {(r["indicator_id"], r["period_end"]) for r in rows}
-    existing = select_all(c, url, key, TABLE, f"indicator_id,period_end&project_id=eq.{project_id}")
-    gone = [r for r in existing if (r["indicator_id"], r["period_end"]) not in live] if rows else []
+    upsert(c, url, key, TABLE, rows, "project_id,indicator_id,period_end")
     for r in gone:
         delete_where(c, url, key, TABLE, f"project_id=eq.{project_id}&indicator_id=eq.{r['indicator_id']}"
                                           f"&period_end=eq.{r['period_end']}")
@@ -148,7 +188,7 @@ def stamp(c, url, key, project_id, error):
 
 def main():
     url, key = _load_env()
-    with httpx.Client(timeout=120) as c:
+    with httpx.Client(timeout=120, headers=SOURCE_HEADER) as c:
         links = select_all(c, url, key, "project_mf_sheets",
                            "project_id,sheet_id,tab,label,county_tabs,projects(project_code)&source_table=eq.project_mf_sheet_values")
         if len(sys.argv) == 5 and sys.argv[1] == "--project" and sys.argv[3] == "--county-json":
@@ -165,17 +205,19 @@ def main():
             if not link:
                 sys.exit(f"{sys.argv[2]} has no project_mf_sheets link with source_table=project_mf_sheet_values")
             data = list(csv.reader(open(sys.argv[4], encoding="utf-8")))
-            n, gone = mirror(c, url, key, link["project_id"], to_rows(link["project_id"], data[0], data[1:]))
+            check_header(data[0])
+            n, gone = mirror(c, url, key, link["project_id"], to_rows(link["project_id"], data[0], data[1:]), sys.argv[2])
             stamp(c, url, key, link["project_id"], None)
             print(f"{sys.argv[2]}: {n} indicator-periods loaded from CSV, {gone} pruned")
             return
-        failures = 0
+        failures, tripped = 0, []
         for link in links:
             code = link["projects"]["project_code"]
             try:
                 header, rows = read_sheet(link["sheet_id"], link["tab"])
+                check_header(header)
                 out = to_rows(link["project_id"], header, rows)
-                n, gone = mirror(c, url, key, link["project_id"], out)
+                n, gone = mirror(c, url, key, link["project_id"], out, code)
                 stamp(c, url, key, link["project_id"], None)
                 print(f"{code}: {len({r['indicator_id'] for r in out})} indicators, {n} indicator-periods, "
                       f"{sum(r['total'] is not None for r in out)} with a value; {gone} pruned")
@@ -190,11 +232,18 @@ def main():
                         rows, report = county_rows(tabs, out)
                         cn, cg = mirror_counties(c, url, key, link["project_id"], rows)
                         print(f"{code} counties: {cn} rows, {cg} pruned — " + "; ".join(report))
+            except Safeguard as e:
+                failures += 1
+                tripped.append(code)
+                stamp(c, url, key, link["project_id"], f"SAFEGUARD: {e}"[:300])
+                print(f"::error::{code} ({link['label']}) NOT synced, safeguard — {e}. Keeping its last copy in Supabase.")
             except (RuntimeError, SystemExit) as e:
                 failures += 1
                 stamp(c, url, key, link["project_id"], str(e)[:300])
                 print(f"::warning::{code} ({link['label']}) not refreshed — {e}. Keeping its last copy in Supabase.")
         print(f"done: {len(links) - failures}/{len(links)} framework sheets refreshed")
+        if tripped:
+            sys.exit(f"safeguard stopped {len(tripped)} framework(s): {', '.join(tripped)} — check those sheets")
 
 
 if __name__ == "__main__":
