@@ -252,14 +252,13 @@
 .chip { display: inline-flex; flex-direction: column; gap: .05rem; padding: .3rem .55rem; border-radius: 6px; font-size: .64rem; font-weight: 700; }
 .chip em { font-style: normal; font-weight: 400; font-size: .54rem; }
 
-/* Status colours: shared by the scorecard chips and the overview grid. Text labels carry the meaning;
+/* Status colours for the scorecard chips. Text labels carry the meaning;
    colour is a second cue only. */
 .st_improved { background: #d8f3e6; color: #0b5e3f; }
 .st_mixed { background: #fdf0cc; color: #6e4d00; }
 .st_no_change { background: #ececea; color: #4a4a48; }
 .st_worsened { background: #fbe0dd; color: #962319; }
 .st_baseline_only { background: #fff; color: #6b6b68; box-shadow: inset 0 0 0 1px #c9c9c6; }
-.st_none { background: #fafafa; color: #bbb; }
 
 .sparks { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .6rem; }
 .spark { margin: 0; border: 1px solid #eee; border-radius: 6px; padding: .45rem .6rem .3rem; background: #fcfcfb; }
@@ -275,22 +274,3 @@
 .takeaways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 @media (max-width: 799px) { .takeaways { grid-template-columns: 1fr; } }
 .confidence { font-size: .62rem; color: #666; border-top: 1px solid #eee; padding-top: .5rem; margin: 0; }
-
-/* ── Overview grid (hub) ────────────────────────────────────────────────── */
-.overview { background: #fff; border: 1px solid var(--border, #d0d0d0); border-radius: 6px; padding: .7rem .85rem; margin-bottom: .8rem; }
-.overview h2 { font-size: .74rem; font-weight: 800; margin: 0 0 .45rem; color: #111; }
-.overviewScroll { overflow-x: auto; }
-.overviewTable { border-collapse: separate; border-spacing: 3px; width: 100%; }
-.overviewTable th, .overviewTable td {
-  font-size: .54rem;
-  line-height: 1.2;
-  text-transform: none;
-  letter-spacing: 0;
-  border: 0;
-  padding: .3rem .3rem;
-  text-align: center;
-  white-space: nowrap;
-}
-.overviewTable thead th { font-weight: 700; color: #333; background: none; }
-.overviewTable th[scope="row"] { text-align: left; font-weight: 700; background: none; }
-.overviewTable td { border-radius: 4px; }

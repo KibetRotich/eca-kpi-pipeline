@@ -1,14 +1,13 @@
 /**
  * /thematic-insights — Thematic Insights hub (Sprint 49).
  *
- * An overview grid (themes × commodities, Sprint 51) from each published synthesis's board scorecard, then
- * one card per theme (evaluation_themes) with its headline, evidence rating and the number of studies behind it.
+ * One card per theme (evaluation_themes) with its headline, evidence rating and the number of studies behind it.
  * Each card opens /thematic-insights/<key>.
  * Syntheses draw on the published studies of /evaluation-insights and are written from Claude Code
  * ("synthesise themes"); M&E Officers / Admins review drafts in ThemeReviewQueue before they appear here.
  */
 import { supabaseAdmin } from '@/lib/supabase'
-import { COMMODITIES, STATUS_LABEL, type CommodityStatus, type Theme, type ThemeInsight } from '@/lib/themes'
+import type { Theme, ThemeInsight } from '@/lib/themes'
 import styles from './themes.module.css'
 import ThemeReviewQueue from './ThemeReviewQueue'
 import Meter from './Meter'
@@ -30,12 +29,6 @@ export default async function ThematicInsightsPage() {
     'theme_key' | 'synthesis' | 'evidence_rating' | 'source_report_ids'>]))
   const themeList = (themes ?? []) as Theme[]
 
-  // Overview grid: only commodities that appear in at least one published scorecard, in the fixed order.
-  const status = new Map<string, CommodityStatus>()
-  for (const i of byTheme.values())
-    for (const r of i.synthesis.board?.scorecard ?? []) status.set(`${i.theme_key}|${r.commodity}`, r.status)
-  const cols = COMMODITIES.filter(c => themeList.some(t => status.has(`${t.key}|${c}`)))
-
   return (
     <div>
       <header className={styles.header}>
@@ -50,35 +43,6 @@ export default async function ThematicInsightsPage() {
       </header>
 
       <ThemeReviewQueue />
-
-      {cols.length > 0 && (
-        <section className={styles.overview} aria-label="Results by theme and commodity">
-          <h2>Results at a glance</h2>
-          <div className={styles.overviewScroll}>
-            <table className={styles.overviewTable}>
-              <thead>
-                <tr><th scope="col">Theme</th>{cols.map(c => <th key={c} scope="col">{c}</th>)}</tr>
-              </thead>
-              <tbody>
-                {themeList.map(t => (
-                  <tr key={t.key}>
-                    <th scope="row"><a href={`/thematic-insights/${t.key}`}>{t.title}</a></th>
-                    {cols.map(c => {
-                      const st = status.get(`${t.key}|${c}`)
-                      return (
-                        <td key={c} className={st ? styles[`st_${st}`] : styles.st_none}
-                            title={`${t.title} · ${c}: ${st ? STATUS_LABEL[st] : 'No evidence'}`}>
-                          {st ? STATUS_LABEL[st] : '–'}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
 
       <div className={styles.themeGrid}>
         {themeList.map(t => {
