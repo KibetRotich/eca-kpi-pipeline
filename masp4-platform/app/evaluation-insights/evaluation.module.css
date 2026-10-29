@@ -25,6 +25,24 @@
 }
 .uploadBtn:hover { background: #24497a; }
 
+/* ── Filters (Sprint 52): Country / Study type / Commodity ── */
+.filters { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin-bottom: .7rem; }
+.filters label { display: grid; gap: .15rem; font-size: .6rem; font-weight: 700; color: #555; }
+.filters select {
+  font: inherit;
+  font-size: .68rem;
+  font-weight: 400;
+  min-width: 150px;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 4px;
+  padding: .3rem .45rem;
+  background: #fff;
+}
+.filterCount { font-size: .62rem; color: #777; padding-bottom: .35rem; }
+.clearFilters { background: none; border: 0; color: var(--navy, #1a3557); font-size: .62rem; text-decoration: underline; padding: 0 0 .35rem; cursor: pointer; }
+.noMatch { font-size: .72rem; color: #777; font-style: italic; }
+@media (max-width: 479px) { .filters label, .filters select { width: 100%; } }
+
 /* ── Study tiles: compact cards sized like the Projects' Progress project tiles ── */
 .studyGrid {
   display: grid;
@@ -70,6 +88,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.studyCommodity { font-size: .56rem; font-weight: 700; color: #6b6b68; }
 .studyHeadline {
   margin: 0;
   font-size: .58rem;

@@ -23,7 +23,7 @@ export const metadata = {
 export default async function EvaluationInsightsPage() {
   const { data } = await supabaseAdmin
     .from('evaluation_reports')
-    .select('id, title, programme, country, period_start, period_end, tags, summary')
+    .select('id, title, programme, country, period_start, period_end, tags, commodities, summary')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
   const studies = (data ?? []) as Study[]

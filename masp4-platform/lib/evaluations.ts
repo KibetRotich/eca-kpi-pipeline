@@ -3,7 +3,7 @@
  * Safe to import from client and server code (no secrets, no server-only imports).
  */
 
-import type { ThemeChart } from '@/lib/themes'
+import { COMMODITIES, type ThemeChart } from '@/lib/themes'
 
 /** Only signed-in accounts on this domain may upload reports. */
 export const STAFF_DOMAIN = 'solidaridadnetwork.org'
@@ -21,6 +21,9 @@ export const EVAL_TAGS = [
 ] as const
 
 export const PROGRAMME_OTHER = 'Programme-wide / other'
+
+/** Commodities a study can cover (Sprint 52); the same list as the theme scorecards. None = programme-wide. */
+export const EVAL_COMMODITIES = COMMODITIES
 
 export const MAX_REPORT_BYTES = 25 * 1024 * 1024   // matches the `reports` bucket limit
 
@@ -59,6 +62,7 @@ export interface EvaluationReport {
   period_start: string | null
   period_end: string | null
   tags: string[]
+  commodities: string[]
   file_name: string
   file_type: EvaluationFileType
   source_url: string | null   // the report in Google Drive (studies linked rather than uploaded)

@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRole } from '@/lib/role-context'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import {
-  EVAL_COUNTRIES, EVAL_TAGS, MAX_REPORT_BYTES, PROGRAMME_OTHER, REPORT_TYPES, isStaffEmail,
+  EVAL_COMMODITIES, EVAL_COUNTRIES, EVAL_TAGS, MAX_REPORT_BYTES, PROGRAMME_OTHER, REPORT_TYPES, isStaffEmail,
 } from '@/lib/evaluations'
 import styles from './evaluation.module.css'
 
@@ -47,6 +47,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [commodities, setCommodities] = useState<string[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<null | 'processing' | 'queued'>(null)
@@ -99,7 +100,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title, country, tags,
+          title, country, tags, commodities,
           project_id: project?.id ?? null,
           programme: project ? project.project_name : PROGRAMME_OTHER,
           period_start: start || null, period_end: end || null,
@@ -187,6 +188,22 @@ function UploadModal({ onClose }: { onClose: () => void }) {
                   <span className={styles.hint}>To</span>
                   <input type="date" value={end} min={start || undefined} onChange={e => setEnd(e.target.value)} />
                 </label>
+              </div>
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend>Commodities <span className={styles.hint}>(leave empty for a programme-wide study)</span></legend>
+              <div className={styles.tagGrid}>
+                {EVAL_COMMODITIES.map(c => {
+                  const on = commodities.includes(c)
+                  return (
+                    <label key={c} className={`${styles.tagOption} ${on ? styles.tagOn : ''}`}>
+                      <input type="checkbox" checked={on}
+                             onChange={() => setCommodities(on ? commodities.filter(x => x !== c) : [...commodities, c])} />
+                      {c}
+                    </label>
+                  )
+                })}
               </div>
             </fieldset>
 

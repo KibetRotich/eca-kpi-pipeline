@@ -1,7 +1,7 @@
 /**
  * /api/evaluations — Evaluation Insights reports (Sprint 47)
  *
- * POST { title, project_id, programme, country, period_start, period_end, tags[], file_name, file_type, file_size }
+ * POST { title, project_id, programme, country, period_start, period_end, tags[], commodities[], file_name, file_type, file_size }
  *      → creates the report record (status 'uploading') and returns a one-time signed upload URL
  *        { id, path, token } for the private `reports` bucket. The browser uploads the file straight
  *        to storage (Vercel caps request bodies at 4.5 MB), then calls POST /api/evaluations/<id>/process.
@@ -14,13 +14,13 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaff } from '@/lib/require-staff'
-import { EVAL_COUNTRIES, EVAL_TAGS, MAX_REPORT_BYTES, PROGRAMME_OTHER, REPORT_TYPES } from '@/lib/evaluations'
+import { EVAL_COMMODITIES, EVAL_COUNTRIES, EVAL_TAGS, MAX_REPORT_BYTES, PROGRAMME_OTHER, REPORT_TYPES } from '@/lib/evaluations'
 import { NextRequest, NextResponse } from 'next/server'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
-const LIST_COLS = 'id, title, programme, country, period_start, period_end, tags, file_name, file_type, source_url, ' +
+const LIST_COLS = 'id, title, programme, country, period_start, period_end, tags, commodities, file_name, file_type, source_url, ' +
                   'evaluator, uploaded_by, uploaded_at, status, summary, error, review_note, published_at'
 
 /** Keeps the original name readable while making it safe as a storage object key. */
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
   const start = b.period_start ? String(b.period_start) : null
   const end = b.period_end ? String(b.period_end) : null
   const tags = Array.isArray(b.tags) ? b.tags.map(String) : []
+  const commodities = Array.isArray(b.commodities) ? b.commodities.map(String) : []
   const fileName = String(b.file_name ?? '')
   const fileType = REPORT_TYPES[String(b.file_type ?? '')]
   const fileSize = Number(b.file_size)
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
   if ((start && !DATE.test(start)) || (end && !DATE.test(end))) return NextResponse.json({ error: 'Invalid evaluation period' }, { status: 400 })
   if (start && end && start > end) return NextResponse.json({ error: 'The evaluation period ends before it starts' }, { status: 400 })
   if (tags.some(t => !(EVAL_TAGS as readonly string[]).includes(t))) return NextResponse.json({ error: 'Unknown tag' }, { status: 400 })
+  if (commodities.some(c => !(EVAL_COMMODITIES as readonly string[]).includes(c))) return NextResponse.json({ error: 'Unknown commodity' }, { status: 400 })
   if (!fileType || !fileName.toLowerCase().endsWith(`.${fileType}`)) {
     return NextResponse.json({ error: 'Only .pdf and .docx files can be uploaded' }, { status: 400 })
   }
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   const { error: insErr } = await supabaseAdmin.from('evaluation_reports').insert({
     id, title, project_id: projectId, programme: programmeName, country,
-    period_start: start, period_end: end, tags: [...new Set(tags)],
+    period_start: start, period_end: end, tags: [...new Set(tags)], commodities: [...new Set(commodities)],
     file_path: path, file_name: fileName.slice(0, 200), file_type: fileType, file_size: fileSize,
     uploaded_by: staff.email, status: 'uploading',
   })
