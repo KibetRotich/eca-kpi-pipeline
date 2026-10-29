@@ -1,125 +1,154 @@
-'use client'
-
 /**
- * Renders one theme synthesis (used by the theme page and the review queue).
- * Every point lists the studies it is drawn from; the Country and Stage filters narrow the points (and chart rows)
- * to those backed by at least one matching study, so readers can see e.g. only the Kenya endline evidence.
+ * Renders one theme synthesis as a board-level view (used by the theme page and the review queue):
+ * headline, headline figures, % change by commodity, commodity scorecard, small trend charts and three
+ * takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
+ * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
  */
-import { useMemo, useState } from 'react'
-import { studyStage, type CitedPoint, type SourceStudy, type ThemeSynthesis } from '@/lib/themes'
-import Sources from './Sources'
-import ThemeCharts from './ThemeCharts'
+import {
+  BASIS_LABEL, STATUS_LABEL, type BoardView, type ThemeSynthesis,
+} from '@/lib/themes'
 import styles from './themes.module.css'
 
-function Points({ title, items, studies }: { title: string; items: CitedPoint[]; studies: Record<string, SourceStudy> }) {
-  if (!items.length) return null
+const fmt = (v: number) => v.toLocaleString('en-GB', { maximumFractionDigits: 2 })
+const signed = (v: number) => `${v > 0 ? '+' : ''}${fmt(v)}%`
+
+function Figures({ figures }: { figures: BoardView['figures'] }) {
+  if (!figures.length) return null
+  return (
+    <div className={styles.figures}>
+      {figures.map((f, i) => (
+        <div key={i} className={styles.figure}>
+          <span className={styles.figValue}>{f.value}</span>
+          <span className={styles.figLabel}>{f.label}</span>
+          <span className={styles.figContext}>{f.context} · {BASIS_LABEL[f.basis]}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Horizontal bars from a zero line; self-reported figures are drawn hollow. */
+function ChangeChart({ rows }: { rows: BoardView['change'] }) {
+  if (!rows.length) return null
+  const lo = Math.min(0, ...rows.map(r => r.pct))
+  const hi = Math.max(0, ...rows.map(r => r.pct))
+  const span = hi - lo || 1
+  const at = (v: number) => ((v - lo) / span) * 100
   return (
     <section>
-      <h3>{title}</h3>
-      <ul>
-        {items.map((p, i) => (
-          <li key={i}>{p.text} <Sources ids={p.sources} studies={studies} /></li>
-        ))}
-      </ul>
+      <h3>Change by commodity</h3>
+      <figure className={styles.chart}>
+        <div className={styles.legend}>
+          <span><i className={styles.keySolid} /> Measured (comparison group or before → after)</span>
+          <span><i className={styles.keyHollow} /> Self-reported</span>
+        </div>
+        {rows.map((r, i) => {
+          const left = Math.min(at(0), at(r.pct)), width = Math.abs(at(r.pct) - at(0))
+          return (
+            <div key={i} className={styles.changeRow} tabIndex={0}>
+              <span className={styles.rowLabel}>
+                <b>{r.commodity}</b> · {r.indicator}
+                <span className={styles.changeFrom}>{r.from} → {r.to}</span>
+              </span>
+              <div className={styles.track}>
+                <span className={styles.zero} style={{ left: `${at(0)}%` }} />
+                <span className={r.basis === 'self_reported' ? styles.barHollow : styles.barSolid}
+                      style={{ left: `${left}%`, width: `${Math.max(width, 0.8)}%` }} />
+                <span className={styles.tip}>
+                  <strong>{r.commodity}: {signed(r.pct)}</strong><br />
+                  {r.from} → {r.to} · {BASIS_LABEL[r.basis]}
+                </span>
+              </div>
+              <span className={styles.changeValue}>{signed(r.pct)}</span>
+            </div>
+          )
+        })}
+      </figure>
     </section>
   )
 }
 
-export default function ThemeView({ synthesis, studies, filterable = true }: {
-  synthesis: ThemeSynthesis
-  studies: Record<string, SourceStudy>
-  filterable?: boolean
-}) {
-  const [country, setCountry] = useState('')
-  const [stage, setStage] = useState('')
+function Scorecard({ rows }: { rows: BoardView['scorecard'] }) {
+  if (!rows.length) return null
+  return (
+    <section>
+      <h3>By commodity</h3>
+      <div className={styles.scorecard}>
+        {rows.map(r => (
+          <span key={r.commodity} className={`${styles.chip} ${styles[`st_${r.status}`]}`}>
+            {r.commodity} <em>{STATUS_LABEL[r.status]}</em>
+          </span>
+        ))}
+      </div>
+    </section>
+  )
+}
 
-  const countries = useMemo(() => [...new Set(Object.values(studies).map(s => s.country))].sort(), [studies])
-  const stages = useMemo(() => [...new Set(Object.values(studies).map(s => studyStage(s.tags)))].sort(), [studies])
+/** One small line chart per project: one indicator, one unit. */
+function Spark({ s }: { s: BoardView['series'][number] }) {
+  const W = 260, H = 110, P = { l: 12, r: 12, t: 22, b: 26 }
+  const vals = s.points.map(p => p.value)
+  const min = Math.min(0, ...vals), max = Math.max(...vals) || 1
+  const x = (i: number) => P.l + (s.points.length === 1 ? 0 : (i / (s.points.length - 1)) * (W - P.l - P.r))
+  const y = (v: number) => P.t + (1 - (v - min) / (max - min || 1)) * (H - P.t - P.b)
+  const anchor = (i: number) => i === 0 ? 'start' : i === s.points.length - 1 ? 'end' : 'middle'
+  return (
+    <figure className={styles.spark}>
+      <figcaption><b>{s.project}</b><span>{s.indicator} ({s.unit})</span></figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img"
+           aria-label={`${s.project}: ${s.points.map(p => `${p.label} ${fmt(p.value)} ${s.unit}`).join(', ')}`}>
+        <line x1={P.l} x2={W - P.r} y1={H - P.b} y2={H - P.b} className={styles.sparkBase} />
+        <path d={s.points.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.value)}`).join(' ')} className={styles.sparkLine} />
+        {s.points.map((p, i) => (
+          <g key={i}>
+            <circle cx={x(i)} cy={y(p.value)} r={4} className={styles.sparkDot} />
+            <text x={x(i)} y={y(p.value) - 8} textAnchor={anchor(i)} className={styles.sparkVal}>{fmt(p.value)}</text>
+            <text x={x(i)} y={H - 8} textAnchor={anchor(i)} className={styles.sparkLab}>{p.label}</text>
+          </g>
+        ))}
+      </svg>
+    </figure>
+  )
+}
 
-  const matches = (id: string) => {
-    const s = studies[id]
-    return !!s && (!country || s.country === country) && (!stage || studyStage(s.tags) === stage)
-  }
-  const keep = (items: CitedPoint[]) => (country || stage) ? items.filter(p => p.sources.some(matches)) : items
-  const trends = (country || stage)
-    ? synthesis.change_over_time.filter(c => c.points.some(p => matches(p.source)))
-    : synthesis.change_over_time
+function Takeaways({ works, barriers, actions }: BoardView['takeaways']) {
+  const cols: [string, string[]][] = [['What works', works], ['What holds results back', barriers], ['What to do', actions]]
+  return (
+    <div className={styles.takeaways}>
+      {cols.filter(([, items]) => items.length).map(([title, items]) => (
+        <section key={title}>
+          <h3>{title}</h3>
+          <ul>{items.slice(0, 3).map((t, i) => <li key={i}>{t}</li>)}</ul>
+        </section>
+      ))}
+    </div>
+  )
+}
 
-  const evidence = keep(synthesis.key_evidence)
-  const works = keep(synthesis.what_works)
-  const barriers = keep(synthesis.barriers)
-  const recs = keep(synthesis.recommendations)
-  const nothing = !evidence.length && !works.length && !barriers.length && !recs.length && !trends.length
-
+export default function ThemeView({ synthesis }: { synthesis: ThemeSynthesis }) {
+  const b = synthesis.board
   return (
     <div className={styles.synthesis}>
       <p className={styles.headline}>{synthesis.headline}</p>
-
-      {filterable && (
-        <div className={styles.filters}>
-          <label>
-            Country
-            <select value={country} onChange={e => setCountry(e.target.value)}>
-              <option value="">All</option>
-              {countries.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </label>
-          <label>
-            Stage
-            <select value={stage} onChange={e => setStage(e.target.value)}>
-              <option value="">All</option>
-              {stages.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </label>
-          {(country || stage) && (
-            <button type="button" className={styles.clear} onClick={() => { setCountry(''); setStage('') }}>Clear</button>
-          )}
-        </div>
-      )}
-
-      {nothing && <p className={styles.none}>No evidence in this theme matches the filters.</p>}
-
-      <Points title="Key evidence" items={evidence} studies={studies} />
-
-      {synthesis.charts && synthesis.charts.length > 0 && (
-        <ThemeCharts charts={synthesis.charts} studies={studies} keep={id => (country || stage) ? matches(id) : true} />
-      )}
-
-      {trends.length > 0 && (
-        <section>
-          <h3>Change over time</h3>
-          <div className={styles.trends}>
-            {trends.map((c, i) => (
-              <div key={i} className={styles.trend}>
-                <div className={styles.trendHead}>{c.project} <span>{c.country}</span></div>
-                <ol className={styles.timeline}>
-                  {c.points.map((p, j) => (
-                    <li key={j}>
-                      <a href={`/evaluation-insights/${p.source}`} className={styles.stage}>{p.stage} {p.year}</a>
-                      <span>{p.finding}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
+      {b ? (
+        <>
+          <Figures figures={b.figures} />
+          <div className={styles.boardCharts}>
+            <ChangeChart rows={b.change} />
+            <Scorecard rows={b.scorecard} />
           </div>
-        </section>
-      )}
-
-      {(works.length > 0 || barriers.length > 0) && (
-        <div className={styles.twoCol}>
-          <Points title="What works" items={works} studies={studies} />
-          <Points title="What holds results back" items={barriers} studies={studies} />
-        </div>
-      )}
-
-      <Points title="Recommendations for programming" items={recs} studies={studies} />
-
-      {synthesis.evidence_gaps.length > 0 && (
-        <section>
-          <h3>Evidence gaps &amp; caveats</h3>
-          <ul>{synthesis.evidence_gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>
-        </section>
+          {b.series.length > 0 && (
+            <section>
+              <h3>Change over time</h3>
+              <div className={styles.sparks}>{b.series.map((s, i) => <Spark key={i} s={s} />)}</div>
+            </section>
+          )}
+          <Takeaways {...b.takeaways} />
+          <p className={styles.confidence}>{b.confidence}</p>
+        </>
+      ) : (
+        <Takeaways works={synthesis.what_works.map(p => p.text)} barriers={synthesis.barriers.map(p => p.text)}
+                   actions={synthesis.recommendations.map(p => p.text)} />
       )}
     </div>
   )

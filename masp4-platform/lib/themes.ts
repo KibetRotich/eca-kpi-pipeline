@@ -45,8 +45,53 @@ export type ThemeChart =
   | { type: 'stacked'; title: string; unit: string; note?: string; categories: string[]
       rows: { label: string; values: number[]; source: string }[] }
 
+/**
+ * How a figure was measured. Board charts draw `self_reported` figures hollow, so they are never read as
+ * equal to measured ones: `comparison` = participants vs a comparison group, `before_after` = measured at
+ * two stages (e.g. monitoring data), `self_reported` = farmers' own estimates or recall.
+ */
+export type Basis = 'comparison' | 'before_after' | 'self_reported'
+
+export const BASIS_LABEL: Record<Basis, string> = {
+  comparison: 'vs comparison group', before_after: 'measured before → after', self_reported: 'self-reported',
+}
+
+/** A commodity's overall direction on one theme (the overview grid and the theme scorecard). */
+export type CommodityStatus = 'improved' | 'mixed' | 'no_change' | 'worsened' | 'baseline_only'
+
+export const STATUS_LABEL: Record<CommodityStatus, string> = {
+  improved: 'Improved', mixed: 'Mixed', no_change: 'No clear change', worsened: 'Worsened',
+  baseline_only: 'Baseline only',
+}
+
+/** Commodity names used by every scorecard, so the overview grid lines up across themes. */
+export const COMMODITIES = [
+  'Coffee', 'Maize', 'Food crops', 'Horticulture', 'Dairy', 'Livestock & beef', 'Tea', 'Oil palm',
+  'Beans & barley', 'Cotton & textiles', 'Leather', 'Gold',
+] as const
+
+/**
+ * The board-level view of a theme (Sprint 51): a few headline figures and charts instead of prose.
+ * Every number cites the study it comes from (`source`), although the board view does not show citations.
+ */
+export interface BoardView {
+  /** 3–4 headline tiles, e.g. value "+2.1 bags/acre", label "Maize yield", context "CSV-Maize, Kenya". */
+  figures: { value: string; label: string; context: string; basis: Basis; source: string }[]
+  /** % change by commodity; `from`/`to` keep the underlying values (e.g. "1.73 kg/tree") visible. */
+  change: { commodity: string; indicator: string; pct: number; from: string; to: string; basis: Basis; source: string }[]
+  /** One row per commodity with evidence in this theme; names come from COMMODITIES. */
+  scorecard: { commodity: string; status: CommodityStatus }[]
+  /** One indicator, one unit, two or more points per project. */
+  series: { project: string; indicator: string; unit: string; points: { label: string; value: number; source: string }[] }[]
+  /** Three short lines each. */
+  takeaways: { works: string[]; barriers: string[]; actions: string[] }
+  /** One sentence on how far the evidence can be trusted. */
+  confidence: string
+}
+
 /** What the synthesis step stores in theme_insights.synthesis. */
 export interface ThemeSynthesis {
+  board?: BoardView
   headline: string
   key_evidence: CitedPoint[]
   charts?: ThemeChart[]

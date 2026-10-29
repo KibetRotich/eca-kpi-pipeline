@@ -1,13 +1,14 @@
 /**
  * /thematic-insights — Thematic Insights hub (Sprint 49).
  *
- * One card per theme (evaluation_themes), showing the theme's PUBLISHED cross-study synthesis: headline,
- * evidence rating and the number of studies behind it. Each card opens /thematic-insights/<key>.
+ * An overview grid (themes × commodities, Sprint 51) from each published synthesis's board scorecard, then
+ * one card per theme (evaluation_themes) with its headline, evidence rating and the number of studies behind it.
+ * Each card opens /thematic-insights/<key>.
  * Syntheses draw on the published studies of /evaluation-insights and are written from Claude Code
  * ("synthesise themes"); M&E Officers / Admins review drafts in ThemeReviewQueue before they appear here.
  */
 import { supabaseAdmin } from '@/lib/supabase'
-import type { Theme, ThemeInsight } from '@/lib/themes'
+import { COMMODITIES, STATUS_LABEL, type CommodityStatus, type Theme, type ThemeInsight } from '@/lib/themes'
 import styles from './themes.module.css'
 import ThemeReviewQueue from './ThemeReviewQueue'
 import Meter from './Meter'
@@ -27,6 +28,13 @@ export default async function ThematicInsightsPage() {
   ])
   const byTheme = new Map((insights ?? []).map(i => [i.theme_key, i as Pick<ThemeInsight,
     'theme_key' | 'synthesis' | 'evidence_rating' | 'source_report_ids'>]))
+  const themeList = (themes ?? []) as Theme[]
+
+  // Overview grid: only commodities that appear in at least one published scorecard, in the fixed order.
+  const status = new Map<string, CommodityStatus>()
+  for (const i of byTheme.values())
+    for (const r of i.synthesis.board?.scorecard ?? []) status.set(`${i.theme_key}|${r.commodity}`, r.status)
+  const cols = COMMODITIES.filter(c => themeList.some(t => status.has(`${t.key}|${c}`)))
 
   return (
     <div>
@@ -34,17 +42,46 @@ export default async function ThematicInsightsPage() {
         <div>
           <h1>Thematic Insights</h1>
           <p className={styles.intro}>
-            What the evidence says across all studies, theme by theme. Each synthesis draws on the {count ?? 0} published
-            studies in <a href="/evaluation-insights">Evaluation Insights</a> (baselines, midlines, endlines, and
-            thematic and impact studies), and every finding links to the studies it comes from.
+            What the evidence says across all studies, theme by theme, drawn from the {count ?? 0} published studies
+            in <a href="/evaluation-insights">Evaluation Insights</a> (baselines, midlines, endlines, and thematic and
+            impact studies).
           </p>
         </div>
       </header>
 
       <ThemeReviewQueue />
 
+      {cols.length > 0 && (
+        <section className={styles.overview} aria-label="Results by theme and commodity">
+          <h2>Results at a glance</h2>
+          <div className={styles.overviewScroll}>
+            <table className={styles.overviewTable}>
+              <thead>
+                <tr><th scope="col">Theme</th>{cols.map(c => <th key={c} scope="col">{c}</th>)}</tr>
+              </thead>
+              <tbody>
+                {themeList.map(t => (
+                  <tr key={t.key}>
+                    <th scope="row"><a href={`/thematic-insights/${t.key}`}>{t.title}</a></th>
+                    {cols.map(c => {
+                      const st = status.get(`${t.key}|${c}`)
+                      return (
+                        <td key={c} className={st ? styles[`st_${st}`] : styles.st_none}
+                            title={`${t.title} · ${c}: ${st ? STATUS_LABEL[st] : 'No evidence'}`}>
+                          {st ? STATUS_LABEL[st] : '–'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className={styles.themeGrid}>
-        {((themes ?? []) as Theme[]).map(t => {
+        {themeList.map(t => {
           const ins = byTheme.get(t.key)
           return (
             <a key={t.key} href={`/thematic-insights/${t.key}`} className={`${styles.themeCard} ${ins ? '' : styles.pending}`}>

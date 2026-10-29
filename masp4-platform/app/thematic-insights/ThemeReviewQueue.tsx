@@ -2,11 +2,11 @@
 
 /**
  * Review queue for /thematic-insights — M&E Officers and Admins only.
- * Lists draft theme syntheses; the reviewer reads each one (with its cited studies), then Publishes or Rejects it.
+ * Lists draft theme syntheses; the reviewer reads each one (board view), then Publishes or Rejects it.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useRole } from '@/lib/role-context'
-import type { SourceStudy, ThemeInsight } from '@/lib/themes'
+import type { ThemeInsight } from '@/lib/themes'
 import ThemeView from './ThemeView'
 import Meter from './Meter'
 import ev from '../evaluation-insights/evaluation.module.css'
@@ -16,7 +16,6 @@ type Draft = ThemeInsight & { evaluation_themes: { title: string } | null }
 export default function ThemeReviewQueue() {
   const { canEdit, loading } = useRole()
   const [drafts, setDrafts] = useState<Draft[] | null>(null)
-  const [studies, setStudies] = useState<Record<string, SourceStudy>>({})
   const [openId, setOpenId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +25,6 @@ export default function ThemeReviewQueue() {
     if (!res.ok) return
     const body = await res.json()
     setDrafts(body.drafts)
-    setStudies(body.studies)
   }, [])
 
   useEffect(() => { if (!loading && canEdit) load() }, [loading, canEdit, load])
@@ -77,7 +75,7 @@ export default function ThemeReviewQueue() {
                       onClick={() => act(d.id, 'reject')}>Reject</button>
             </div>
           </div>
-          {openId === d.id && <ThemeView synthesis={d.synthesis} studies={studies} filterable={false} />}
+          {openId === d.id && <ThemeView synthesis={d.synthesis} />}
         </div>
       ))}
     </section>
