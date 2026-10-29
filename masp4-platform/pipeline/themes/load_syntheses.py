@@ -13,6 +13,11 @@ env = dict(l.strip().split('=', 1) for l in open(sys.argv[1], encoding='utf-8') 
 URL, KEY = env['NEXT_PUBLIC_SUPABASE_URL'].strip(), env['SUPABASE_SERVICE_ROLE_KEY'].strip()
 HDR = {'apikey': KEY, 'Authorization': f'Bearer {KEY}', 'Content-Type': 'application/json'}
 POINT_LISTS = ('key_evidence', 'what_works', 'barriers', 'recommendations')
+# Board view (Sprint 51), mirroring lib/themes.ts.
+BASES = ('comparison', 'before_after', 'self_reported')
+STATUSES = ('improved', 'mixed', 'no_change', 'worsened', 'baseline_only')
+COMMODITIES = ('Coffee', 'Maize', 'Food crops', 'Horticulture', 'Dairy', 'Livestock & beef', 'Tea', 'Oil palm',
+               'Beans & barley', 'Cotton & textiles', 'Leather', 'Gold')
 
 
 def req(method, path, body=None, prefer=None):
@@ -48,6 +53,25 @@ for it in items:
         if ch['type'] == 'stacked' and any(len(r['values']) != len(ch['categories']) for r in ch['rows']):
             errors.append(f"{key}: chart '{ch['title']}' has rows that do not match its categories")
         cited.update(r['source'] for r in ch['rows'])
+    board = syn.get('board')
+    if board:
+        for f in board['figures']:
+            if f['basis'] not in BASES:
+                errors.append(f"{key}: figure '{f['label']}' has basis {f['basis']}")
+            cited.add(f['source'])
+        for r in board['change']:
+            if r['basis'] not in BASES or not isinstance(r['pct'], (int, float)):
+                errors.append(f"{key}: change row '{r['commodity']}' needs a known basis and a numeric pct")
+            cited.add(r['source'])
+        for r in board['scorecard']:
+            if r['commodity'] not in COMMODITIES or r['status'] not in STATUSES:
+                errors.append(f"{key}: scorecard row {r} needs a COMMODITIES name and a known status")
+        for s in board['series']:
+            if len(s['points']) < 2 or not s.get('unit'):
+                errors.append(f"{key}: series '{s['project']}' needs a unit and at least two points")
+            cited.update(p['source'] for p in s['points'])
+        if any(len(board['takeaways'][k]) > 3 for k in ('works', 'barriers', 'actions')) or not board.get('confidence'):
+            errors.append(f'{key}: takeaways are limited to 3 each, and confidence is required')
     for sid in cited - published:
         errors.append(f'{key}: cites {sid}, which is not a published study')
     rows.append({'theme_key': key, 'status': 'draft', 'synthesis': syn, 'evidence_rating': it['evidence_rating'],

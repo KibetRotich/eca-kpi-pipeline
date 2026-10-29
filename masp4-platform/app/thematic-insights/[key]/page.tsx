@@ -1,11 +1,10 @@
 /**
- * /thematic-insights/<key> — one theme's published cross-study synthesis, with the source studies behind it.
- * Only published syntheses and published studies are shown (reviewers read drafts in the review queue).
+ * /thematic-insights/<key> — one theme's published cross-study synthesis as a board-level view
+ * (Sprint 51: figures and charts; the source-study list and prose were removed). Reviewers read drafts in the review queue.
  */
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
-import { formatPeriod } from '@/lib/evaluations'
-import { studyStage, type SourceStudy, type Theme, type ThemeInsight } from '@/lib/themes'
+import type { Theme, ThemeInsight } from '@/lib/themes'
 import ThemeView from '../ThemeView'
 import Meter from '../Meter'
 import styles from '../themes.module.css'
@@ -35,14 +34,7 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
     .eq('theme_key', theme.key).eq('status', 'published').maybeSingle()
   const ins = insight as ThemeInsight | null
 
-  let studies: SourceStudy[] = []
-  if (ins?.source_report_ids.length) {
-    const { data } = await supabaseAdmin.from('evaluation_reports')
-      .select('id, title, programme, country, tags, period_start, period_end')
-      .in('id', ins.source_report_ids).eq('status', 'published').order('period_end', { ascending: false })
-    studies = (data ?? []) as SourceStudy[]
-  }
-  const byId = Object.fromEntries(studies.map(s => [s.id, s]))
+  const n = ins?.source_report_ids.length ?? 0
 
   return (
     <div>
@@ -56,7 +48,7 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
           {ins && (
             <div className={styles.rating}>
               <Meter rating={ins.evidence_rating} />
-              <span>{studies.length} {studies.length === 1 ? 'study' : 'studies'} · updated{' '}
+              <span>Based on {n} {n === 1 ? 'study' : 'studies'} · updated{' '}
                 {new Date(ins.published_at ?? ins.generated_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</span>
             </div>
           )}
@@ -68,24 +60,7 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
             The synthesis for this theme will appear here once it has been reviewed by the M&amp;E team.
           </div>
         ) : (
-          <>
-            <ThemeView synthesis={ins.synthesis} studies={byId} />
-            {ins.synthesis.rating_reason && (
-              <p className={styles.ratingReason}><strong>Why this evidence rating:</strong> {ins.synthesis.rating_reason}</p>
-            )}
-            <section className={styles.sourceList}>
-              <h3>Source studies ({studies.length})</h3>
-              <ul>
-                {studies.map(s => (
-                  <li key={s.id}>
-                    <a href={`/evaluation-insights/${s.id}`}>{s.title}</a>
-                    <span>{[s.country, studyStage(s.tags), formatPeriod(s.period_start, s.period_end)]
-                      .filter(Boolean).join(' · ')}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </>
+          <ThemeView synthesis={ins.synthesis} />
         )}
       </article>
     </div>
