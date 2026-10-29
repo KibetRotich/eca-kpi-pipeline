@@ -75,8 +75,9 @@ export const COMMODITIES = [
  * Every number cites the study it comes from (`source`), although the board view does not show citations.
  */
 export interface BoardView {
-  /** 3–4 headline tiles, e.g. value "+2.1 bags/acre", label "Maize yield", context "CSV-Maize, Kenya". */
-  figures: { value: string; label: string; context: string; basis: Basis; source: string }[]
+  /** 3–4 headline tiles, e.g. value "+2.1 bags/acre", label "Maize yield", context "CSV-Maize, Kenya".
+   *  `explain` (Sprint 57) is one plain-language sentence saying what the number counts, for whom and when. */
+  figures: { value: string; label: string; context: string; basis: Basis; source: string; explain?: string }[]
   /** % change by commodity; `from`/`to` keep the underlying values (e.g. "1.73 kg/tree") visible. */
   change: { commodity: string; indicator: string; pct: number; from: string; to: string; basis: Basis; source: string }[]
   /** One row per commodity with evidence in this theme; names come from COMMODITIES. */

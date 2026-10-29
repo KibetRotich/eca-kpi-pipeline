@@ -210,10 +210,11 @@
 .tableView th { background: #f5f5f5; font-weight: 700; }
 
 /* ── Board view (Sprint 51) ─────────────────────────────────────────────── */
-.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .6rem; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .6rem; }
 .figure {
   display: grid;
-  gap: .15rem;
+  align-content: start;
+  gap: .25rem;
   padding: .6rem .75rem;
   border: 1px solid #eee;
   border-left: 4px solid #f2b600;
@@ -222,6 +223,7 @@
 }
 .figValue { font-size: 1.15rem; font-weight: 800; color: #111; line-height: 1.1; }
 .figLabel { font-size: .68rem; font-weight: 700; color: #333; }
+.figExplain { font-size: .64rem; color: #444; line-height: 1.4; }
 .figContext { font-size: .56rem; color: #777; }
 
 .boardCharts { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; align-items: start; }

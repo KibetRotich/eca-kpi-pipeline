@@ -20,6 +20,7 @@ function Figures({ figures }: { figures: BoardView['figures'] }) {
         <div key={i} className={styles.figure}>
           <span className={styles.figValue}>{f.value}</span>
           <span className={styles.figLabel}>{f.label}</span>
+          {f.explain && <span className={styles.figExplain}>{f.explain}</span>}
           <span className={styles.figContext}>{f.context} · {BASIS_LABEL[f.basis]}</span>
         </div>
       ))}
