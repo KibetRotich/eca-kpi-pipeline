@@ -16,7 +16,7 @@ POINT_LISTS = ('key_evidence', 'what_works', 'barriers', 'recommendations')
 # Board view (Sprint 51), mirroring lib/themes.ts.
 BASES = ('comparison', 'before_after', 'self_reported')
 STATUSES = ('improved', 'mixed', 'no_change', 'worsened', 'baseline_only')
-COMMODITIES = ('Coffee', 'Maize', 'Food crops', 'Horticulture', 'Dairy', 'Livestock & beef', 'Tea', 'Oil palm',
+COMMODITIES = ('Coffee', 'Maize', 'Food crops', 'F&V', 'Dairy', 'Livestock & beef', 'Tea', 'Oil palm',
                'Beans & barley', 'Cotton & textiles', 'Leather', 'Gold')
 
 

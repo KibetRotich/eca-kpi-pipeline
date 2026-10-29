@@ -64,9 +64,9 @@ export const STATUS_LABEL: Record<CommodityStatus, string> = {
   baseline_only: 'Baseline only',
 }
 
-/** Commodity names used by every scorecard, so the overview grid lines up across themes. */
+/** Commodity names used by theme scorecards and study filters. F&V = fruits & vegetables (was 'Horticulture', Sprint 53). */
 export const COMMODITIES = [
-  'Coffee', 'Maize', 'Food crops', 'Horticulture', 'Dairy', 'Livestock & beef', 'Tea', 'Oil palm',
+  'Coffee', 'Maize', 'Food crops', 'F&V', 'Dairy', 'Livestock & beef', 'Tea', 'Oil palm',
   'Beans & barley', 'Cotton & textiles', 'Leather', 'Gold',
 ] as const
 
