@@ -1,5 +1,5 @@
 """Build a single self-contained interactive HTML dashboard for the UG Tree
-Seedlings Request dataset (NPL & REAP), covering all 9 insight sections plus
+Seedlings Request dataset (NPL & REAP), covering 7 insight sections plus
 Distribution & Fulfilment (application → distribution).
 
 Reads the ug_seed_* tables from Supabase (loaded nightly by load_supabase.py), so
@@ -8,7 +8,7 @@ served / repeat / legacy flags come from transform.py via the database.
 
 Computation is done in pandas; results are emitted as a JSON blob of typed
 "blocks" rendered client-side by generic JS + Chart.js. The Executive section
-(9) filters client-side over an embedded record-level array. GPS / cooperative
+filters client-side over an embedded record-level array. GPS point
 maps are matplotlib PNGs embedded as base64.
 
 Output: <repo>/public/Seedlings_Dashboard.html  (served by Next.js at /Seedlings_Dashboard.html)
@@ -134,9 +134,6 @@ m["start_dt"] = m["start_dt"].where(valid_t)
 m["date"] = m["start_dt"].dt.date
 m["ym"] = m["start_dt"].dt.strftime("%Y-%m")
 m["week"] = m["start_dt"].dt.to_period("W").dt.start_time
-m["dur_min"] = (m["end_dt"] - m["start_dt"]).dt.total_seconds() / 60
-m["wit_dt"] = pd.to_datetime(m["witness_date"], errors="coerce", utc=True)
-m["wit_delay"] = (m["wit_dt"] - m["start_dt"].dt.floor("D")).dt.days
 
 # GPS
 m["lat"] = num(m["lat"]); m["lon"] = num(m["lon"])
@@ -286,31 +283,6 @@ add(s, {"type": "line", "title": "Cumulative seedlings: applied for vs delivered
                    {"label": "delivered", "data": [int(x) for x in dl_m.reindex(months, fill_value=0).cumsum()]}],
         "note": "applied for by application month; delivered by distribution month"})
 
-dd = era["days_n"].dropna()
-edges = [0, 15, 30, 60, 90, 120, 180, 270, 365, 10_000]
-lbl = ["0–14", "15–29", "30–59", "60–89", "90–119", "120–179", "180–269", "270–364", "365+"]
-add(s, {"type": "bar", "title": "Days from application to delivery",
-        "labels": lbl, "values": [int(x) for x in pd.cut(dd, edges, right=False, labels=lbl).value_counts().reindex(lbl)],
-        "horizontal": False, "axisLabel": "applications served",
-        "note": f"median {dd.median():.0f} days; 90th percentile {dd.quantile(.9):.0f} days" if len(dd) else ""})
-
-md_r = era.groupby("region_norm")["days_n"].median().dropna().sort_values(ascending=False)
-add(s, {"type": "bar", "title": "Median days to delivery, by region",
-        "labels": list(md_r.index), "values": [round(float(x), 0) for x in md_r.values],
-        "horizontal": True, "axisLabel": "days"})
-
-bl = (wait[wait["district"] != ""].groupby(["region_norm", "district"])
-      .agg(awaiting=("_id", "size"), pre25=("era", lambda x: int((~x).sum())),
-           over90=("age_days", lambda x: int((x > 90).sum())),
-           oldest=("age_days", "max"), seedlings=("seed_clean", "sum"))
-      .reset_index().sort_values("awaiting", ascending=False))
-add(s, {"type": "table", "title": "Backlog: applications awaiting delivery, by district",
-        "columns": ["region", "district", "awaiting", "of which 2023–24", "waiting >90 days", "oldest (days)",
-                    "seedlings applied for"],
-        "rows": [[r.region_norm, r.district, int(r.awaiting), int(r.pre25), int(r.over90), int(r.oldest),
-                  int(r.seedlings) if not pd.isna(r.seedlings) else 0] for r in bl.head(30).itertuples()],
-        "note": f"{len(bl)} districts with applications awaiting; top 30 shown. Includes applications not approved."})
-
 ev_m = evr.dropna(subset=["ev_dt"]).groupby(evr["ev_dt"].dt.strftime("%Y-%m")).size()
 add(s, {"type": "bar", "title": "Distribution events per month",
         "labels": list(ev_m.index), "values": [int(x) for x in ev_m.values],
@@ -339,17 +311,6 @@ ax.set_title("Applications and distribution events"); ax.set_xlabel("Longitude")
 ax.legend(markerscale=4, fontsize=8, loc="upper right"); ax.grid(alpha=0.3)
 add(s, {"type": "image", "title": "Where seedlings were requested vs delivered (GPS)", "src": b64fig(fig)})
 
-flag_given = int((dreal["already_given"].fillna("").str.lower() == "yes").sum())
-add(s, {"type": "kpi", "title": "Distribution data quality",
-        "cards": [{"label": "Farmer entries (real events)", "value": f"{len(dreal):,}"},
-                  {"label": "Linked to an application", "value": f"{int(dreal['matched'].sum()):,}"},
-                  {"label": "Repeat entries (same application)", "value": f"{int(dreal['is_repeat'].sum()):,}"},
-                  {"label": "Flagged 'already given' by the form", "value": f"{flag_given:,}"},
-                  {"label": "Legacy trial entries (no seedlings)", "value": f"{int(dreal['is_legacy'].sum()):,}"},
-                  {"label": "Test events excluded", "value": f"{len(ev_test):,}"}],
-        "note": "Repeats are later entries for an application already served; only the first delivery counts. "
-                "Legacy entries are mostly 2023–24 form trials with no seedlings or lookup values."})
-
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — Regional & Geographic
 # ════════════════════════════════════════════════════════════════════════════
@@ -358,11 +319,17 @@ s = sec("s1", "1 · Regional & Geographic", "Where farmers, seedlings and spend 
 add(s, vc_block(m["region_norm"], "Farmers (applications) by region", horizontal=True,
                 axis="applications", note="south_western folds in southern_western (version coding)"))
 
-dist_seed = mc.groupby("district")["total_seedlings_n"].sum().sort_values(ascending=False)
-dist_seed = dist_seed[dist_seed.index != ""]
-add(s, {"type": "bar", "title": f"Total seedlings by district (all {len(dist_seed)})",
-        "labels": list(dist_seed.index), "values": [int(x) for x in dist_seed.values],
-        "horizontal": True, "axisLabel": "seedlings", "tall": True})
+ds = era[era["district"] != ""].assign(
+    delivered=era["given_n"].where(era["served"], 0).fillna(0),
+    awaiting=era["seed_clean"].where(~era["served"], 0).fillna(0))
+dist_seed = ds.groupby("district")[["delivered", "awaiting"]].sum()
+dist_seed = dist_seed.loc[dist_seed.sum(axis=1).sort_values(ascending=False).index]
+add(s, {"type": "stacked", "title": f"Seedlings by district: delivered vs awaiting (all {len(dist_seed)})",
+        "labels": list(dist_seed.index),
+        "series": [{"label": "delivered", "data": [int(x) for x in dist_seed["delivered"]]},
+                   {"label": "awaiting / not approved", "data": [int(x) for x in dist_seed["awaiting"]]}],
+        "horizontal": True, "tall": True,
+        "note": "bar length = seedlings applied for; delivered from the Distribution form"})
 
 dist_cost = mc.groupby("district")["grand_total_n"].sum().sort_values(ascending=False)
 dist_cost = dist_cost[dist_cost.index != ""]
@@ -447,34 +414,13 @@ ax.set_title("GPS points by project (where project recorded)"); ax.set_xlabel("L
 ax.legend(markerscale=4); ax.grid(alpha=0.3)
 add(s, {"type": "image", "title": "Project footprint overlap (subset, 26% have project)", "src": b64fig(fig)})
 
-# region × species heatmap
-piv = (itc[itc["advance_item"].isin(SPECIES_DYN)]
-       .pivot_table(index="region_norm", columns="advance_item", values="qty", aggfunc="sum", fill_value=0))
-piv = piv.reindex(columns=[c for c in SPECIES_DYN if c in piv.columns])
-add(s, {"type": "heatmap", "title": "Region × species — total seedlings",
-        "ylabels": list(piv.index), "xlabels": list(piv.columns),
-        "matrix": [[int(v) for v in row] for row in piv.values]})
-
-# cooperative bubble map (centroid sized by farmer count)
-coop_geo = (m[m["in_ug"]].groupby("cooperative")
-            .agg(lat=("lat", "mean"), lon=("lon", "mean"), n=("_id", "size"))
-            .reset_index())
-coop_geo = coop_geo[(coop_geo["n"] >= 5) & (~coop_geo["cooperative"].str.lower().str.contains("individual|private"))]
-fig, ax = plt.subplots(figsize=(7, 7))
-sc = ax.scatter(coop_geo["lon"], coop_geo["lat"], s=np.sqrt(coop_geo["n"]) * 3,
-                alpha=0.55, color="#e65100", edgecolor="k", linewidth=0.2)
-ax.set_title("Cooperative locations (centroid, sized by farmer count)")
-ax.set_xlabel("Longitude"); ax.set_ylabel("Latitude"); ax.grid(alpha=0.3)
-add(s, {"type": "image", "title": "Cooperative footprint & size", "src": b64fig(fig),
-        "note": f"{len(coop_geo)} cooperatives with >=5 geolocated farmers"})
-
 add(s, {"type": "note", "title": "Not computable",
         "text": "Participation relative to <b>registered</b> cooperatives per district (uganda_cooperatives) needs an external cooperative registry that is not in the submission data."})
 
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION 2 — Time Trends
 # ════════════════════════════════════════════════════════════════════════════
-s = sec("s2", "2 · Time Trends", "Application rollout over time, by region and project, with cost and turnaround trends.")
+s = sec("s2", "2 · Time Trends", "Application rollout over time, by region and project.")
 
 wk = m.dropna(subset=["week"])
 weekly_reg = wk.pivot_table(index="week", columns="region_norm", values="_id", aggfunc="size", fill_value=0)
@@ -496,40 +442,20 @@ add(s, {"type": "line", "title": "Applications over time: climate_heroes vs reap
         "series": [{"label": c, "data": [int(x) for x in proj_wk[c]]} for c in proj_wk.columns],
         "note": "only the 26% of records carrying a project value"})
 
-peak = m["ym"].value_counts().sort_values(ascending=False).head(10)
-add(s, {"type": "table", "title": "Peak enrollment months",
-        "columns": ["month", "applications"],
-        "rows": [[k, int(v)] for k, v in peak.items()]})
-
-cost_t = mc.dropna(subset=["ym"]).groupby("ym")["grand_total_n"].mean()
-add(s, {"type": "line", "title": "Avg grand_total per application over time (UGX)",
-        "labels": list(cost_t.index),
-        "series": [{"label": "avg grand_total", "data": [round(float(x), 0) for x in cost_t.values]}]})
-
-dur = m[(m["dur_min"] > 0) & (m["dur_min"] < 240)]
-dur_wk = dur.dropna(subset=["week"]).groupby("week")["dur_min"].mean()
-add(s, {"type": "line", "title": "Avg form completion time (min) by week",
-        "labels": [d.strftime("%Y-%m-%d") for d in dur_wk.index],
-        "series": [{"label": "avg minutes", "data": [round(float(x), 1) for x in dur_wk.values]}],
-        "note": "completion times 0–240 min only"})
-
-wd = m["wit_delay"].dropna()
-wd = wd[(wd >= -5) & (wd <= 60)]
-hist, edges = np.histogram(wd, bins=range(-5, 62, 5))
-add(s, {"type": "bar", "title": "Witness date − application date (days)",
-        "labels": [f"{edges[i]}..{edges[i+1]}" for i in range(len(hist))],
-        "values": [int(x) for x in hist], "horizontal": False, "axisLabel": "submissions",
-        "note": f"{int((m['wit_delay'].dropna()>3).sum()):,} records have witness >3 days after application (possible backlog)"})
-
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION 3 — Seedling Varieties
 # ════════════════════════════════════════════════════════════════════════════
 s = sec("s3", "3 · Seedling Varieties", "Species demand, mix by geography, and unlisted-species requests.")
 
-spq = itc.groupby("advance_item")["qty"].sum().sort_values(ascending=False)
-add(s, {"type": "bar", "title": "Species ranked by total seedlings requested",
-        "labels": list(spq.index), "values": [int(x) for x in spq.values],
-        "horizontal": True, "axisLabel": "seedlings"})
+spq = itc.assign(status=np.where(itc["_id"].isin(srv_ids), "delivered", "awaiting / not approved"))
+spq = spq.pivot_table(index="advance_item", columns="status", values="qty", aggfunc="sum", fill_value=0)
+spq = spq.reindex(columns=["delivered", "awaiting / not approved"], fill_value=0)
+spq = spq.loc[spq.sum(axis=1).sort_values(ascending=False).index]
+add(s, {"type": "stacked", "title": "Species ranked by total seedlings requested: delivered vs awaiting",
+        "labels": list(spq.index),
+        "series": [{"label": c, "data": [int(x) for x in spq[c]]} for c in spq.columns],
+        "horizontal": True, "tall": True,
+        "note": "delivered = species on applications that were served — the Distribution form records totals only, not species"})
 
 sp_reg = (itc[itc["advance_item"].isin(SPECIES_DYN)]
           .pivot_table(index="region_norm", columns="advance_item", values="qty", aggfunc="sum", fill_value=0))
@@ -537,30 +463,12 @@ add(s, {"type": "stacked", "title": "Species mix by region (stacked seedlings)",
         "labels": list(sp_reg.index),
         "series": [{"label": c, "data": [int(x) for x in sp_reg[c]]} for c in sp_reg.columns if c in sp_reg]})
 
-avg_sp = itc.groupby("advance_item")["qty"].mean().sort_values(ascending=False)
-add(s, {"type": "bar", "title": "Avg seedlings per request line, by species",
-        "labels": list(avg_sp.index), "values": [round(float(x), 1) for x in avg_sp.values],
-        "horizontal": True, "axisLabel": "avg qty/line"})
-
 oth = itc[itc["other_species_name"].str.strip() != ""]["other_species_name"].str.strip().str.lower()
 oth_top = oth.value_counts().head(25)
 add(s, {"type": "table", "title": "Most-requested unlisted species (other_species_name)",
         "columns": ["species (free text)", "requests"],
         "rows": [[k, int(v)] for k, v in oth_top.items()],
         "note": f"{(itc['advance_item']=='others').sum():,} 'others' line-items; {oth.nunique():,} distinct free-text names"})
-
-# species diversity per district (HHI) — low diversity = risk
-def hhi(g):
-    sh = g.groupby("advance_item")["qty"].sum()
-    p = sh / sh.sum()
-    return float((p ** 2).sum())
-div = itc[itc["district"] != ""].groupby("district").apply(hhi, include_groups=False)
-divn = itc[itc["district"] != ""].groupby("district").size()
-div_df = pd.DataFrame({"HHI": div, "line_items": divn}).query("line_items>=50").sort_values("HHI", ascending=False)
-add(s, {"type": "table", "title": "Districts with lowest species diversity (high HHI = over-reliance)",
-        "columns": ["district", "HHI concentration", "line items"],
-        "rows": [[i, round(r.HHI, 3), int(r.line_items)] for i, r in div_df.head(15).iterrows()],
-        "note": "HHI near 1.0 = one species dominates; agronomic monoculture risk"})
 
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION 4 — Costs & Financials
@@ -615,62 +523,9 @@ add(s, {"type": "kpi", "title": "Program cost & forward projection",
         "note": "linear extrapolation of the last 8 active weeks; indicative only"})
 
 # ════════════════════════════════════════════════════════════════════════════
-# SECTION 5 — Efficiency & Operational Ratios
+# SECTION 5 — Farmer & Cooperative Profiles
 # ════════════════════════════════════════════════════════════════════════════
-s = sec("s5", "5 · Efficiency & Operational", "Enumerator throughput, turnaround, and control-quality ratios.")
-
-ve = m[m["enum"].notna()].copy()
-ep = ve.groupby("enum").agg(subs=("_id", "size"), days=("date", "nunique")).reset_index()
-ep["per_day"] = (ep["subs"] / ep["days"]).round(1)
-ep = ep.sort_values("subs", ascending=False)
-add(s, {"type": "bar", "title": "Top 20 enumerators by submissions",
-        "labels": list(ep["enum"].head(20)), "values": [int(x) for x in ep["subs"].head(20)],
-        "horizontal": True, "axisLabel": "submissions", "tall": True,
-        "note": f"{ve['enum'].nunique():,} enumerators total"})
-
-dur_e = (dur.groupby("enum")["dur_min"].mean().dropna())
-de = dur_e.sort_values()
-fast = de.head(10); slow = de.tail(10)
-add(s, {"type": "table", "title": "Form completion time per enumerator (min)",
-        "columns": ["enumerator", "avg minutes", "speed"],
-        "rows": [[i, round(float(v), 1), "fastest"] for i, v in fast.items()]
-                + [[i, round(float(v), 1), "slowest"] for i, v in slow.items()]})
-
-# seedlings per minute
-spm = ve.copy()
-spm = spm[(spm["dur_min"] > 0) & (spm["dur_min"] < 240) & (~spm["impl"])]
-spm_e = (spm.groupby("enum").apply(lambda g: g["total_seedlings_n"].sum() / g["dur_min"].sum(), include_groups=False)
-         .replace([np.inf, -np.inf], np.nan).dropna().sort_values(ascending=False))
-add(s, {"type": "bar", "title": "Seedlings per interview-minute (top 20 enumerators)",
-        "labels": list(spm_e.head(20).index), "values": [round(float(x), 2) for x in spm_e.head(20).values],
-        "horizontal": True, "axisLabel": "seedlings/min", "tall": True})
-
-aa = m["farmer__already_applied"].str.strip().str.lower().isin(["yes", "true", "1"])
-no_fid = m["have_farmer_id"].str.strip().str.lower().eq("no")
-add(s, {"type": "kpi", "title": "Control / quality ratios",
-        "cards": [{"label": "'Already applied' flag rate", "value": f"{aa.mean()*100:.2f}%"},
-                  {"label": "No Farmer ID (have_farmer_id=no)", "value": f"{no_fid.mean()*100:.1f}%"},
-                  {"label": "Manual ID fallback", "value": f"{(~m['manual_farmer_id'].apply(miss)).mean()*100:.1f}%"},
-                  {"label": "Scanned Farmer ID", "value": f"{(~m['farmer_id'].apply(miss)).mean()*100:.1f}%"}]})
-
-nfr = m[~m["no_farmer_id_reason"].apply(miss)]
-nfr_piv = nfr.pivot_table(index="region_norm", columns="no_farmer_id_reason", values="_id", aggfunc="size", fill_value=0)
-add(s, {"type": "stacked", "title": "Reason for missing Farmer ID, by region",
-        "labels": list(nfr_piv.index),
-        "series": [{"label": c, "data": [int(x) for x in nfr_piv[c]]} for c in nfr_piv.columns]})
-
-# overhead ratio by region
-ov = mc.groupby("region_norm").apply(
-    lambda g: (g["facilitation_cost_n"].sum() + g["transport_cost_n"].sum()) / g["grand_total_n"].sum()
-    if g["grand_total_n"].sum() else np.nan, include_groups=False).dropna().sort_values(ascending=False)
-add(s, {"type": "bar", "title": "Overhead ratio (facilitation+transport ÷ grand_total) by region",
-        "labels": list(ov.index), "values": [round(float(x) * 100, 1) for x in ov.values],
-        "horizontal": True, "axisLabel": "% overhead"})
-
-# ════════════════════════════════════════════════════════════════════════════
-# SECTION 6 — Farmer & Cooperative Profiles
-# ════════════════════════════════════════════════════════════════════════════
-s = sec("s6", "6 · Farmer & Cooperative Profiles", "Cooperative vs individual uptake, ID coverage, project mix.")
+s = sec("s6", "5 · Farmer & Cooperative Profiles", "Cooperative vs individual uptake, ID coverage, project mix.")
 
 ct = m["coop_type"].value_counts()
 add(s, {"type": "bar", "title": "Applications: cooperative member vs individual/private",
@@ -703,9 +558,9 @@ add(s, {"type": "stacked", "title": "Project × region (where project recorded)"
         "series": [{"label": c, "data": [int(x) for x in px[c]]} for c in px.columns]})
 
 # ════════════════════════════════════════════════════════════════════════════
-# SECTION 7 — Data Quality & Process Integrity
+# SECTION 6 — Data Quality & Process Integrity
 # ════════════════════════════════════════════════════════════════════════════
-s = sec("s7", "7 · Data Quality & Integrity", "Completeness, evidence capture, and outlier/control checks.")
+s = sec("s7", "6 · Data Quality & Integrity", "Completeness, evidence capture, and outlier/control checks.")
 
 gt_pos = m[m["grand_total_n"] > 0]
 miss_wit = gt_pos[~gt_pos["has_witness"].fillna(False).astype(bool)]
@@ -722,7 +577,7 @@ add(s, {"type": "bar", "title": "Form photos captured per submission",
         "horizontal": False, "axisLabel": "submissions"})
 
 # enumerators with high 'other' rates
-oth_enum = ve.copy()
+oth_enum = m[m["enum"].notna()].copy()
 oth_enum["is_other"] = (oth_enum["no_farmer_id_reason"].str.strip().str.lower() == "other")
 ge = oth_enum.groupby("enum").agg(n=("_id", "size"), others=("is_other", "sum"))
 ge = ge[ge["n"] >= 30]
@@ -739,9 +594,9 @@ add(s, {"type": "table", "title": "Outlier single-species quantities (fraud/erro
         "note": f"{int((it['qty']>1000).sum()):,} line-items >1,000; {int(it['implausible'].sum())} are >10,000 (excluded from all totals)"})
 
 # ════════════════════════════════════════════════════════════════════════════
-# SECTION 8 — Qualitative & Feedback
+# SECTION 7 — Qualitative & Feedback
 # ════════════════════════════════════════════════════════════════════════════
-s = sec("s8", "8 · Qualitative & Feedback", "Themes in farmer comments and demand for unlisted species.")
+s = sec("s8", "7 · Qualitative & Feedback", "Themes in farmer comments and demand for unlisted species.")
 
 if "comments_questions_001" in m.columns:
     cm = m["comments_questions_001"].fillna("").str.strip()
@@ -770,7 +625,7 @@ add(s, {"type": "bar", "title": "Volume of new-species suggestions by region",
         "horizontal": True, "axisLabel": "suggestions"})
 
 # ════════════════════════════════════════════════════════════════════════════
-# SECTION 9 — Executive (interactive)  -> handled specially in JS
+# SECTION 8 — Executive (interactive)  -> handled specially in JS
 # ════════════════════════════════════════════════════════════════════════════
 # Region health scorecard (RAG)
 health_rows = []

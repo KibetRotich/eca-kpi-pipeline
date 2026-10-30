@@ -198,7 +198,7 @@ function drawChart(cv,b){
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:14,font:{size:9}}},y:{ticks:{font:{size:9}}}}}};
   } else if(b.type=="stacked"){
     cfg={type:"bar",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,backgroundColor:PAL[i%PAL.length]}))},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:60}},y:{stacked:true,ticks:{font:{size:9}}}}}};
+      options:{indexAxis:b.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:b.horizontal?0:60}},y:{stacked:true,ticks:{font:{size:9},autoSkip:!b.horizontal}}}}};
   }
   charts.push(new Chart(cv,cfg));
 }
