@@ -81,22 +81,19 @@ SUPABASE_SERVICE_ROLE_KEY=    # server-side only, never exposed to client
 **Staff-only gate (Sprint 50):** `proxy.ts` verifies the `sb-access-token` JWT (ES256, `getClaims`) on every request — pages, API routes and the static dashboards in `public/`. No valid @solidaridadnetwork.org session → pages redirect to `/signin?next=…`, APIs return 401. Only `/signin`, `/auth/callback` and the assets they need are open. In the DB, `anon` has no privileges in schema `public` and open RLS policies use `public.is_staff()`; server code reads with `supabaseAdmin`. Nothing on the platform is public.
 
 **Role system** (3 tiers):
-- `admin` — full access: create/edit targets, approve submissions, manage users
-- `me_officer` — data officer: upload CSVs, approve/reject submissions
+- `admin` — full access: create/edit targets, manage users
+- `me_officer` — data officer: edit targets and frameworks
 - `viewer` — read-only: dashboards only
 
 Role is fetched from `user_roles` table via `/api/me` on every page load. Client access via `useRole()` hook (`lib/role-context.tsx`). Server-side API protection via `requireEditor()` (`lib/require-editor.ts`). New Google logins auto-create as `viewer` via Supabase trigger.
 
-**Data import pipeline:**
-```
-CSV upload (/upload) → /api/import → odk_submissions (status=pending)
-  → /submissions review queue → approve → lib/normalizers/* → KPI tables
-  → odk_submissions.status=approved
-```
+**How data gets in (no manual upload):**
+- Kobo forms → scheduled GitHub Actions (`.github/workflows/*.yml`, daily; ECA Events every 3h) → Supabase → Output Insights dashboards
+- Project measurement frameworks → teams edit Google Sheets monthly → `frameworks.yml` runs `pipeline/frameworks/sync_framework_sheets.py` nightly → `project_mf_sheet_values` → /targets (sync status in `project_mf_sheets.last_synced_at` / `last_error`)
 
-Form type is auto-detected from CSV column headers. Supported forms: FarmerProfile, ServiceProviderProfile, CSOProfile, CompanyProfile, S61, S62, S21Farmer, S21SP, S25, S63, S64, S65.
+The old CSV upload → `/submissions` review queue was never used (0 rows) and was removed in Oct 2026. Its tables (`odk_submissions`, `farmer_profiles`, `s61_resilience_surveys` … `s65_procurement_records`) are still in the DB and empty; `v_s61_kpi`–`v_s65_kpi` read them for /dashboard, so don't drop them until the S6.x KPIs get a Kobo sync or are taken off /dashboard.
 
-**Key tables:** `user_roles`, `odk_submissions`, `project_kpi_targets`, `project_year_enrollments`, `project_output_records`, `project_rec_records`. KPI data lives in views: `v_s61_kpi` through `v_s65_kpi`, aggregated in `v_kpi_summary`.
+**Key tables:** `user_roles`, `project_kpi_targets`, `project_year_enrollments`, `project_output_records`, `project_rec_records`. KPI data lives in views: `v_s61_kpi` through `v_s65_kpi`, aggregated in `v_kpi_summary`.
 
 **Sprint migrations:** SQL files in `masp4-platform/pipeline/` named by sprint (e.g., `masp4_migration_sprint13_roles.sql`). Run in Supabase SQL Editor. Sprint 13 = role system + RLS policies.
 

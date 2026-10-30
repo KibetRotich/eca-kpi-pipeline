@@ -389,7 +389,7 @@ export default function InstructionsPage() {
         </Card>
       </Section>
 
-      {/* Survey Form — no download button here; button lives on the Import CSV page */}
+      {/* Survey Form */}
       <Section title="Survey Form" color={YELLOW}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.7rem' }}>
           <Card>
@@ -397,8 +397,8 @@ export default function InstructionsPage() {
             <div style={{ fontSize: '0.68rem', color: '#333', lineHeight: 1.8 }}>
               The <strong>MASP IV Farmer Survey V2.0</strong> covers S6.1, S6.2, S2.1, and S2.5 in a single
               combined interview. It is an XLSForm compatible with <strong>KoboToolbox</strong> and ODK Central.
-              Download it from the <a href="/upload" style={{ color: NAVY, fontWeight: 700 }}>Import CSV</a> page and
-              upload to your KoboToolbox account to deploy to enumerators.
+              <a href="/MASP_IV_Kobo_Form_V2.0.xlsx" download style={{ color: NAVY, fontWeight: 700 }}>Download the form (V2.0 · XLSForm)</a> and
+              upload it to your KoboToolbox account to deploy to enumerators.
               <br /><br />
               V2.0 introduces <strong>commodity-wise deployment</strong>: instead of one KoboToolbox project per
               field project (20+ deployments), one deployment covers all projects within a commodity (~10 deployments
@@ -416,34 +416,32 @@ export default function InstructionsPage() {
             <div style={{ fontSize: '0.65rem', color: '#555', lineHeight: 1.7 }}>
               <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
                 <li>Select <code>_commodity</code> first (e.g. Coffee) — this filters the project list automatically</li>
-                <li>Select <code>_project_code</code> from the filtered dropdown — use only codes listed in the Projects&rsquo; Progress table (e.g. <code>KE-COF-001</code>). Wrong codes will cause import failures.</li>
+                <li>Select <code>_project_code</code> from the filtered dropdown — use only codes listed in the Projects&rsquo; Progress table (e.g. <code>KE-COF-001</code>). Submissions with a wrong code cannot be linked to a project.</li>
                 <li>Select <code>_survey_round</code> — Baseline (2026), Midline, Endline, or Annual monitoring</li>
                 <li>Confirm enumerators select the correct <code>_country</code> from the dropdown</li>
                 <li>Enable GPS on all devices before the first interview</li>
-                <li>Run a 3–5 farmer pilot; export and import the pilot CSV to validate before full deployment</li>
+                <li>Run a 3–5 farmer pilot and share the results with the M&amp;E team to validate before full deployment</li>
                 <li>Enter annual targets in <strong>Projects&rsquo; Progress</strong> before starting fieldwork so the extrapolation formula has a denominator</li>
               </ul>
             </div>
           </Card>
           <Card>
-            <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.5rem' }}>Exporting from KoboToolbox</div>
+            <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.5rem' }}>Kobo Data</div>
             <div style={{ fontSize: '0.65rem', color: '#555', lineHeight: 1.7 }}>
-              <ol style={{ paddingLeft: '1.1rem', margin: 0 }}>
-                <li>Open your project in KoboToolbox and go to <em>Data → Downloads</em></li>
-                <li>Select <strong>CSV</strong> format, all fields, all versions</li>
-                <li>Click <em>Export</em> and download the file to your computer. In V2.0 the CSV contains all projects within the commodity — the importer handles mixed <code>_project_code</code> values automatically</li>
-                <li>Upload via the <a href="/upload" style={{ color: NAVY, fontWeight: 700 }}>Import CSV</a> page — select the survey year and click Upload</li>
-              </ol>
+              There is no manual upload. Kobo forms connected to the platform are synced automatically by scheduled
+              jobs (daily, or every 3 hours for ECA Events), and the dashboards under <strong>Output Insights</strong> refresh
+              from that data. To connect a new Kobo form, or to bring Farmer Survey V2.0 data into Network KPIs,
+              contact the ECA M&amp;E team.
             </div>
           </Card>
           <Card>
-            <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.5rem' }}>After Uploading</div>
+            <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.8px', color: '#888', marginBottom: '.5rem' }}>Measurement Frameworks</div>
             <div style={{ fontSize: '0.65rem', color: '#555', lineHeight: 1.7 }}>
-              Uploaded rows enter a <strong>pending</strong> queue. The <strong>M&amp;E Officer</strong> reviews each
-              submission in the <a href="/submissions" style={{ color: NAVY, fontWeight: 700 }}>Submissions</a> page
-              for completeness and plausibility before approving. Only <strong>approved</strong> submissions are
-              counted in KPI cards and charts. Rejected submissions are flagged with a reason for correction and
-              re-upload.
+              Each project keeps its measurement framework in a Google Sheet, updated monthly by the project team.
+              The platform reads every linked sheet overnight and shows it in the project&rsquo;s window on{' '}
+              <a href="/targets" style={{ color: NAVY, fontWeight: 700 }}>Projects&rsquo; Progress</a>. Keep the sheet
+              shared (Viewer) with the M&amp;E sync account and do not rename its tabs or column headers, or the sync
+              will skip it.
             </div>
           </Card>
         </div>
