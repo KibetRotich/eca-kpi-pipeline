@@ -267,7 +267,7 @@ function build(){
   // Executive first, then Round Tracker and Reconciliation, then Distribution & Fulfilment and the rest
   const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec");
   nav.appendChild(exNav); main.appendChild(buildExec());
-  const ORDER=["tracker","recon","s0","standards"];
+  const ORDER=["tracker","recon","s0"];
   const rank=sc=>{const i=ORDER.indexOf(sc.id); return i<0?ORDER.length:i;};
   DATA.sections.map((sc,i)=>[sc,i]).sort((x,y)=>rank(x[0])-rank(y[0])||x[1]-y[1]).forEach(([sc])=>{
     const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
