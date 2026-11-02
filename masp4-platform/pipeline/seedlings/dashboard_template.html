@@ -48,6 +48,11 @@
   .filters button{padding:7px 14px;border:0;background:#FFC800;color:#000;font-weight:600;border-radius:6px;cursor:pointer;font-size:13px}
   .filters button:hover{background:#e6b400}
   .rag-g{background:#c8e6c9}.rag-a{background:#fff3cd}.rag-r{background:#f8d7da}
+  .st{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .st-Completed{background:#c8e6c9}.st-Distributing{background:#d6e9ff}.st-Paused{background:#f8d7da}.st-Not-started{background:#eee;color:#555}
+  .dl{float:right;margin-top:-4px;padding:4px 10px;border:1px solid var(--bd);background:#fff;border-radius:6px;font-size:11.5px;cursor:pointer}
+  .dl:hover{border-color:#FFC800}
+  tr.total td{font-weight:700;border-top:2px solid var(--bd)}
   .footer{color:var(--mut);font-size:11px;margin-top:30px;padding-top:14px;border-top:1px solid var(--bd)}
   .pill{display:inline-block;background:#fffce8;border:1px solid var(--bd);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px}
   .mapbox{height:540px;border-radius:8px;border:1px solid var(--bd);overflow:hidden;background:#eef3f5}
@@ -91,6 +96,7 @@ function renderBlock(b){
   } else if(b.type=="image"){
     const im=el("img","map"); im.src=b.src; box.appendChild(im);
   } else if(b.type=="table"){
+    if(b.download){const d=el("button","dl","⬇ CSV"); d.onclick=()=>downloadCsv(b.download,b.columns,b.rows); box.insertBefore(d,box.firstChild);}
     box.appendChild(buildTable(b.columns,b.rows));
   } else if(b.type=="heatmap"){
     box.appendChild(buildHeatmap(b));
@@ -110,6 +116,46 @@ function buildTable(cols,rows){
   const tb=el("tbody");
   rows.forEach(r=>{const tr=el("tr"); r.forEach((v,i)=>{const td=el("td",(i>0&&typeof v=="number")?"num":null, typeof v=="number"?fmt(v):v); tr.appendChild(td);}); tb.appendChild(tr);});
   t.appendChild(tb); wrap.appendChild(t); return wrap;
+}
+
+function downloadCsv(name,cols,rows){
+  const esc=v=>{const s=v==null?"":String(v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const csv=[cols,...rows].map(r=>r.map(esc).join(",")).join("\n");
+  const a=el("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+// ── Round Tracker: progress per district, one application round at a time ──
+const TRK_COLS=["District","Applications","Served","Pending","Seedlings delivered","Last distribution","Status"];
+function buildTracker(sc){
+  const T=sc.tracker, wrap=el("div");
+  const fb=el("div","filters"); const w=el("div"); w.appendChild(el("label",null,"Application round"));
+  const sel=el("select"); T.rounds.forEach(r=>sel.appendChild(new Option(T.labels[r],r))); w.appendChild(sel); fb.appendChild(w);
+  wrap.appendChild(fb);
+  const kp=el("div","block full"); const kc=el("div","kpis"); kp.appendChild(kc); wrap.appendChild(kp);
+  const tb=el("div","block full"); const h=el("h3"); const dl=el("button","dl","⬇ CSV");
+  tb.appendChild(dl); tb.appendChild(h); const box=el("div","tablebox"); box.style.maxHeight="none"; tb.appendChild(box);
+  tb.appendChild(el("div","note",`Status: <b>Completed</b> = at least ${T.done_pct}% of applications served · <b>Distributing</b> = a delivery in the last ${T.stall_days} days · <b>Paused</b> = no delivery for more than ${T.stall_days} days · <b>Not started</b> = none served. Pending also includes applications that were not approved (the approved list is kept outside Kobo), so a district can be complete without reaching 100%. Data as of ${T.as_of}.`));
+  wrap.appendChild(tb);
+  const draw=()=>{
+    const rows=T.rows[sel.value], sum=i=>rows.reduce((a,r)=>a+r[i],0);
+    const n=sum(1), sv=sum(2), cnt=s=>rows.filter(r=>r[6]==s).length;
+    kc.innerHTML="";
+    [["Applications",fmt(n)],["Served",fmt(sv)],["Pending",fmt(sum(3))],["Served %",n?(sv/n*100).toFixed(1)+"%":"–"],
+     ["Seedlings delivered",fmt(sum(4))],["Districts completed",cnt("Completed")+" of "+rows.length],
+     ["Distributing",cnt("Distributing")],["Paused / not started",cnt("Paused")+" / "+cnt("Not started")]]
+     .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",String(v))); d.appendChild(el("div","l",l)); kc.appendChild(d);});
+    h.textContent=`Progress by district — ${T.labels[sel.value]} (${rows.length} districts, most pending first)`;
+    const t=el("table"), hr=el("tr"); TRK_COLS.forEach((c,i)=>hr.appendChild(el("th",i>0&&i<6?"num":null,c))); t.appendChild(hr);
+    const tot=el("tr","total"); ["Total",n,sv,sum(3),sum(4),"",""].forEach((v,i)=>tot.appendChild(el("td",i>0&&i<5?"num":null,typeof v=="number"?fmt(v):v))); t.appendChild(tot);
+    rows.forEach(r=>{const tr=el("tr"); r.forEach((v,i)=>{
+      const td=el("td",i>0&&i<6?"num":null, i==6?`<span class="st st-${v.replace(/ /g,"-")}">${v}</span>`:(typeof v=="number"?fmt(v):v)); tr.appendChild(td);});
+      t.appendChild(tr);});
+    box.innerHTML=""; box.appendChild(t);
+    dl.onclick=()=>downloadCsv(`round_tracker_${sel.value}.csv`,TRK_COLS,rows);
+  };
+  sel.onchange=draw; draw();
+  return wrap;
 }
 
 function buildHeatmap(b){
@@ -217,22 +263,24 @@ function build(){
     `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} delivered (${g.fulfil_pct}% of applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
   const nav=document.getElementById("nav"), main=document.getElementById("main");
 
-  // Exec section first
-  const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec"); nav.appendChild(exNav);
-  main.appendChild(buildExec());
-
+  // Round Tracker, Reconciliation and Data Standards first, then the Executive section, then the rest
+  const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec");
+  const FIELD=["tracker","recon","standards"];
+  let execAdded=false;
   DATA.sections.forEach(sc=>{
+    if(!execAdded&&!FIELD.includes(sc.id)){nav.appendChild(exNav); main.appendChild(buildExec()); execAdded=true;}
     const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
     const sd=el("div","section"); sd.id=sc.id; sd.style.display="none";
     sd.appendChild(el("div","sec-title",sc.title));
     if(sc.desc) sd.appendChild(el("div","sec-desc",sc.desc));
+    if(sc.tracker) sd.appendChild(buildTracker(sc));
     const grid=el("div","grid");
     sc.blocks.forEach(b=>grid.appendChild(renderBlock(b)));
     sd.appendChild(grid);
     sd.appendChild(el("div","footer","Source: KoBoToolbox forms a5rJdqQGuy2DtTXvEx3cpq (applications) + aGXzNqEgZhjXazLmLPVpMn (distribution), via Supabase · implausible quantities (>10k) excluded from all totals."));
     main.appendChild(sd);
   });
-  show("exec");
+  show("tracker");
 }
 
 // ── Executive interactive section ─────────────────────────────────────────

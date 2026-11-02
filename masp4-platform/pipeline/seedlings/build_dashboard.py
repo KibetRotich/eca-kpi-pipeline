@@ -216,6 +216,165 @@ MED_DAYS = float(era["days_n"].median()) if era["days_n"].notna().any() else Non
 n_era_only, n_srv_era = int(m["era"].sum()), int(m.loc[m["era"], "served"].sum())
 FULFIL_ERA = n_srv_era / n_era_only * 100 if n_era_only else 0
 
+# ════════════════════════════════════════════════════════════════════════════
+# ROUND TRACKER — the field team's questions, per district and application round
+# ════════════════════════════════════════════════════════════════════════════
+# Rounds = year the application was submitted (2025 onwards; 2023–24 had no distributions).
+# Districts are the ones recorded on the forms (already folded to lower case above).
+# Status, from the data only: Not started = none served · Completed ≥ DONE_PCT served (pending also holds
+# applications that were never approved, so 100% is not expected) · Distributing = a delivery within
+# STALL_DAYS · Paused = no delivery for longer than that.
+STALL_DAYS = 30
+DONE_PCT = 90
+BULK_EVENT = 50          # farmers entered under one distribution event
+LATE_DAYS = 14           # distribution entered this long after the delivery date
+QUIET_DAYS = 21          # enumerator with no submission for this long…
+ACTIVE_DAYS = 90         # …among those who submitted within this window (others finished earlier rounds)
+
+nice = lambda d: d.title() if d else "(blank)"
+cur = m[m["era"]].copy()
+cur["round"] = cur["sub_dt"].dt.year.astype("Int64").astype(str)
+ROUNDS = sorted(cur["round"].unique(), reverse=True)
+
+
+def status(served, n, last):
+    if served == 0:
+        return "Not started"
+    if served / n * 100 >= DONE_PCT:
+        return "Completed"
+    return "Distributing" if pd.notna(last) and (NOW - last).days <= STALL_DAYS else "Paused"
+
+
+def tracker_rows(df):
+    rows = []
+    for d, g in df.groupby("district"):
+        n, served = len(g), int(g["served"].sum())
+        last = g.loc[g["served"], "dist_dt"].max()
+        rows.append([nice(d), n, served, n - served, int(g.loc[g["served"], "given_n"].sum()),
+                     last.strftime("%Y-%m-%d") if pd.notna(last) else "–", status(served, n, last)])
+    return sorted(rows, key=lambda r: (-r[3], r[0]))     # most pending first
+
+
+TRACKER = {"rounds": ROUNDS + ["all"], "labels": {**{r: f"{r} round" for r in ROUNDS}, "all": "All rounds (2025+)"},
+           "rows": {r: tracker_rows(cur[cur["round"] == r]) for r in ROUNDS},
+           "stall_days": STALL_DAYS, "done_pct": DONE_PCT, "as_of": NOW.strftime("%Y-%m-%d")}
+TRACKER["rows"]["all"] = tracker_rows(cur)
+
+# ── Reconciliation: applications vs distribution records, duplicates ─────────
+bid = cur["beneficiary_id"].fillna("").astype(str).str.strip()
+cur["bid"] = bid.where(bid != "")
+den_cur = den[den["real"] & ~den["is_legacy"]].merge(
+    cur[["_id", "district", "round"]].rename(columns={"_id": "application_kobo_id"}),
+    on="application_kobo_id", how="inner")
+recon_rows = []
+for (r, d), g in cur.groupby(["round", "district"]):
+    e = den_cur[(den_cur["round"] == r) & (den_cur["district"] == d)]
+    dup = g[g["bid"].notna()].groupby("bid").size()
+    recon_rows.append([r, nice(d), len(g), int(g["served"].sum()), len(e), int(e["is_repeat"].sum()),
+                       int((dup > 1).sum()), int((dup - 1).clip(lower=0).sum())])
+recon_rows.sort(key=lambda x: (x[0], -x[2]))
+
+by_bid = cur[cur["bid"].notna()].groupby("bid").agg(
+    apps=("_id", "size"), rounds=("round", lambda s: ", ".join(sorted(set(s)))),
+    districts=("district", lambda s: ", ".join(sorted({nice(x) for x in s}))), served=("served", "sum"))
+dups = by_bid[by_bid["apps"] > 1].sort_values(["served", "apps"], ascending=False)
+n_twice = int((dups["served"] > 1).sum())
+n_both = int(dups["rounds"].str.contains(",").sum())
+n_unmatched = int((den["real"] & ~den["is_legacy"] & ~den["matched"]).sum())
+
+# ── Data standards: how distributions are captured ────────────────────────────
+ev = dev[~dev["is_test"]].copy()
+ev["district"] = ev["district"].fillna("").astype(str).str.strip().str.lower()
+ev["sub"] = pd.to_datetime(ev["submitted_at"], errors="coerce", utc=True)
+ent = den[den["real"] & ~den["is_legacy"]].copy()
+ent["dist"] = pd.to_datetime(ent["distributed_at"], errors="coerce", utc=True)
+per_ev = ent.groupby("event_kobo_id").agg(farmers=("id", "size"), dist=("dist", "max")).reset_index()
+ev = ev.merge(per_ev, left_on="kobo_id", right_on="event_kobo_id", how="inner")
+ev["late"] = (ev["sub"] - ev["dist"]).dt.days > LATE_DAYS
+ev["bulk"] = ev["farmers"] >= BULK_EVENT
+std_rows = []
+for d, g in ev[ev["sub"] >= DIST_ERA].groupby("district"):
+    last = g["sub"].max()
+    std_rows.append([nice(d), len(g), int(g["farmers"].sum()), round(g["farmers"].mean(), 1), int(g["bulk"].sum()),
+                     int(g["late"].sum()), last.strftime("%Y-%m-%d"), int((NOW - last).days)])
+std_rows.sort(key=lambda x: (-x[4], -x[5]))
+
+# Same person typed differently ('Ssentongo  Martin' / 'ssentongo martin') → one row
+ev["enum"] = ev["enumerator"].fillna("").astype(str).map(lambda x: " ".join(x.split()).title())
+recent = ev[(ev["sub"] >= DIST_ERA) & (ev.groupby("enum")["sub"].transform("max") >= NOW - pd.Timedelta(days=ACTIVE_DAYS))]
+enum_rows = []
+for e, g in recent.groupby("enum"):
+    if not e:
+        continue
+    last = g["sub"].max()
+    days = int((NOW - last).days)
+    enum_rows.append([e, ", ".join(sorted({nice(x) for x in g["district"] if x})) or "(blank)", len(g),
+                      int(g["farmers"].sum()), last.strftime("%Y-%m-%d"), days,
+                      "Quiet" if days > QUIET_DAYS else "Active"])
+enum_rows.sort(key=lambda x: -x[5])
+# Published per district only — this HTML is committed to a PUBLIC repo, so no enumerator names or beneficiary IDs.
+last_by_enum = recent[recent["enum"] != ""].groupby("enum")["sub"].max()
+enum_dist_rows = []
+for d, g in recent[recent["enum"] != ""].groupby("district"):
+    names = g["enum"].unique()
+    quiet = sum((NOW - last_by_enum[n]).days > QUIET_DAYS for n in names)
+    last = g["sub"].max()
+    enum_dist_rows.append([nice(d), len(names), len(names) - quiet, int(quiet), last.strftime("%Y-%m-%d"),
+                           int((NOW - last).days)])
+enum_dist_rows.sort(key=lambda x: x[5])
+
+T = sec("tracker", "★ Round Tracker",
+        "Progress per district for each application round (2025 onwards), straight from the Kobo application and "
+        "distribution forms. Use it to see which districts are done, still distributing, stalled or not started.")
+T["tracker"] = TRACKER
+
+R = sec("recon", "Reconciliation",
+        "Where applications and distribution records disagree, and how many farmers appear more than once. "
+        "Counts only: the farmer-level list is kept off this page (the page is stored in a public code repository).")
+add(R, {"type": "kpi", "title": "Duplicates and mismatches (2025 onwards)", "cards": [
+    {"label": "Beneficiary IDs with more than one application", "value": f"{len(dups):,}"},
+    {"label": "Extra applications from those IDs", "value": f"{int((dups['apps'] - 1).sum()):,}"},
+    {"label": "IDs that applied in more than one round", "value": f"{n_both:,}"},
+    {"label": "IDs served more than once", "value": f"{n_twice:,}"},
+    {"label": "Distribution entries not linked to any application", "value": f"{n_unmatched:,}"},
+    {"label": "Repeat distribution entries", "value": f"{int(den_cur['is_repeat'].sum()):,}"}]})
+add(R, {"type": "table", "title": "Applications vs distribution records, by round and district",
+        "columns": ["Round", "District", "Applications", "Served", "Distribution entries", "Repeat entries",
+                    "Duplicate IDs", "Extra applications"],
+        "rows": recon_rows, "download": "reconciliation_by_district.csv",
+        "note": "Distribution entries = rows on the Distribution form linked to that district's applications; "
+                "repeat entries = a farmer entered again after a first delivery. Duplicate IDs = beneficiary IDs with "
+                "more than one application in that round and district. To reconcile against a field list, compare its "
+                "count with the Applications column for the same round."})
+
+D = sec("standards", "Data Standards",
+        "How distributions are being captured. Distributions should be recorded in Kobo at the distribution, one "
+        "farmer at a time; long lists entered under one event, or entries made weeks later, suggest lists typed up "
+        "afterwards.")
+ev_cur = ev[ev["sub"] >= DIST_ERA]
+add(D, {"type": "kpi", "title": "Distribution capture (2025 onwards)", "cards": [
+    {"label": "Distribution events", "value": f"{len(ev_cur):,}"},
+    {"label": f"Bulk events (≥{BULK_EVENT} farmers in one event)", "value": f"{int(ev_cur['bulk'].sum()):,}"},
+    {"label": "Farmers in bulk events", "value": f"{int(ev_cur.loc[ev_cur['bulk'], 'farmers'].sum()):,}"},
+    {"label": f"Events entered >{LATE_DAYS} days after delivery", "value": f"{int(ev_cur['late'].sum()):,}"},
+    {"label": f"Enumerators active in the last {ACTIVE_DAYS} days", "value": f"{len(enum_rows):,}"},
+    {"label": f"…of whom still submitting (last {QUIET_DAYS} days)", "value": f"{sum(r[6] == 'Active' for r in enum_rows):,}"}]})
+add(D, {"type": "table", "title": "Distribution capture by district",
+        "columns": ["District", "Events", "Farmers entered", "Avg farmers per event", "Bulk events",
+                    "Late-entered events", "Last submission", "Days since"],
+        "rows": std_rows, "download": "distribution_capture_by_district.csv",
+        "note": f"Bulk event = {BULK_EVENT} or more farmers entered under one distribution event. Late-entered = "
+                f"submitted more than {LATE_DAYS} days after the recorded delivery date."})
+add(D, {"type": "table", "title": "Enumerator activity by district",
+        "columns": ["District", f"Enumerators active (last {ACTIVE_DAYS} days)", f"Still submitting (last {QUIET_DAYS} days)",
+                    f"Quiet >{QUIET_DAYS} days", "Last submission", "Days since"],
+        "rows": enum_dist_rows, "download": "enumerator_activity_by_district.csv",
+        "note": f"Counts enumerators who submitted a distribution in the last {ACTIVE_DAYS} days; quiet = nothing for more "
+                f"than {QUIET_DAYS} days. Names are not shown on this page."})
+add(D, {"type": "note", "title": "Photos",
+        "text": "Distribution photos are not yet loaded from Kobo, so reused photos cannot be detected here. "
+                "That check needs the photo fields added to the nightly sync."})
+
 s = sec("s0", "0 · Distribution & Fulfilment",
         "What farmers received, joined from the Distribution form to each application. "
         "Fulfilment = share of all applications (2023 onwards) with a recorded delivery.")
