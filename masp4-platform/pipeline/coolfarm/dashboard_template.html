@@ -1035,8 +1035,8 @@ function renderQuality(el){
 /* ───────── shell ───────── */
 let current = 'overview';
 function buildNav(){
-  document.getElementById('nav').innerHTML = SECTIONS.map(([id,label])=>
-    `<a data-id="${id}" class="${id===current?'active':''}">${label}</a>`).join('');
+  document.getElementById('nav').innerHTML = SECTIONS.map(([id,label],i)=>
+    `<a data-id="${id}" class="${id===current?'active':''}">${i+1} · ${label}</a>`).join('');
   document.querySelectorAll('#nav a').forEach(a=>a.onclick=()=>{current=a.dataset.id; buildNav(); render();});
 }
 function buildFilters(){
@@ -1075,6 +1075,8 @@ function render(){
     return;
   }
   fn(host.firstChild);
+  const t=host.querySelector('.sec-title');
+  if(t) t.insertAdjacentText('afterbegin',`${SECTIONS.findIndex(s=>s[0]===current)+1} · `);
 }
 function footer(){
   const s=D.sync||{};

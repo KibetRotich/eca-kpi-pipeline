@@ -658,7 +658,7 @@ function renderActive(){
   leafletMaps.length=0;   // drop refit handles for maps in the DOM we're about to replace
   const sec=SECTIONS.find(s=>s.id===active);
   const wrap=$("#secwrap");
-  wrap.innerHTML=`<div class="sec-title">${sec.title}</div><div class="sec-desc">${sec.desc}</div><div id="secbody"></div>`
+  wrap.innerHTML=`<div class="sec-title">${SECTIONS.indexOf(sec)+1} · ${sec.title}</div><div class="sec-desc">${sec.desc}</div><div id="secbody"></div>`
     +`<div class="footer">Source: KoBoToolbox form <code>${META.form_uid}</code> · ${fmt(META.n)} households · ${META.date_min}→${META.date_max} · refreshed nightly from KoBoToolbox. Global filters apply across every tab.</div>`;
   sec.render($("#secbody"));
   setTimeout(()=>leafletMaps.forEach(m=>m.refit()),60);
@@ -690,7 +690,7 @@ function buildFilters(){
 function boot(){
   $("#hdrsub").textContent=`${fmt(META.n)} households · ${L.countries.join(" / ")} · ${META.date_min}→${META.date_max}`;
   const nav=$("#nav");
-  SECTIONS.forEach(s=>{const a=el("a",s.id===active?"active":"",s.title);a.dataset.id=s.id;a.onclick=()=>show(s.id);nav.appendChild(a);});
+  SECTIONS.forEach((s,i)=>{const a=el("a",s.id===active?"active":"",`${i+1} · ${s.title}`);a.dataset.id=s.id;a.onclick=()=>show(s.id);nav.appendChild(a);});
   buildFilters();
   renderActive();
 }

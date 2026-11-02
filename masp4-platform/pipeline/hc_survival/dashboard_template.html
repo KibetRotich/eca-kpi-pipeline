@@ -138,9 +138,9 @@ function build(){
   $("#hdrsub").textContent=DATA.subtitle;
   const nav=$("#nav"),main=$("#main");
   DATA.sections.forEach((s,i)=>{
-    const a=el("a",i===0?"active":"",s.title);a.onclick=()=>{document.querySelectorAll("nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active");document.querySelectorAll("section").forEach(x=>x.classList.remove("show"));$("#sec_"+s.id).classList.add("show");Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}});};
+    const a=el("a",i===0?"active":"",`${i+1} · ${s.title}`);a.onclick=()=>{document.querySelectorAll("nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active");document.querySelectorAll("section").forEach(x=>x.classList.remove("show"));$("#sec_"+s.id).classList.add("show");Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}});};
     nav.appendChild(a);
-    const sec=el("section",i===0?"show":"");sec.id="sec_"+s.id;sec.appendChild(el("div","sec-title",s.title));if(s.desc)sec.appendChild(el("div","sec-desc",s.desc));sec.insertAdjacentHTML("beforeend",s.html);main.appendChild(sec);
+    const sec=el("section",i===0?"show":"");sec.id="sec_"+s.id;sec.appendChild(el("div","sec-title",`${i+1} · ${s.title}`));if(s.desc)sec.appendChild(el("div","sec-desc",s.desc));sec.insertAdjacentHTML("beforeend",s.html);main.appendChild(sec);
   });
   // filters UI
   const fr=$("#filters");
