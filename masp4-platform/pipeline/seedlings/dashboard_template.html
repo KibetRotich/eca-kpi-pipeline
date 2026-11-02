@@ -49,7 +49,7 @@
   .filters button:hover{background:#e6b400}
   .rag-g{background:#c8e6c9}.rag-a{background:#fff3cd}.rag-r{background:#f8d7da}
   .st{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap}
-  .st-Completed{background:#c8e6c9}.st-Distributing{background:#d6e9ff}.st-Paused{background:#f8d7da}.st-Not-started{background:#eee;color:#555}
+  .st-Completed{background:#c8e6c9}.st-Distributing{background:#d6e9ff}.st-Paused{background:#f8d7da}.st-Not-distributed{background:#f1f1f1;color:#777}.st-Not-started{background:#eee;color:#555}
   .dl{float:right;margin-top:-4px;padding:4px 10px;border:1px solid var(--bd);background:#fff;border-radius:6px;font-size:11.5px;cursor:pointer}
   .dl:hover{border-color:#FFC800}
   tr.total td{font-weight:700;border-top:2px solid var(--bd)}
@@ -135,7 +135,7 @@ function buildTracker(sc){
   const kp=el("div","block full"); const kc=el("div","kpis"); kp.appendChild(kc); wrap.appendChild(kp);
   const tb=el("div","block full"); const h=el("h3"); const dl=el("button","dl","⬇ CSV");
   tb.appendChild(dl); tb.appendChild(h); const box=el("div","tablebox"); box.style.maxHeight="none"; tb.appendChild(box);
-  tb.appendChild(el("div","note",`Status: <b>Completed</b> = at least ${T.done_pct}% of applications served · <b>Distributing</b> = a delivery in the last ${T.stall_days} days · <b>Paused</b> = no delivery for more than ${T.stall_days} days · <b>Not started</b> = none served. Pending also includes applications that were not approved (the approved list is kept outside Kobo), so a district can be complete without reaching 100%. Data as of ${T.as_of}.`));
+  tb.appendChild(el("div","note",`Status: <b>Completed</b> = at least ${T.done_pct}% of applications served · <b>Distributing</b> = a delivery in the last ${T.stall_days} days · <b>Paused</b> = no delivery for more than ${T.stall_days} days · <b>Not started</b> = none served yet · <b>Not distributed</b> = 2023–24 rounds, which had no distributions. In <b>All rounds</b>, status is judged on the 2025 and later rounds only. Pending also includes applications that were not approved (the approved list is kept outside Kobo), so a district can be complete without reaching 100%. Data as of ${T.as_of}.`));
   wrap.appendChild(tb);
   const draw=()=>{
     const rows=T.rows[sel.value], sum=i=>rows.reduce((a,r)=>a+r[i],0);
@@ -144,6 +144,7 @@ function buildTracker(sc){
     [["Applications",fmt(n)],["Served",fmt(sv)],["Pending",fmt(sum(3))],["Served %",n?(sv/n*100).toFixed(1)+"%":"–"],
      ["Seedlings delivered",fmt(sum(4))],["Districts completed",cnt("Completed")+" of "+rows.length],
      ["Distributing",cnt("Distributing")],["Paused / not started",cnt("Paused")+" / "+cnt("Not started")]]
+     .concat(cnt("Not distributed")?[["Not distributed (2023–24 only)",cnt("Not distributed")]]:[])
      .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",String(v))); d.appendChild(el("div","l",l)); kc.appendChild(d);});
     h.textContent=`Progress by district — ${T.labels[sel.value]} (${rows.length} districts, most pending first)`;
     const t=el("table"), hr=el("tr"); TRK_COLS.forEach((c,i)=>hr.appendChild(el("th",i>0&&i<6?"num":null,c))); t.appendChild(hr);
@@ -260,7 +261,7 @@ function show(id){
 function build(){
   const g=DATA.global;
   document.getElementById("hdr-sub").textContent =
-    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} delivered (${g.fulfil_pct}% of applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
+    `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} seedlings delivered (${g.fulfil_pct}% of applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
   const nav=document.getElementById("nav"), main=document.getElementById("main");
 
   // Round Tracker, Reconciliation and Data Standards first, then the Executive section, then the rest
@@ -290,7 +291,7 @@ const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
 function buildExec(){
   const sd=el("div","section"); sd.id="exec";
   sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
-  sd.appendChild(el("div","sec-desc","Live KPIs filterable by region, project and month, including delivery from the Distribution form (fulfilment counts all applications; the 2023–24 rounds had no distributions, so they count as not served). Below: regional health scorecard (RAG) and monthly executive summary."));
+  sd.appendChild(el("div","sec-desc","KPIs for all applications since 2023, filterable by region, project and submission month — the same rules as the Round Tracker, so with no filter the totals match its “All rounds” view. Fulfilment = served ÷ applications; the 2023–24 rounds had no distributions, so they count as not served. Seedlings requested leaves out 72 applications with implausible quantities (over 10,000); those applications still count."));
 
   // filters
   const fb=el("div","filters");
@@ -298,8 +299,8 @@ function buildExec(){
     const s=el("select"); s.id=id; s.appendChild(new Option("All","")); opts.forEach(o=>s.appendChild(new Option(o,o))); w.appendChild(s); return w;};
   fb.appendChild(mkSel("f-region","Region",EX.regions));
   fb.appendChild(mkSel("f-project","Project",EX.projects));
-  fb.appendChild(mkSel("f-from","Month from",EX.months));
-  fb.appendChild(mkSel("f-to","Month to",EX.months));
+  fb.appendChild(mkSel("f-from","Submitted from (month)",EX.months));
+  fb.appendChild(mkSel("f-to","Submitted to (month)",EX.months));
   const btn=el("button",null,"Reset"); btn.onclick=()=>{["f-region","f-project","f-from","f-to"].forEach(i=>document.getElementById(i).value=""); applyExec();};
   fb.appendChild(btn);
   sd.appendChild(fb);
@@ -308,7 +309,7 @@ function buildExec(){
 
   const grid=el("div","grid");
   const c1=el("div","block"); c1.appendChild(el("h3",null,"Applications vs served, by region (filtered)")); const cb1=el("div","chartbox"); const cv1=el("canvas"); cv1.id="exec-reg"; cb1.appendChild(cv1); c1.appendChild(cb1); grid.appendChild(c1);
-  const c2=el("div","block"); c2.appendChild(el("h3",null,"Seedlings applied for vs delivered, by month (filtered)")); const cb2=el("div","chartbox"); const cv2=el("canvas"); cv2.id="exec-mon"; cb2.appendChild(cv2); c2.appendChild(cb2); grid.appendChild(c2);
+  const c2=el("div","block"); c2.appendChild(el("h3",null,"Seedlings requested vs delivered, by month (filtered)")); const cb2=el("div","chartbox"); const cv2=el("canvas"); cv2.id="exec-mon"; cb2.appendChild(cv2); c2.appendChild(cb2); grid.appendChild(c2);
   sd.appendChild(grid);
 
   // health scorecard
@@ -330,7 +331,7 @@ function buildExec(){
 
   // monthly exec summary
   const mb=el("div","block full"); mb.appendChild(el("h3",null,"Monthly Executive Summary"));
-  mb.appendChild(buildTable(["Month","Applications","Seedlings","Disbursed (UGX)","Served","Seedlings delivered"],EX.monthly));
+  mb.appendChild(buildTable(["Month submitted","Applications","Seedlings requested","Disbursed (UGX)","Served","Seedlings delivered"],EX.monthly));
   sd.appendChild(mb);
 
   setTimeout(()=>{["f-region","f-project","f-from","f-to"].forEach(i=>document.getElementById(i).onchange=applyExec); applyExec();},0);
@@ -347,10 +348,10 @@ function applyExec(){
   const era=rows.filter(x=>x[IDX.ym]>=EX.dist_era), served=era.reduce((a,x)=>a+x[IDX.served],0),
         given=rows.reduce((a,x)=>a+x[IDX.given],0);
   const kc=document.getElementById("exec-kpis"); kc.innerHTML="";
-  [["Applications",fmt(n)],["Seedlings",fmt(seed)],["Total cost (UGX)",fmt(cost)],
+  [["Applications",fmt(n)],["Seedlings requested",fmt(seed)],["Total cost (UGX)",fmt(cost)],
    ["Seedling unit price (UGX)",seed?("UGX "+(scost/seed).toFixed(0)):"–"],
    ["Avg seedlings/farmer",n?(seed/n).toFixed(1):"–"],
-   ["Applications served",fmt(served)],["Fulfilment",era.length?(served/era.length*100).toFixed(1)+"%":"–"],
+   ["Served",fmt(served)],["Fulfilment",era.length?(served/era.length*100).toFixed(1)+"%":"–"],
    ["Seedlings delivered",fmt(given)]]
    .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
 

@@ -193,6 +193,12 @@ m["given_n"] = num(m["seedlings_given"])
 m["days_n"] = num(m["days_to_distribution"])
 m["dist_dt"] = pd.to_datetime(m["first_distributed_at"], errors="coerce", utc=True)
 m["era"] = m["sub_dt"] >= DIST_ERA
+# ONE set of rules for the whole page (Tracker, Executive, header): every application since 2023 is in scope;
+# the SUBMISSION date decides the round and the month; the 72 implausible-quantity applications still count
+# as applications (and as served), only their seedling and cost amounts are left out of the totals.
+m["sym"] = m["sub_dt"].dt.strftime("%Y-%m")
+for c in ["total_seedlings_n", "grand_total_n", "total_seedlings_cost_n"]:
+    m[c.replace("_n", "_ok")] = m[c].where(~m["impl"])
 mc = m[~m["impl"]].copy()              # re-derive so the cleaned main carries the delivery columns
 era = m.copy()                         # all applications (2023–24 included, unserved)
 era["seed_clean"] = era["total_seedlings_n"].where(~era["impl"])   # implausible (>10k) excluded, as elsewhere
@@ -219,7 +225,7 @@ FULFIL_ERA = n_srv_era / n_era_only * 100 if n_era_only else 0
 # ════════════════════════════════════════════════════════════════════════════
 # ROUND TRACKER — the field team's questions, per district and application round
 # ════════════════════════════════════════════════════════════════════════════
-# Rounds = year the application was submitted (2025 onwards; 2023–24 had no distributions).
+# Rounds = year the application was submitted, from 2023 (the 2023–24 rounds had no distributions).
 # Districts are the ones recorded on the forms (already folded to lower case above).
 # Status, from the data only: Not started = none served · Completed ≥ DONE_PCT served (pending also holds
 # applications that were never approved, so 100% is not expected) · Distributing = a delivery within
@@ -232,14 +238,14 @@ QUIET_DAYS = 21          # enumerator with no submission for this long…
 ACTIVE_DAYS = 90         # …among those who submitted within this window (others finished earlier rounds)
 
 nice = lambda d: d.title() if d else "(blank)"
-cur = m[m["era"]].copy()
+cur = m.copy()
 cur["round"] = cur["sub_dt"].dt.year.astype("Int64").astype(str)
 ROUNDS = sorted(cur["round"].unique(), reverse=True)
 
 
-def status(served, n, last):
+def status(served, n, last, rnd=None):
     if served == 0:
-        return "Not started"
+        return "Not distributed" if rnd and rnd < str(DIST_ERA.year) else "Not started"
     if served / n * 100 >= DONE_PCT:
         return "Completed"
     return "Distributing" if pd.notna(last) and (NOW - last).days <= STALL_DAYS else "Paused"
@@ -250,12 +256,16 @@ def tracker_rows(df):
     for d, g in df.groupby("district"):
         n, served = len(g), int(g["served"].sum())
         last = g.loc[g["served"], "dist_dt"].max()
+        # Status describes distribution progress, so it is judged on the rounds that had distributions
+        # (2025 on); a district with only 2023–24 applications is "Not distributed".
+        dg = g[g["era"]]
+        st = status(int(dg["served"].sum()), len(dg), last) if len(dg) else status(0, n, last, g["round"].max())
         rows.append([nice(d), n, served, n - served, int(g.loc[g["served"], "given_n"].sum()),
-                     last.strftime("%Y-%m-%d") if pd.notna(last) else "–", status(served, n, last)])
+                     last.strftime("%Y-%m-%d") if pd.notna(last) else "–", st])
     return sorted(rows, key=lambda r: (-r[3], r[0]))     # most pending first
 
 
-TRACKER = {"rounds": ROUNDS + ["all"], "labels": {**{r: f"{r} round" for r in ROUNDS}, "all": "All rounds (2025+)"},
+TRACKER = {"rounds": ROUNDS + ["all"], "labels": {**{r: f"{r} round" for r in ROUNDS}, "all": "All rounds (2023 onwards)"},
            "rows": {r: tracker_rows(cur[cur["round"] == r]) for r in ROUNDS},
            "stall_days": STALL_DAYS, "done_pct": DONE_PCT, "as_of": NOW.strftime("%Y-%m-%d")}
 TRACKER["rows"]["all"] = tracker_rows(cur)
@@ -324,14 +334,15 @@ for d, g in recent[recent["enum"] != ""].groupby("district"):
 enum_dist_rows.sort(key=lambda x: x[5])
 
 T = sec("tracker", "★ Round Tracker",
-        "Progress per district for each application round (2025 onwards), straight from the Kobo application and "
-        "distribution forms. Use it to see which districts are done, still distributing, stalled or not started.")
+        "Progress per district for each application round (2023 onwards), straight from the Kobo application and "
+        "distribution forms. Use it to see which districts are done, still distributing, paused or not started. "
+        "The 2023 and 2024 rounds had no distributions.")
 T["tracker"] = TRACKER
 
 R = sec("recon", "Reconciliation",
         "Where applications and distribution records disagree, and how many farmers appear more than once. "
         "Counts only: the farmer-level list is kept off this page (the page is stored in a public code repository).")
-add(R, {"type": "kpi", "title": "Duplicates and mismatches (2025 onwards)", "cards": [
+add(R, {"type": "kpi", "title": "Duplicates and mismatches (all rounds, 2023 onwards)", "cards": [
     {"label": "Beneficiary IDs with more than one application", "value": f"{len(dups):,}"},
     {"label": "Extra applications from those IDs", "value": f"{int((dups['apps'] - 1).sum()):,}"},
     {"label": "IDs that applied in more than one round", "value": f"{n_both:,}"},
@@ -352,7 +363,7 @@ D = sec("standards", "Data Standards",
         "farmer at a time; long lists entered under one event, or entries made weeks later, suggest lists typed up "
         "afterwards.")
 ev_cur = ev[ev["sub"] >= DIST_ERA]
-add(D, {"type": "kpi", "title": "Distribution capture (2025 onwards)", "cards": [
+add(D, {"type": "kpi", "title": "Distribution capture (all distribution events)", "cards": [
     {"label": "Distribution events", "value": f"{len(ev_cur):,}"},
     {"label": f"Bulk events (≥{BULK_EVENT} farmers in one event)", "value": f"{int(ev_cur['bulk'].sum()):,}"},
     {"label": "Farmers in bulk events", "value": f"{int(ev_cur.loc[ev_cur['bulk'], 'farmers'].sum()):,}"},
@@ -790,7 +801,7 @@ add(s, {"type": "bar", "title": "Volume of new-species suggestions by region",
 health_rows = []
 overall_uptake = mc["total_seedlings_n"].mean()
 for r, g in mc.groupby("region_norm"):
-    subs = len(g)
+    subs = int((m["region_norm"] == r).sum())     # all applications, like the rest of the page
     uptake = g["total_seedlings_n"].mean()
     cps_r = (g["total_seedlings_cost_n"].sum() / g["total_seedlings_n"].sum()) if g["total_seedlings_n"].sum() else np.nan
     enum_prod = m[(m["region_norm"] == r) & m["enum"].notna()].groupby("enum").size().mean()
@@ -805,21 +816,21 @@ for r, g in mc.groupby("region_norm"):
                         "all_photos_pct": round(float(dq), 1)})
 
 # Monthly executive summary
-monthly = (mc.dropna(subset=["ym"]).groupby("ym")
-           .agg(applications=("_id", "size"), seedlings=("total_seedlings_n", "sum"),
-                disbursed=("grand_total_n", "sum"), served=("served", "sum"),
-                given=("given_n", "sum")).reset_index().sort_values("ym"))
-monthly_rows = [[r.ym, int(r.applications), int(r.seedlings), int(r.disbursed), int(r.served), int(r.given)]
+monthly = (m.dropna(subset=["sym"]).groupby("sym")
+           .agg(applications=("_id", "size"), seedlings=("total_seedlings_ok", "sum"),
+                disbursed=("grand_total_ok", "sum"), served=("served", "sum"),
+                given=("given_n", "sum")).reset_index().sort_values("sym"))
+monthly_rows = [[r.sym, int(r.applications), int(r.seedlings), int(r.disbursed), int(r.served), int(r.given)]
                 for r in monthly.itertuples()]
 
 # Record-level array for client-side filtering (trim to essentials)
-rec = mc[["region_norm", "district", "proj", "ym", "total_seedlings_n",
-          "grand_total_n", "coop_type", "total_seedlings_cost_n", "served", "given_n", "dist_dt"]].copy()
-rec = rec.dropna(subset=["ym"])
+rec = m[["region_norm", "district", "proj", "sym", "total_seedlings_ok",
+         "grand_total_ok", "coop_type", "total_seedlings_cost_ok", "served", "given_n", "dist_dt"]].copy()
+rec = rec.dropna(subset=["sym"]).rename(columns={"sym": "ym"})
 records = [[r.region_norm, r.district or "(blank)", r.proj, r.ym,
-            int(r.total_seedlings_n) if not pd.isna(r.total_seedlings_n) else 0,
-            int(r.grand_total_n) if not pd.isna(r.grand_total_n) else 0, r.coop_type,
-            int(r.total_seedlings_cost_n) if not pd.isna(r.total_seedlings_cost_n) else 0,
+            int(r.total_seedlings_ok) if not pd.isna(r.total_seedlings_ok) else 0,
+            int(r.grand_total_ok) if not pd.isna(r.grand_total_ok) else 0, r.coop_type,
+            int(r.total_seedlings_cost_ok) if not pd.isna(r.total_seedlings_cost_ok) else 0,
             int(r.served), int(r.given_n) if not pd.isna(r.given_n) else 0,
             r.dist_dt.strftime("%Y-%m") if not pd.isna(r.dist_dt) else ""]
            for r in rec.itertuples()]
@@ -838,7 +849,7 @@ EXEC = {
 
 GLOBAL = {
     "N": N, "items": len(it),
-    "total_seedlings": int(itc["qty"].sum()),
+    "total_seedlings": int(m["total_seedlings_ok"].sum()),   # application totals, as in the Executive section
     "total_cost": int(mc["grand_total_n"].sum()),
     "regions": int(mc["region_norm"].nunique()),
     "districts": int(mc[mc["district"] != ""]["district"].nunique()),
