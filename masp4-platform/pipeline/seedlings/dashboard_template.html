@@ -49,7 +49,7 @@
   .filters button:hover{background:#e6b400}
   .rag-g{background:#c8e6c9}.rag-a{background:#fff3cd}.rag-r{background:#f8d7da}
   .st{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap}
-  .st-Completed{background:#c8e6c9}.st-Distributing{background:#d6e9ff}.st-Paused{background:#f8d7da}.st-Not-distributed{background:#f1f1f1;color:#777}.st-Not-started{background:#eee;color:#555}
+  .st-Completed{background:#c8e6c9}.st-Distributing{background:#d6e9ff}.st-Pending{background:#f8d7da}.st-Not-distributed{background:#f1f1f1;color:#777}.st-Not-started{background:#eee;color:#555}
   .dl{float:right;margin-top:-4px;padding:4px 10px;border:1px solid var(--bd);background:#fff;border-radius:6px;font-size:11.5px;cursor:pointer}
   .dl:hover{border-color:#FFC800}
   tr.total td{font-weight:700;border-top:2px solid var(--bd)}
@@ -135,7 +135,7 @@ function buildTracker(sc){
   const kp=el("div","block full"); const kc=el("div","kpis"); kp.appendChild(kc); wrap.appendChild(kp);
   const tb=el("div","block full"); const h=el("h3"); const dl=el("button","dl","⬇ CSV");
   tb.appendChild(dl); tb.appendChild(h); const box=el("div","tablebox"); box.style.maxHeight="none"; tb.appendChild(box);
-  tb.appendChild(el("div","note",`Status: <b>Completed</b> = at least ${T.done_pct}% of applications served · <b>Distributing</b> = a delivery in the last ${T.stall_days} days · <b>Paused</b> = no delivery for more than ${T.stall_days} days · <b>Not started</b> = none served yet · <b>Not distributed</b> = 2023–24 rounds, which had no distributions. In <b>All rounds</b>, status is judged on the 2025 and later rounds only. Pending also includes applications that were not approved (the approved list is kept outside Kobo), so a district can be complete without reaching 100%. Data as of ${T.as_of}.`));
+  tb.appendChild(el("div","note",`Status: <b>Completed</b> = at least ${T.done_pct}% of applications served · <b>Distributing</b> = a delivery in the last ${T.stall_days} days · <b>Pending</b> = some served, no delivery for more than ${T.stall_days} days · <b>Not started</b> = none served yet · <b>Not distributed</b> = 2023–24 rounds, which had no distributions. In <b>All rounds</b>, status is judged on the 2025 and later rounds only. The Pending count also includes applications that were not approved (the approved list is kept outside Kobo), so a district can be complete without reaching 100%. Data as of ${T.as_of}.`));
   wrap.appendChild(tb);
   const draw=()=>{
     const rows=T.rows[sel.value], sum=i=>rows.reduce((a,r)=>a+r[i],0);
@@ -143,7 +143,7 @@ function buildTracker(sc){
     kc.innerHTML="";
     [["Applications",fmt(n)],["Served",fmt(sv)],["Pending",fmt(sum(3))],["Served %",n?(sv/n*100).toFixed(1)+"%":"–"],
      ["Seedlings delivered",fmt(sum(4))],["Districts completed",cnt("Completed")+" of "+rows.length],
-     ["Distributing",cnt("Distributing")],["Paused / not started",cnt("Paused")+" / "+cnt("Not started")]]
+     ["Districts distributing",cnt("Distributing")],["Districts pending / not started",cnt("Pending")+" / "+cnt("Not started")]]
      .concat(cnt("Not distributed")?[["Not distributed (2023–24 only)",cnt("Not distributed")]]:[])
      .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",String(v))); d.appendChild(el("div","l",l)); kc.appendChild(d);});
     h.textContent=`Progress by district — ${T.labels[sel.value]} (${rows.length} districts, most pending first)`;

@@ -229,7 +229,7 @@ FULFIL_ERA = n_srv_era / n_era_only * 100 if n_era_only else 0
 # Districts are the ones recorded on the forms (already folded to lower case above).
 # Status, from the data only: Not started = none served · Completed ≥ DONE_PCT served (pending also holds
 # applications that were never approved, so 100% is not expected) · Distributing = a delivery within
-# STALL_DAYS · Paused = no delivery for longer than that.
+# STALL_DAYS · Pending = no delivery for longer than that.
 STALL_DAYS = 30
 DONE_PCT = 90
 BULK_EVENT = 50          # farmers entered under one distribution event
@@ -248,7 +248,7 @@ def status(served, n, last, rnd=None):
         return "Not distributed" if rnd and rnd < str(DIST_ERA.year) else "Not started"
     if served / n * 100 >= DONE_PCT:
         return "Completed"
-    return "Distributing" if pd.notna(last) and (NOW - last).days <= STALL_DAYS else "Paused"
+    return "Distributing" if pd.notna(last) and (NOW - last).days <= STALL_DAYS else "Pending"
 
 
 def tracker_rows(df):
