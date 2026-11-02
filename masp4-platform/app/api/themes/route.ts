@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin.from('theme_insights')
     .select('id, theme_key, status, synthesis, evidence_rating, source_report_ids, review_note, generated_at, ' +
-            'published_at, evaluation_themes(title, sort_order)')
+            'published_at, evaluation_themes(title, sort_order, kind)')
     .eq('status', 'draft')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const drafts = (data ?? []) as unknown as DraftRow[]

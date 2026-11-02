@@ -104,11 +104,16 @@ export interface ThemeSynthesis {
   rating_reason: string
 }
 
+/**
+ * A theme, or (Sprint 57) a commodity under "Commodity Insights". A commodity's synthesis has the same shape, but its
+ * board `change` and `scorecard` rows name a THEME in their `commodity` field (e.g. "Incomes & Livelihoods").
+ */
 export interface Theme {
   key: string
   title: string
   description: string
   sort_order: number
+  kind: 'theme' | 'commodity'
 }
 
 export interface ThemeInsight {

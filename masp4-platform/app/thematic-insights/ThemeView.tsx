@@ -2,12 +2,15 @@
  * Renders one theme synthesis as a board-level view (used by the theme page and the review queue):
  * headline, headline figures, % change by commodity, commodity scorecard, small trend charts and three
  * takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
+ * `by` names what the change chart and scorecard rows are: commodities on a theme page, themes on a commodity page.
  * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
  */
 import {
   BASIS_LABEL, STATUS_LABEL, type BoardView, type ThemeSynthesis,
 } from '@/lib/themes'
 import styles from './themes.module.css'
+
+type By = 'commodity' | 'theme'
 
 const fmt = (v: number) => v.toLocaleString('en-GB', { maximumFractionDigits: 2 })
 const signed = (v: number) => `${v > 0 ? '+' : ''}${fmt(v)}%`
@@ -29,7 +32,7 @@ function Figures({ figures }: { figures: BoardView['figures'] }) {
 }
 
 /** Horizontal bars from a zero line; self-reported figures are drawn hollow. */
-function ChangeChart({ rows }: { rows: BoardView['change'] }) {
+function ChangeChart({ rows, by }: { rows: BoardView['change']; by: By }) {
   if (!rows.length) return null
   const lo = Math.min(0, ...rows.map(r => r.pct))
   const hi = Math.max(0, ...rows.map(r => r.pct))
@@ -37,7 +40,7 @@ function ChangeChart({ rows }: { rows: BoardView['change'] }) {
   const at = (v: number) => ((v - lo) / span) * 100
   return (
     <section>
-      <h3>Change by commodity</h3>
+      <h3>Change by {by}</h3>
       <figure className={styles.chart}>
         <div className={styles.legend}>
           <span><i className={styles.keySolid} /> Measured (comparison group or before → after)</span>
@@ -69,11 +72,11 @@ function ChangeChart({ rows }: { rows: BoardView['change'] }) {
   )
 }
 
-function Scorecard({ rows }: { rows: BoardView['scorecard'] }) {
+function Scorecard({ rows, by }: { rows: BoardView['scorecard']; by: By }) {
   if (!rows.length) return null
   return (
     <section>
-      <h3>By commodity</h3>
+      <h3>By {by}</h3>
       <div className={styles.scorecard}>
         {rows.map(r => (
           <span key={r.commodity} className={`${styles.chip} ${styles[`st_${r.status}`]}`}>
@@ -126,7 +129,7 @@ function Takeaways({ works, barriers, actions }: BoardView['takeaways']) {
   )
 }
 
-export default function ThemeView({ synthesis }: { synthesis: ThemeSynthesis }) {
+export default function ThemeView({ synthesis, by = 'commodity' }: { synthesis: ThemeSynthesis; by?: By }) {
   const b = synthesis.board
   return (
     <div className={styles.synthesis}>
@@ -135,8 +138,8 @@ export default function ThemeView({ synthesis }: { synthesis: ThemeSynthesis }) 
         <>
           <Figures figures={b.figures} />
           <div className={styles.boardCharts}>
-            <ChangeChart rows={b.change} />
-            <Scorecard rows={b.scorecard} />
+            <ChangeChart rows={b.change} by={by} />
+            <Scorecard rows={b.scorecard} by={by} />
           </div>
           {b.series.length > 0 && (
             <section>

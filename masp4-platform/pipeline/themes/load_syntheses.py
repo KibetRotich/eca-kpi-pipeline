@@ -5,6 +5,9 @@ Charts (synthesis.charts, optional) are checked too: one unit each, every row ci
 Every cited source must be a PUBLISHED study, or the load stops. Each theme's existing draft is replaced;
 published syntheses are untouched until a reviewer publishes the new draft on /thematic-insights.
 
+A commodity (Sprint 57, evaluation_themes.kind = 'commodity') loads the same way; its board change and
+scorecard rows name a THEME title in their `commodity` field instead of a commodity.
+
 Usage: python -I load_syntheses.py <path-to-.env.local> <syntheses.json> [--dry-run]
 """
 import json, sys, urllib.request
@@ -28,7 +31,9 @@ def req(method, path, body=None, prefer=None):
         return json.loads(resp.read() or b'null')
 
 
-themes = {t['key'] for t in req('GET', 'evaluation_themes?select=key')}
+theme_rows = req('GET', 'evaluation_themes?select=key,title,kind')
+themes = {t['key']: t['kind'] for t in theme_rows}
+THEME_TITLES = tuple(t['title'] for t in theme_rows if t['kind'] == 'theme')
 published = {s['id'] for s in req('GET', 'evaluation_reports?status=eq.published&select=id')}
 items = json.load(open(sys.argv[2], encoding='utf-8'))
 
@@ -63,9 +68,10 @@ for it in items:
             if r['basis'] not in BASES or not isinstance(r['pct'], (int, float)):
                 errors.append(f"{key}: change row '{r['commodity']}' needs a known basis and a numeric pct")
             cited.add(r['source'])
+        names = THEME_TITLES if themes.get(key) == 'commodity' else COMMODITIES
         for r in board['scorecard']:
-            if r['commodity'] not in COMMODITIES or r['status'] not in STATUSES:
-                errors.append(f"{key}: scorecard row {r} needs a COMMODITIES name and a known status")
+            if r['commodity'] not in names or r['status'] not in STATUSES:
+                errors.append(f"{key}: scorecard row {r} needs a {'theme title' if names is THEME_TITLES else 'COMMODITIES name'} and a known status")
         for s in board['series']:
             if len(s['points']) < 2 or not s.get('unit'):
                 errors.append(f"{key}: series '{s['project']}' needs a unit and at least two points")

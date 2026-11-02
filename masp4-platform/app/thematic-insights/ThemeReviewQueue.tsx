@@ -11,7 +11,7 @@ import ThemeView from './ThemeView'
 import Meter from './Meter'
 import ev from '../evaluation-insights/evaluation.module.css'
 
-type Draft = ThemeInsight & { evaluation_themes: { title: string } | null }
+type Draft = ThemeInsight & { evaluation_themes: { title: string; kind: 'theme' | 'commodity' } | null }
 
 export default function ThemeReviewQueue() {
   const { canEdit, loading } = useRole()
@@ -48,8 +48,8 @@ export default function ThemeReviewQueue() {
   if (loading || !canEdit || !drafts?.length) return null
 
   return (
-    <section className={ev.review} aria-label="Theme syntheses awaiting review">
-      <h2>Theme syntheses awaiting review ({drafts.length})</h2>
+    <section className={ev.review} aria-label="Syntheses awaiting review">
+      <h2>Theme and commodity syntheses awaiting review ({drafts.length})</h2>
       {error && <div className={ev.error} role="alert">{error}</div>}
       {drafts.map(d => (
         <div key={d.id} className={ev.reviewItem}>
@@ -75,7 +75,9 @@ export default function ThemeReviewQueue() {
                       onClick={() => act(d.id, 'reject')}>Reject</button>
             </div>
           </div>
-          {openId === d.id && <ThemeView synthesis={d.synthesis} />}
+          {openId === d.id && (
+            <ThemeView synthesis={d.synthesis} by={d.evaluation_themes?.kind === 'commodity' ? 'theme' : 'commodity'} />
+          )}
         </div>
       ))}
     </section>

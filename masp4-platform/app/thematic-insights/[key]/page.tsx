@@ -1,6 +1,7 @@
 /**
  * /thematic-insights/<key> — one theme's published cross-study synthesis as a board-level view
  * (Sprint 51: figures and charts; the source-study list and prose were removed). Reviewers read drafts in the review queue.
+ * A commodity (Sprint 57, kind = 'commodity') uses the same page; its charts are broken down by theme.
  */
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -15,7 +16,7 @@ const KEY = /^[a-z_]{2,40}$/
 
 async function getTheme(key: string) {
   if (!KEY.test(key)) return null
-  const { data } = await supabaseAdmin.from('evaluation_themes').select('key, title, description, sort_order')
+  const { data } = await supabaseAdmin.from('evaluation_themes').select('key, title, description, sort_order, kind')
     .eq('key', key).single()
   return data as Theme | null
 }
@@ -38,7 +39,9 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
 
   return (
     <div>
-      <a href="/thematic-insights" className={styles.back}>← All themes</a>
+      <a href={theme.kind === 'commodity' ? '/thematic-insights#commodity-insights' : '/thematic-insights'} className={styles.back}>
+        ← {theme.kind === 'commodity' ? 'All commodities' : 'All themes'}
+      </a>
       <article className={styles.detail}>
         <div className={styles.detailHead}>
           <div>
@@ -57,10 +60,10 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
         {!ins ? (
           <div className={styles.empty}>
             <strong>Synthesis in preparation</strong>
-            The synthesis for this theme will appear here once it has been reviewed by the M&amp;E team.
+            The synthesis for this {theme.kind} will appear here once it has been reviewed by the M&amp;E team.
           </div>
         ) : (
-          <ThemeView synthesis={ins.synthesis} />
+          <ThemeView synthesis={ins.synthesis} by={theme.kind === 'commodity' ? 'theme' : 'commodity'} />
         )}
       </article>
     </div>

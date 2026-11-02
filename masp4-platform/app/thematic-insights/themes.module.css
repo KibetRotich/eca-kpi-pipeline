@@ -4,6 +4,10 @@
 .header { margin-bottom: .9rem; }
 .header h1 { margin: 0; font-size: 1.05rem; font-weight: 800; }
 .intro { margin: .25rem 0 0; font-size: .78rem; color: #555; max-width: 760px; }
+/* Commodity Insights (Sprint 57): a second section under the theme cards, headed like the page title. */
+.commoditySection { margin-top: 1.6rem; }
+.commoditySection > h2 { margin: 0; font-size: 1.05rem; font-weight: 800; }
+.commoditySection > .intro { margin-bottom: .9rem; }
 
 /* ── Theme cards ───────────────────────────────────────────────────────── */
 .themeGrid {

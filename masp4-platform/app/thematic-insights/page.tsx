@@ -1,7 +1,8 @@
 /**
  * /thematic-insights — Thematic Insights hub (Sprint 49).
  *
- * One card per theme (evaluation_themes) with its headline, evidence rating and the number of studies behind it.
+ * One card per theme (evaluation_themes) with its headline, evidence rating and the number of studies behind it,
+ * then (Sprint 57) a "Commodity Insights" section with one card per commodity (kind = 'commodity').
  * Each card opens /thematic-insights/<key>.
  * Syntheses draw on the published studies of /evaluation-insights and are written from Claude Code
  * ("synthesise themes"); M&E Officers / Admins review drafts in ThemeReviewQueue before they appear here.
@@ -20,13 +21,12 @@ export const metadata = {
 
 export default async function ThematicInsightsPage() {
   const [{ data: themes }, { data: insights }, { count }] = await Promise.all([
-    supabaseAdmin.from('evaluation_themes').select('key, title, description, sort_order').order('sort_order'),
+    supabaseAdmin.from('evaluation_themes').select('key, title, description, sort_order, kind').order('sort_order'),
     supabaseAdmin.from('theme_insights').select('theme_key, synthesis, evidence_rating, source_report_ids')
       .eq('status', 'published'),
     supabaseAdmin.from('evaluation_reports').select('id', { count: 'exact', head: true }).eq('status', 'published'),
   ])
-  const byTheme = new Map((insights ?? []).map(i => [i.theme_key, i as Pick<ThemeInsight,
-    'theme_key' | 'synthesis' | 'evidence_rating' | 'source_report_ids'>]))
+  const byTheme = new Map((insights ?? []).map(i => [i.theme_key, i as Published]))
   const themeList = (themes ?? []) as Theme[]
 
   return (
@@ -44,30 +44,46 @@ export default async function ThematicInsightsPage() {
 
       <ThemeReviewQueue />
 
-      <div className={styles.themeGrid}>
-        {themeList.map(t => {
-          const ins = byTheme.get(t.key)
-          return (
-            <a key={t.key} href={`/thematic-insights/${t.key}`} className={`${styles.themeCard} ${ins ? '' : styles.pending}`}>
-              <h2 className={styles.themeTitle}>{t.title}</h2>
-              {ins ? (
-                <>
-                  <p className={styles.themeHeadline}>{ins.synthesis.headline}</p>
-                  <span className={styles.themeFoot}>
-                    <Meter rating={ins.evidence_rating} />
-                    <span>{ins.source_report_ids.length} {ins.source_report_ids.length === 1 ? 'study' : 'studies'}</span>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <p className={styles.themeHeadline}>{t.description}</p>
-                  <span className={styles.themeFoot}><span>Synthesis in preparation</span></span>
-                </>
-              )}
-            </a>
-          )
-        })}
-      </div>
+      <ThemeGrid themes={themeList.filter(t => t.kind === 'theme')} byTheme={byTheme} />
+
+      <section className={styles.commoditySection} aria-labelledby="commodity-insights">
+        <h2 id="commodity-insights">Commodity Insights</h2>
+        <p className={styles.intro}>
+          The same evidence read commodity by commodity: what the studies say about each value chain across every theme.
+        </p>
+        <ThemeGrid themes={themeList.filter(t => t.kind === 'commodity')} byTheme={byTheme} />
+      </section>
+    </div>
+  )
+}
+
+type Published = Pick<ThemeInsight, 'theme_key' | 'synthesis' | 'evidence_rating' | 'source_report_ids'>
+
+function ThemeGrid({ themes, byTheme }: { themes: Theme[]; byTheme: Map<string, Published> }) {
+  return (
+    <div className={styles.themeGrid}>
+      {themes.map(t => {
+        const ins = byTheme.get(t.key)
+        return (
+          <a key={t.key} href={`/thematic-insights/${t.key}`} className={`${styles.themeCard} ${ins ? '' : styles.pending}`}>
+            <h2 className={styles.themeTitle}>{t.title}</h2>
+            {ins ? (
+              <>
+                <p className={styles.themeHeadline}>{ins.synthesis.headline}</p>
+                <span className={styles.themeFoot}>
+                  <Meter rating={ins.evidence_rating} />
+                  <span>{ins.source_report_ids.length} {ins.source_report_ids.length === 1 ? 'study' : 'studies'}</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <p className={styles.themeHeadline}>{t.description}</p>
+                <span className={styles.themeFoot}><span>Synthesis in preparation</span></span>
+              </>
+            )}
+          </a>
+        )
+      })}
     </div>
   )
 }
