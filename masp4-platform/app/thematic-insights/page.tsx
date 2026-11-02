@@ -16,7 +16,7 @@ import Meter from './Meter'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Thematic Insights — MASP IV Data Platform',
+  title: 'Thematic Insights — ECA PMEL Platform',
 }
 
 export default async function ThematicInsightsPage() {

@@ -9,7 +9,7 @@
  */
 
 export const metadata = {
-  title: 'MASP III Dashboard — MASP IV Data Platform',
+  title: 'MASP III Dashboard — ECA PMEL Platform',
 }
 
 export default function EcaDashboardPage() {

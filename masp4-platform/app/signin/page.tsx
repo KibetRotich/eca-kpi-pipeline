@@ -64,7 +64,7 @@ export default function SignInPage() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '55vh' }}>
       <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderTop: '4px solid #FFC800', padding: '1.8rem 2rem', maxWidth: 420, textAlign: 'center', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111', marginBottom: '.5rem' }}>Sign in to the MASP IV Data Platform</div>
+        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111', marginBottom: '.5rem' }}>Sign in to the ECA PMEL Platform</div>
         <p style={{ fontSize: '.72rem', color: '#555', lineHeight: 1.6, margin: '0 0 1.2rem' }}>
           The platform is for Solidaridad staff only. Use your <strong>@{STAFF_DOMAIN}</strong> Google account.
         </p>

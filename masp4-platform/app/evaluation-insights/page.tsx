@@ -17,7 +17,7 @@ import StudyBrowser, { type Study } from './StudyBrowser'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Evaluation Insights — MASP IV Data Platform',
+  title: 'Evaluation Insights — ECA PMEL Platform',
 }
 
 export default async function EvaluationInsightsPage() {

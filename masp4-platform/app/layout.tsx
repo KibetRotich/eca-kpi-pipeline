@@ -4,7 +4,7 @@ import { RoleProvider } from '@/lib/role-context'
 import AuthButton from '@/components/AuthButton'
 
 export const metadata: Metadata = {
-  title: 'MASP IV Data Platform — Solidaridad ECA',
+  title: 'ECA PMEL Platform — Solidaridad ECA',
   description: 'Solidaridad East & Central Africa — MASP IV monitoring and data platform',
 }
 
@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#000', lineHeight: 1 }}>
-                MASP IV · Data Platform
+                ECA PMEL Platform
               </div>
               <div style={{ fontSize: '.56rem', fontWeight: 800, color: '#000', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 2 }}>
                 East &amp; Central Africa &middot; 2026–2030

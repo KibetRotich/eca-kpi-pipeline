@@ -9,7 +9,7 @@
  */
 
 export const metadata = {
-  title: 'P2P Project Dashboard — MASP IV Data Platform',
+  title: 'P2P Project Dashboard — ECA PMEL Platform',
 }
 
 export default function P2pDashboardPage() {

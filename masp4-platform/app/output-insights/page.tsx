@@ -14,7 +14,7 @@
 import styles from './page.module.css'
 
 export const metadata = {
-  title: 'Output Insights — MASP IV Data Platform',
+  title: 'Output Insights — ECA PMEL Platform',
 }
 
 type Dashboard = {

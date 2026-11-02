@@ -3,7 +3,7 @@
  */
 
 export const metadata = {
-  title: 'Network KPI Measurement — MASP IV Data Platform',
+  title: 'Network KPI Measurement — ECA PMEL Platform',
 }
 
 const YELLOW = '#FFC800'
@@ -451,7 +451,7 @@ export default function InstructionsPage() {
       {/* Footer note */}
       <div style={{ borderTop: '1px solid #d0d0d0', paddingTop: '.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '.5rem' }}>
         <div style={{ fontSize: '0.6rem', color: '#aaa', textTransform: 'uppercase', letterSpacing: '.8px' }}>
-          Solidaridad East &amp; Central Africa · MASP IV Data Platform · 2026–2030
+          Solidaridad East &amp; Central Africa · ECA PMEL Platform · 2026–2030
         </div>
         <div style={{ fontSize: '0.6rem', color: '#aaa' }}>
           For technical support contact the ECA M&amp;E team
