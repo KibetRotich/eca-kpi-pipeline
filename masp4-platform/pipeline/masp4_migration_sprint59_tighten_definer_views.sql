@@ -29,6 +29,9 @@ revoke execute on function public.eca_farmer_depth(text, text, text, text, text,
   from public, anon, authenticated;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 revoke execute on function public.enforce_auth_email_domain() from public, anon, authenticated;
+-- Belt and braces for sign-in: the Auth service (not exposed through /rest/v1) keeps EXECUTE on the trigger functions.
+grant execute on function public.handle_new_user() to supabase_auth_admin;
+grant execute on function public.enforce_auth_email_domain() to supabase_auth_admin;
 
 alter function public.set_updated_at() set search_path = public;
 alter function public.lock_baseline_on_approve() set search_path = public;
