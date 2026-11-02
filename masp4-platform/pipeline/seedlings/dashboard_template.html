@@ -265,11 +265,13 @@ function build(){
   const nav=document.getElementById("nav"), main=document.getElementById("main");
 
   // Executive first, then Round Tracker and Reconciliation, then Distribution & Fulfilment and the rest
-  const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec");
+  const exNav=el("a",null,"1 · Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec");
   nav.appendChild(exNav); main.appendChild(buildExec());
   const ORDER=["tracker","recon","s0"];
   const rank=sc=>{const i=ORDER.indexOf(sc.id); return i<0?ORDER.length:i;};
-  DATA.sections.map((sc,i)=>[sc,i]).sort((x,y)=>rank(x[0])-rank(y[0])||x[1]-y[1]).forEach(([sc])=>{
+  DATA.sections.map((sc,i)=>[sc,i]).sort((x,y)=>rank(x[0])-rank(y[0])||x[1]-y[1]).forEach(([sc],n)=>{
+    // number tabs by display order (Executive = 1), ignoring any number baked into the title
+    sc.title=`${n+2} · ${sc.title.replace(/^(★|\d+\s*·)\s*/,"")}`;
     const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
     const sd=el("div","section"); sd.id=sc.id; sd.style.display="none";
     sd.appendChild(el("div","sec-title",sc.title));
@@ -290,7 +292,7 @@ const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
 
 function buildExec(){
   const sd=el("div","section"); sd.id="exec";
-  sd.appendChild(el("div","sec-title","★ Executive Dashboard"));
+  sd.appendChild(el("div","sec-title","1 · Executive Dashboard"));
   sd.appendChild(el("div","sec-desc","KPIs for all applications since 2023, filterable by region, project and submission month — the same rules as the Round Tracker, so with no filter the totals match its “All rounds” view. Fulfilment = served ÷ applications; the 2023–24 rounds had no distributions, so they count as not served. Seedlings requested leaves out 72 applications with implausible quantities (over 10,000); those applications still count."));
 
   // filters
