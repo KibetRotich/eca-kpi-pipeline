@@ -40,6 +40,11 @@ async function fetchAll(view: string, columns: string, f: Filters,
   return rows
 }
 
+/** Every PII-free event row matching the filters, for the CSV export (/api/eca-events/export). */
+export function getEventsForExport(f: Filters) {
+  return fetchAll('v_eca_events_safe', '*', f)
+}
+
 // ── Filter options + admin cascade ────────────────────────────────────────────
 
 export interface FilterOptions {
