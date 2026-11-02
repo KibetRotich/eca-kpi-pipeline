@@ -4,7 +4,7 @@
  * the query layer.
  */
 import { parseFilters, getOverview, getProjects, getFarmerDepth, getGenderYouth } from '@/lib/eca-events/queries'
-import { Kpi, Card, BarChart, LineChart, Caption } from './charts'
+import { Kpi, Card, BarChart, Caption } from './charts'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,7 @@ export default async function OverviewPage(
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '.7rem', marginTop: '.8rem' }}>
         <Card title="Reach & events by month" height={240}
           note={`Monthly reported reach and event count. n=${o.totalEvents.toLocaleString()} events.`}>
-          <LineChart labels={months} series={[
+          <BarChart labels={months} series={[
             { label: 'Reach', data: o.byMonth.map(m => m.reach), color: '#FFC800' },
             { label: 'Events', data: o.byMonth.map(m => m.events), color: '#111' },
           ]} />
@@ -44,7 +44,7 @@ export default async function OverviewPage(
 
         <Card title="Female & youth share over time" height={240}
           note="% of reported reach that is female / youth (≤35), by month.">
-          <LineChart labels={gy.byMonth.map(m => m.month)} series={[
+          <BarChart labels={gy.byMonth.map(m => m.month)} series={[
             { label: '% Female', data: gy.byMonth.map(m => m.pctFemale ?? 0), color: '#FFC800' },
             { label: '% Youth', data: gy.byMonth.map(m => m.pctYouth ?? 0), color: '#111' },
           ]} />

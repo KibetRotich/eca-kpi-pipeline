@@ -4,7 +4,7 @@
  * Reusable chart.js + card primitives for the ECA Events dashboard.
  * Solidaridad theme: yellow #FFC800, black #111, grey #888.
  */
-import { Bar, Line, Doughnut, Scatter } from 'react-chartjs-2'
+import { Bar, Doughnut, Scatter } from 'react-chartjs-2'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement,
   LineElement, ArcElement, Tooltip, Legend, Filler,
@@ -106,21 +106,6 @@ export function BarChart({ labels, series, horizontal, stacked }:
   if (stacked) { opts.scales.x = { ...opts.scales.x, stacked: true }; opts.scales.y = { ...opts.scales.y, stacked: true } }
   if (series.length < 2 && !series[0]?.label) opts.plugins.legend.display = false
   return <Bar data={data} options={opts} />
-}
-
-export function LineChart({ labels, series }:
-  { labels: string[]; series: { label: string; data: number[]; color?: string }[] }) {
-  if (!labels.length) return <Empty />
-  const data = {
-    labels,
-    datasets: series.map((s, i) => ({
-      label: s.label, data: s.data,
-      borderColor: s.color ?? PALETTE[i % PALETTE.length],
-      backgroundColor: (s.color ?? PALETTE[i % PALETTE.length]) + '33',
-      fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2,
-    })),
-  }
-  return <Line data={data} options={baseOpts({ scales: numScales }) as any} />
 }
 
 export function ScatterChart({ points, xLabel, yLabel }:

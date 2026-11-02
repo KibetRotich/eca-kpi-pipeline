@@ -27,6 +27,13 @@ type Dashboard = {
 
 const DASHBOARDS: Dashboard[] = [
   {
+    href: '/eca-events',
+    title: 'ECA Trainings & Events Tracker',
+    blurb: 'Training & event delivery analytics across Kenya, Uganda, Tanzania & Ethiopia — reach, gender & youth, geography, curriculum, beneficiaries, facilitators, farmer-level depth, data quality and planning. Global filters (date, country, project, event type) apply across every page.',
+    chips: ['Executive Overview', 'Geography', 'Gender & Youth', 'Projects & Commodities',
+      'Curriculum', 'Beneficiaries', 'Facilitators', 'Farmer Depth', 'Data Quality', 'Time & Planning'],
+  },
+  {
     href: '/Seedlings_Dashboard.html',
     external: true,
     title: 'Climate Heroes / REAP Projects',
@@ -39,13 +46,6 @@ const DASHBOARDS: Dashboard[] = [
     title: 'Seedlings Distribution — Kenya (SAVE KE)',
     blurb: 'Tree-seedling distribution analytics for SAVE KE (Nyandarua, Kenya) — unique farmers reached and seedlings handed out by sub-county, ward and village, automatically detected distribution rounds with new vs returning farmers, species mix (fodder, fruit, indigenous/timber), farmer groups, GPS map of distribution events, and data-quality checks including probable duplicate entries. Summary filters by sub-county, ward and round. Refreshed nightly from KoboToolbox.',
     chips: ['Summary', 'Reach & Geography', 'Distribution rounds', 'Species', 'Farmer groups', 'Operations', 'Data quality', 'Feedback'],
-  },
-  {
-    href: '/eca-events',
-    title: 'ECA Trainings & Events Tracker',
-    blurb: 'Training & event delivery analytics across Kenya, Uganda, Tanzania & Ethiopia — reach, gender & youth, geography, curriculum, beneficiaries, facilitators, farmer-level depth, data quality and planning. Global filters (date, country, project, event type) apply across every page.',
-    chips: ['Executive Overview', 'Geography', 'Gender & Youth', 'Projects & Commodities',
-      'Curriculum', 'Beneficiaries', 'Facilitators', 'Farmer Depth', 'Data Quality', 'Time & Planning'],
   },
   {
     href: '/HC_Survival_UG_Dashboard.html',
