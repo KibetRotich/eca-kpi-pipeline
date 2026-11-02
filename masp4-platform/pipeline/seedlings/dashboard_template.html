@@ -264,12 +264,12 @@ function build(){
     `${fmt(g.N)} applications · ${fmt(g.total_seedlings)} seedlings requested · ${fmt(g.delivered)} seedlings delivered (${g.fulfil_pct}% of applications served) · UGX ${fmt(g.total_cost)} · ${g.date_min} → ${g.date_max}`;
   const nav=document.getElementById("nav"), main=document.getElementById("main");
 
-  // Round Tracker, Reconciliation and Data Standards first, then the Executive section, then the rest
+  // Executive first, then Round Tracker and Reconciliation, then Distribution & Fulfilment and the rest
   const exNav=el("a",null,"★ Executive Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec");
-  const FIELD=["tracker","recon","standards"];
-  let execAdded=false;
-  DATA.sections.forEach(sc=>{
-    if(!execAdded&&!FIELD.includes(sc.id)){nav.appendChild(exNav); main.appendChild(buildExec()); execAdded=true;}
+  nav.appendChild(exNav); main.appendChild(buildExec());
+  const ORDER=["tracker","recon","s0","standards"];
+  const rank=sc=>{const i=ORDER.indexOf(sc.id); return i<0?ORDER.length:i;};
+  DATA.sections.map((sc,i)=>[sc,i]).sort((x,y)=>rank(x[0])-rank(y[0])||x[1]-y[1]).forEach(([sc])=>{
     const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
     const sd=el("div","section"); sd.id=sc.id; sd.style.display="none";
     sd.appendChild(el("div","sec-title",sc.title));
@@ -281,7 +281,7 @@ function build(){
     sd.appendChild(el("div","footer","Source: KoBoToolbox forms a5rJdqQGuy2DtTXvEx3cpq (applications) + aGXzNqEgZhjXazLmLPVpMn (distribution), via Supabase · implausible quantities (>10k) excluded from all totals."));
     main.appendChild(sd);
   });
-  show("tracker");
+  show("exec");
 }
 
 // ── Executive interactive section ─────────────────────────────────────────
