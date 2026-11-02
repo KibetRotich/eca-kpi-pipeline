@@ -29,9 +29,8 @@ const DASHBOARDS: Dashboard[] = [
   {
     href: '/eca-events',
     title: 'ECA Trainings & Events Tracker',
-    blurb: 'Training & event delivery analytics across Kenya, Uganda, Tanzania & Ethiopia — reach, gender & youth, geography, curriculum, beneficiaries, facilitators, farmer-level depth, data quality and planning. Global filters (date, country, project, event type) apply across every page.',
-    chips: ['Executive Overview', 'Geography', 'Gender & Youth', 'Projects & Commodities',
-      'Curriculum', 'Beneficiaries', 'Facilitators', 'Farmer Depth', 'Data Quality', 'Time & Planning'],
+    blurb: 'Training & event delivery analytics across Kenya, Uganda, Tanzania & Ethiopia — an overview of reach, events and commodities; where & who (geography, gender & youth, beneficiaries); what was delivered (curriculum, facilitators, timing); farmer-level depth; and data quality & notes. Global filters (date, country, project, event type) apply across every page.',
+    chips: ['Overview', 'Where & Who', 'What Was Delivered', 'Farmer Depth', 'Data quality & notes'],
   },
   {
     href: '/Seedlings_Dashboard.html',
