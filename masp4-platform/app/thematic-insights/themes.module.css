@@ -280,3 +280,23 @@
 .takeaways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 @media (max-width: 799px) { .takeaways { grid-template-columns: 1fr; } }
 .confidence { font-size: .62rem; color: #666; border-top: 1px solid #eee; padding-top: .5rem; margin: 0; }
+
+/* ── Copy / PNG buttons (Sprint 59) ─────────────────────────────────────
+   Top-right of every copyable chart or figure block; faint until the block is hovered or focused. */
+.copyable { position: relative; }
+.copyBtns {
+  position: absolute; top: .3rem; right: .3rem; z-index: 2;
+  display: inline-flex; gap: .2rem;
+  opacity: .45; transition: opacity .15s;
+}
+.copyable:hover > .copyBtns, .copyable:focus-within > .copyBtns { opacity: 1; }
+.copyBtns button {
+  font: inherit; font-size: .56rem; line-height: 1; padding: .22rem .4rem; cursor: pointer;
+  color: var(--navy, #1a3557); background: var(--white, #fff); border: 1px solid #d6d6d6; border-radius: 4px;
+}
+.copyBtns button:hover:not(:disabled) { border-color: var(--navy, #1a3557); }
+.copyBtns button:disabled { cursor: progress; }
+@media (hover: none) { .copyBtns { opacity: 1; } }
+/* Keep titles, units and tiles clear of the buttons. */
+.copyable > figcaption { padding-right: 5.4rem; }
+.figures.copyable { padding-top: 1.6rem; }

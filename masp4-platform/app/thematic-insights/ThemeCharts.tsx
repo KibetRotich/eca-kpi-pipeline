@@ -2,10 +2,11 @@
  * Charts for a theme synthesis ("In figures"). Plain HTML/CSS horizontal charts, one unit per chart:
  *   dumbbell (earlier → later per item), bar (one value per item) and stacked (shares per item).
  * Every row shows its value as text and a hover/focus tooltip, every chart has a data table, and
- * each chart lists the studies its rows come from. Rows are narrowed by the theme page's filters (`keep`).
+ * each chart lists the studies its rows come from. Each chart can be copied or downloaded as an image (CopyChart). Rows are narrowed by the theme page's filters (`keep`).
  */
 import type { SourceStudy, ThemeChart } from '@/lib/themes'
 import Sources from './Sources'
+import CopyChart from './CopyChart'
 import styles from './themes.module.css'
 
 /** Categorical order for stacked shares (validated palette; fixed order, never cycled). */
@@ -181,7 +182,8 @@ export default function ThemeCharts({ charts, studies, keep }: {
       <h3>In figures</h3>
       <div className={styles.charts}>
         {shown.map((c, i) => (
-          <figure key={i} className={styles.chart}>
+          <figure key={i} className={`${styles.chart} ${styles.copyable}`} data-copy="">
+            <CopyChart title={c.title} />
             <figcaption>
               <span className={styles.chartTitle}>{c.title}</span>
               <span className={styles.chartUnit}>{c.unit}</span>

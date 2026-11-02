@@ -3,6 +3,7 @@
  * headline, headline figures, % change by commodity, commodity scorecard, small trend charts and three
  * takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
  * `by` names what the change chart and scorecard rows are: commodities on a theme page, themes on a commodity page.
+ * Every chart and figure block can be copied or downloaded as an image (CopyChart, Sprint 59).
  * Commodity pages (Sprint 58) also show the synthesis's `charts` ("In figures"), each citing its studies.
  * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
  */
@@ -10,6 +11,7 @@ import {
   BASIS_LABEL, STATUS_LABEL, type BoardView, type SourceStudy, type ThemeSynthesis,
 } from '@/lib/themes'
 import ThemeCharts from './ThemeCharts'
+import CopyChart from './CopyChart'
 import styles from './themes.module.css'
 
 type By = 'commodity' | 'theme'
@@ -20,7 +22,8 @@ const signed = (v: number) => `${v > 0 ? '+' : ''}${fmt(v)}%`
 function Figures({ figures }: { figures: BoardView['figures'] }) {
   if (!figures.length) return null
   return (
-    <div className={styles.figures}>
+    <div className={`${styles.figures} ${styles.copyable}`} data-copy="">
+      <CopyChart title="Headline figures" />
       {figures.map((f, i) => (
         <div key={i} className={styles.figure}>
           <span className={styles.figValue}>{f.value}</span>
@@ -41,7 +44,8 @@ function ChangeChart({ rows, by }: { rows: BoardView['change']; by: By }) {
   const span = hi - lo || 1
   const at = (v: number) => ((v - lo) / span) * 100
   return (
-    <section>
+    <section className={styles.copyable} data-copy="">
+      <CopyChart title={`Change by ${by}`} />
       <h3>Change by {by}</h3>
       <figure className={styles.chart}>
         <div className={styles.legend}>
@@ -77,7 +81,8 @@ function ChangeChart({ rows, by }: { rows: BoardView['change']; by: By }) {
 function Scorecard({ rows, by }: { rows: BoardView['scorecard']; by: By }) {
   if (!rows.length) return null
   return (
-    <section>
+    <section className={styles.copyable} data-copy="">
+      <CopyChart title={`By ${by}`} />
       <h3>By {by}</h3>
       <div className={styles.scorecard}>
         {rows.map(r => (
@@ -99,7 +104,8 @@ function Spark({ s }: { s: BoardView['series'][number] }) {
   const y = (v: number) => P.t + (1 - (v - min) / (max - min || 1)) * (H - P.t - P.b)
   const anchor = (i: number) => i === 0 ? 'start' : i === s.points.length - 1 ? 'end' : 'middle'
   return (
-    <figure className={styles.spark}>
+    <figure className={`${styles.spark} ${styles.copyable}`} data-copy="">
+      <CopyChart title={`${s.project} - ${s.indicator}`} />
       <figcaption><b>{s.project}</b><span>{s.indicator} ({s.unit})</span></figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img"
            aria-label={`${s.project}: ${s.points.map(p => `${p.label} ${fmt(p.value)} ${s.unit}`).join(', ')}`}>
