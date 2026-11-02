@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import EcaNav from './EcaNav'
+import navStyles from './EcaNav.module.css'
 import FilterBar from './FilterBar'
 import ExportButton from './ExportButton'
 import { getFilterOptions, getSyncMeta } from '@/lib/eca-events/queries'
@@ -37,10 +38,13 @@ export default async function EcaEventsLayout({ children }: { children: React.Re
         </div>
       </header>
 
-      <Suspense fallback={null}><EcaNav /></Suspense>
-      <Suspense fallback={null}><FilterBar options={options} /></Suspense>
-
-      {children}
+      <div className={navStyles.shell}>
+        <Suspense fallback={null}><EcaNav /></Suspense>
+        <div className={navStyles.main}>
+          <Suspense fallback={null}><FilterBar options={options} /></Suspense>
+          {children}
+        </div>
+      </div>
     </div>
   )
 }
