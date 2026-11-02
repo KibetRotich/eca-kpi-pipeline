@@ -5,7 +5,7 @@
  */
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
-import type { Theme, ThemeInsight } from '@/lib/themes'
+import type { SourceStudy, Theme, ThemeInsight } from '@/lib/themes'
 import ThemeView from '../ThemeView'
 import Meter from '../Meter'
 import styles from '../themes.module.css'
@@ -37,6 +37,14 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
 
   const n = ins?.source_report_ids.length ?? 0
 
+  // Commodity pages cite the studies behind each chart.
+  const { data: studyRows } = theme.kind === 'commodity' && n
+    ? await supabaseAdmin.from('evaluation_reports')
+        .select('id, title, programme, country, tags, period_start, period_end')
+        .in('id', ins!.source_report_ids).eq('status', 'published')
+    : { data: [] }
+  const studies = Object.fromEntries((studyRows ?? []).map(s => [s.id, s as SourceStudy]))
+
   return (
     <div>
       <a href={theme.kind === 'commodity' ? '/thematic-insights#commodity-insights' : '/thematic-insights'} className={styles.back}>
@@ -63,7 +71,7 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
             The synthesis for this {theme.kind} will appear here once it has been reviewed by the M&amp;E team.
           </div>
         ) : (
-          <ThemeView synthesis={ins.synthesis} by={theme.kind === 'commodity' ? 'theme' : 'commodity'} />
+          <ThemeView synthesis={ins.synthesis} by={theme.kind === 'commodity' ? 'theme' : 'commodity'} studies={studies} />
         )}
       </article>
     </div>

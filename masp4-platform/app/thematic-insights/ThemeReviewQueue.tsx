@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useRole } from '@/lib/role-context'
-import type { ThemeInsight } from '@/lib/themes'
+import type { SourceStudy, ThemeInsight } from '@/lib/themes'
 import ThemeView from './ThemeView'
 import Meter from './Meter'
 import ev from '../evaluation-insights/evaluation.module.css'
@@ -16,6 +16,7 @@ type Draft = ThemeInsight & { evaluation_themes: { title: string; kind: 'theme' 
 export default function ThemeReviewQueue() {
   const { canEdit, loading } = useRole()
   const [drafts, setDrafts] = useState<Draft[] | null>(null)
+  const [studies, setStudies] = useState<Record<string, SourceStudy>>({})
   const [openId, setOpenId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +26,7 @@ export default function ThemeReviewQueue() {
     if (!res.ok) return
     const body = await res.json()
     setDrafts(body.drafts)
+    setStudies(body.studies ?? {})
   }, [])
 
   useEffect(() => { if (!loading && canEdit) load() }, [loading, canEdit, load])
@@ -76,7 +78,8 @@ export default function ThemeReviewQueue() {
             </div>
           </div>
           {openId === d.id && (
-            <ThemeView synthesis={d.synthesis} by={d.evaluation_themes?.kind === 'commodity' ? 'theme' : 'commodity'} />
+            <ThemeView synthesis={d.synthesis} by={d.evaluation_themes?.kind === 'commodity' ? 'theme' : 'commodity'}
+                       studies={studies} />
           )}
         </div>
       ))}

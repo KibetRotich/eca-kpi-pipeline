@@ -3,11 +3,13 @@
  * headline, headline figures, % change by commodity, commodity scorecard, small trend charts and three
  * takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
  * `by` names what the change chart and scorecard rows are: commodities on a theme page, themes on a commodity page.
+ * Commodity pages (Sprint 58) also show the synthesis's `charts` ("In figures"), each citing its studies.
  * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
  */
 import {
-  BASIS_LABEL, STATUS_LABEL, type BoardView, type ThemeSynthesis,
+  BASIS_LABEL, STATUS_LABEL, type BoardView, type SourceStudy, type ThemeSynthesis,
 } from '@/lib/themes'
+import ThemeCharts from './ThemeCharts'
 import styles from './themes.module.css'
 
 type By = 'commodity' | 'theme'
@@ -129,7 +131,11 @@ function Takeaways({ works, barriers, actions }: BoardView['takeaways']) {
   )
 }
 
-export default function ThemeView({ synthesis, by = 'commodity' }: { synthesis: ThemeSynthesis; by?: By }) {
+export default function ThemeView({ synthesis, by = 'commodity', studies = {} }: {
+  synthesis: ThemeSynthesis
+  by?: By
+  studies?: Record<string, SourceStudy>
+}) {
   const b = synthesis.board
   return (
     <div className={styles.synthesis}>
@@ -141,6 +147,9 @@ export default function ThemeView({ synthesis, by = 'commodity' }: { synthesis: 
             <ChangeChart rows={b.change} by={by} />
             <Scorecard rows={b.scorecard} by={by} />
           </div>
+          {by === 'theme' && synthesis.charts && synthesis.charts.length > 0 && (
+            <ThemeCharts charts={synthesis.charts} studies={studies} keep={() => true} />
+          )}
           {b.series.length > 0 && (
             <section>
               <h3>Change over time</h3>
