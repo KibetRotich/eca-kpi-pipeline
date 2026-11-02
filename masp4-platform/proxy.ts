@@ -41,6 +41,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Everything except the sign-in flow itself and the assets it needs to render
-  matcher: ['/((?!signin|auth/callback|_next/static|_next/image|favicon\\.ico|solidaridad-logo\\.png).*)'],
+  // Everything except the sign-in flow itself, the assets it needs to render,
+  // and Vercel Web Analytics (/_vercel/insights — its script + event beacon, no platform data)
+  matcher: ['/((?!signin|auth/callback|_next/static|_next/image|_vercel|favicon\\.ico|solidaridad-logo\\.png).*)'],
 }

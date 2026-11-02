@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { RoleProvider } from '@/lib/role-context'
 import AuthButton from '@/components/AuthButton'
@@ -171,6 +172,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             MASP IV · 2026–2030
           </span>
         </footer>
+
+        {/* Vercel Web Analytics — anonymous page views; read them in Vercel → masp4-platform → Analytics */}
+        <Script id="vercel-analytics-queue" strategy="afterInteractive">
+          {`window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};`}
+        </Script>
+        <Script src="/_vercel/insights/script.js" strategy="afterInteractive" />
 
       </body>
     </html>
