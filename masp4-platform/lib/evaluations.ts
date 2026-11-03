@@ -25,11 +25,27 @@ export const PROGRAMME_OTHER = 'Programme-wide / other'
 /** Commodities a study can cover (Sprint 52); the same list as the theme scorecards. None = programme-wide. */
 export const EVAL_COMMODITIES = COMMODITIES
 
-export const MAX_REPORT_BYTES = 25 * 1024 * 1024   // matches the `reports` bucket limit
+/**
+ * Reads a Google Drive / Google Docs share link and returns the file id, the canonical link stored as
+ * source_url, and the file type when the link itself reveals it (Google Docs). Null for anything that is
+ * not a link to a single Drive file or Google Doc (folders, Sheets, Slides, other sites).
+ */
+export function parseDriveLink(raw: string): { id: string; url: string; type: 'gdoc' | null } | null {
+  let u: URL
+  try { u = new URL(raw.trim()) } catch { return null }
+  if (u.protocol !== 'https:') return null
+  const ID = /^[A-Za-z0-9_-]{20,}$/
 
-export const REPORT_TYPES: Record<string, 'pdf' | 'docx'> = {
-  'application/pdf': 'pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  if (u.hostname === 'docs.google.com') {
+    const m = u.pathname.match(/^\/document\/(?:u\/\d+\/)?d\/([^/]+)/)
+    return m && ID.test(m[1]) ? { id: m[1], url: `https://docs.google.com/document/d/${m[1]}/edit`, type: 'gdoc' } : null
+  }
+  if (u.hostname === 'drive.google.com') {
+    const m = u.pathname.match(/^\/file\/(?:u\/\d+\/)?d\/([^/]+)/)
+    const id = m?.[1] ?? ((u.pathname === '/open' || u.pathname === '/uc') ? u.searchParams.get('id') : null)
+    return id && ID.test(id) ? { id, url: `https://drive.google.com/file/d/${id}/view`, type: null } : null
+  }
+  return null
 }
 
 /** 'queued' = waiting for a summary (no ANTHROPIC_API_KEY: summaries are written from Claude Code instead). */

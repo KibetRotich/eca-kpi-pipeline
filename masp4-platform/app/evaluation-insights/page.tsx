@@ -5,12 +5,13 @@
  * impact studies) with the key insights pulled out of each. Every published report is one compact tile
  * (sized like the Projects' Progress project tiles) linking to /evaluation-insights/<id>.
  *
- * Signed-in staff see an "Upload Report" button (UploadReport); uploads are summarised by the Claude
- * API into drafts, which M&E Officers / Admins review in the queue (ReviewQueue) before they appear here.
+ * Signed-in staff see an "Add Study" button (AddStudy) that links a study kept in Google Drive; its summary
+ * is written from Claude Code into a draft, which M&E Officers / Admins review in the queue (ReviewQueue)
+ * before it appears here.
  */
 import { supabaseAdmin } from '@/lib/supabase'
 import styles from './evaluation.module.css'
-import UploadReport from './UploadReport'
+import AddStudy from './AddStudy'
 import ReviewQueue from './ReviewQueue'
 import StudyBrowser, { type Study } from './StudyBrowser'
 
@@ -38,7 +39,7 @@ export default async function EvaluationInsightsPage() {
             and impact studies. Studies will be added here as they are completed.
           </p>
         </div>
-        <UploadReport />
+        <AddStudy />
       </header>
 
       <ReviewQueue />

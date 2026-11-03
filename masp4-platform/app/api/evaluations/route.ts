@@ -1,10 +1,11 @@
 /**
- * /api/evaluations — Evaluation Insights reports (Sprint 47)
+ * /api/evaluations — Evaluation Insights reports (Sprint 47; Drive-linked since Sprint 60)
  *
- * POST { title, project_id, programme, country, period_start, period_end, tags[], commodities[], file_name, file_type, file_size }
- *      → creates the report record (status 'uploading') and returns a one-time signed upload URL
- *        { id, path, token } for the private `reports` bucket. The browser uploads the file straight
- *        to storage (Vercel caps request bodies at 4.5 MB), then calls POST /api/evaluations/<id>/process.
+ * POST { title, drive_url, file_type, project_id, programme, country, period_start, period_end, tags[], commodities[] }
+ *      → adds a study that lives in Google Drive. Nothing is copied to Supabase Storage: the row keeps the
+ *        Drive file id + link, and is saved as 'queued' (Awaiting summary). Its summary is written from
+ *        Claude Code ("summarise new reports"), then an M&E Officer / Admin publishes it.
+ *      file_type is 'pdf' or 'docx' for a Drive file; Google Docs links are always 'gdoc'.
  *      Requires a signed-in @solidaridadnetwork.org account (requireStaff).
  *
  * GET  ?scope=review → every report not yet published (awaiting summary, drafts, failures, in progress),
@@ -14,7 +15,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaff } from '@/lib/require-staff'
-import { EVAL_COMMODITIES, EVAL_COUNTRIES, EVAL_TAGS, MAX_REPORT_BYTES, PROGRAMME_OTHER, REPORT_TYPES } from '@/lib/evaluations'
+import { EVAL_COMMODITIES, EVAL_COUNTRIES, EVAL_TAGS, PROGRAMME_OTHER, parseDriveLink } from '@/lib/evaluations'
 import { NextRequest, NextResponse } from 'next/server'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -22,12 +23,6 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 
 const LIST_COLS = 'id, title, programme, country, period_start, period_end, tags, commodities, file_name, file_type, source_url, ' +
                   'evaluator, uploaded_by, uploaded_at, status, summary, error, review_note, published_at'
-
-/** Keeps the original name readable while making it safe as a storage object key. */
-function safeFileName(name: string, ext: string) {
-  const base = name.replace(/\.[^.]+$/, '').normalize('NFKD').replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 80)
-  return `${base || 'report'}.${ext}`
-}
 
 export async function POST(req: NextRequest) {
   const staff = await requireStaff(req)
@@ -44,9 +39,8 @@ export async function POST(req: NextRequest) {
   const end = b.period_end ? String(b.period_end) : null
   const tags = Array.isArray(b.tags) ? b.tags.map(String) : []
   const commodities = Array.isArray(b.commodities) ? b.commodities.map(String) : []
-  const fileName = String(b.file_name ?? '')
-  const fileType = REPORT_TYPES[String(b.file_type ?? '')]
-  const fileSize = Number(b.file_size)
+  const drive = parseDriveLink(String(b.drive_url ?? ''))
+  const fileType = drive?.type ?? String(b.file_type ?? '')
 
   if (title.length < 3 || title.length > 300) return NextResponse.json({ error: 'Report Title must be 3–300 characters' }, { status: 400 })
   if (!programme) return NextResponse.json({ error: 'Programme is required' }, { status: 400 })
@@ -56,11 +50,13 @@ export async function POST(req: NextRequest) {
   if (start && end && start > end) return NextResponse.json({ error: 'The evaluation period ends before it starts' }, { status: 400 })
   if (tags.some(t => !(EVAL_TAGS as readonly string[]).includes(t))) return NextResponse.json({ error: 'Unknown tag' }, { status: 400 })
   if (commodities.some(c => !(EVAL_COMMODITIES as readonly string[]).includes(c))) return NextResponse.json({ error: 'Unknown commodity' }, { status: 400 })
-  if (!fileType || !fileName.toLowerCase().endsWith(`.${fileType}`)) {
-    return NextResponse.json({ error: 'Only .pdf and .docx files can be uploaded' }, { status: 400 })
-  }
-  if (!Number.isInteger(fileSize) || fileSize <= 0 || fileSize > MAX_REPORT_BYTES) {
-    return NextResponse.json({ error: 'The file must be smaller than 25 MB' }, { status: 400 })
+  if (!drive) return NextResponse.json({ error: 'Paste the link to one Google Drive file or Google Doc (not a folder)' }, { status: 400 })
+  if (!['pdf', 'docx', 'gdoc'].includes(fileType)) return NextResponse.json({ error: 'Choose the file type (PDF or Word)' }, { status: 400 })
+
+  const { data: existing } = await supabaseAdmin.from('evaluation_reports')
+    .select('title, status').eq('drive_file_id', drive.id).maybeSingle()
+  if (existing) {
+    return NextResponse.json({ error: `This file is already in the library as "${existing.title}" (${existing.status})` }, { status: 409 })
   }
 
   let programmeName = programme
@@ -73,23 +69,16 @@ export async function POST(req: NextRequest) {
   }
 
   const id = crypto.randomUUID()
-  const path = `evaluations/${id}/${safeFileName(fileName, fileType)}`
-
   const { error: insErr } = await supabaseAdmin.from('evaluation_reports').insert({
     id, title, project_id: projectId, programme: programmeName, country,
     period_start: start, period_end: end, tags: [...new Set(tags)], commodities: [...new Set(commodities)],
-    file_path: path, file_name: fileName.slice(0, 200), file_type: fileType, file_size: fileSize,
-    uploaded_by: staff.email, status: 'uploading',
+    source_url: drive.url, drive_file_id: drive.id, file_name: title.slice(0, 200), file_type: fileType,
+    uploaded_by: staff.email, status: 'queued',
   })
+  if (insErr?.code === '23505') return NextResponse.json({ error: 'This file is already in the library' }, { status: 409 })
   if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
 
-  const { data: signed, error: signErr } = await supabaseAdmin.storage.from('reports').createSignedUploadUrl(path)
-  if (signErr || !signed) {
-    await supabaseAdmin.from('evaluation_reports').delete().eq('id', id)
-    return NextResponse.json({ error: 'Could not prepare the upload — please try again' }, { status: 500 })
-  }
-
-  return NextResponse.json({ id, path: signed.path, token: signed.token }, { status: 201 })
+  return NextResponse.json({ id, status: 'queued' }, { status: 201 })
 }
 
 export async function GET(req: NextRequest) {
