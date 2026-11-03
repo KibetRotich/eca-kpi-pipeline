@@ -194,18 +194,8 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const yearAxis = [...new Set(rows.map(r => r.period_end))].sort()
   const mainId = pick || [...score].sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]?.id || ''
   const mainInd = score.find(s => s.id === mainId)
-  const pointsOf = (id: string) => series(id)
   const countyPoints = (county: string, id: string) => Object.fromEntries((sheet.counties ?? [])
     .filter(r => r.county === county && r.indicator_id === id && r.total != null).map(r => [r.period_end, Number(r.total)]))
-  // running totals (cumulative = Y): the latest year with a male / female split, not the sum of all years
-  const gall = mainInd ? mainInd.g.filter(r => r.total != null) : []
-  const gsplit = gall.filter(r => r.male != null || r.female != null)
-  const gsel = mainInd && !mainInd.running ? gall : gsplit.length ? gsplit.slice(-1) : gall.slice(-1)
-  const gsum = (k: 'male' | 'female' | 'non_individual' | 'total') => gsel.reduce((a, r) => a + (Number((r as any)[k]) || 0), 0)
-  // with an EoP gender split in the sheet, the pie shows it instead of adding up overlapping years
-  const eg = mainInd?.eopRow?.eop_male != null && mainInd?.eopRow?.eop_female != null ? mainInd.eopRow : null
-  const gm = eg ? Number(eg.eop_male) : gsum('male'), gf = eg ? Number(eg.eop_female) : gsum('female')
-  const gni = eg ? 0 : gsum('non_individual'), gt = eg ? Number(eg.eop_total) : gsum('total')
 
   const src = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit?gid=${sheet.gid}&rm=minimal`
   const link = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit#gid=${sheet.gid}`
@@ -270,25 +260,8 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
         </div>
       </div>
 
-      {/* Progress graphs — county layout (P2P): overall per-year chart, one per county, gender pie last */}
+      {/* Progress graphs — county layout (P2P): one chart per county (the overall per-year chart and gender pie were removed to declutter) */}
       {yearLayout && mainInd && (<>
-        {/* Row 1: overall progress per year and the gender pie, side by side (half width each) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
-          <YearChart title={`Progress per year — ${hasCounties ? 'all counties' : 'project'}`} axis={yearAxis} label={plab} height={220}
-            points={pointsOf(mainId)} target={mainInd.tgt} options={opts} value={mainId} onPick={id => { setPick(id); setCountyPick({}) }}
-            running={mainInd.running} eop={mainInd.eop ?? mainInd.overall}
-            eopLabel={mainInd.eop != null ? 'end-of-project achievement' : 'overall achievement so far'}
-            note={`Bars: ${mainInd.running ? `achievement in each ${annual ? 'year' : 'period'}. Green line: running total` : 'value reported (already a running total or rate, so not added up)'}.${mainInd.eop != null ? ' Purple: end-of-project achievement from the sheet, the project total where yearly figures overlap.' : mainInd.overall != null ? ' Purple: the sheet’s overall achievement so far, used as progress.' : ''} Dashed: Direct end target${mainInd.tgt == null ? ' (none set for this indicator)' : ''}.`} />
-          <div style={card}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Gender — {short(mainInd.indicator)}</div>
-            <div style={{ height: 220 }}>
-              <Donut parts={[['Women', gf, '#d81b60'], ['Men', gm, '#1565c0'],
-                             ['Non-individual (co-ops, companies…)', gni, '#9e9e9e'], ['Not disaggregated', Math.max(0, gt - gm - gf - gni), '#d8d8d8']]} />
-            </div>
-            <div style={small}>{eg ? 'End-of-project figure from the sheet' : mainInd.running ? `All reported ${annual ? 'years' : 'periods'}` : `Running total as of ${gsel[0] ? plab(gsel[0].period_end) : '–'}`} for the indicator selected in the progress chart.</div>
-          </div>
-        </div>
-        {/* Then one chart per county */}
         {hasCounties && (<>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem' }}>
           {(sheet.county_order ?? []).map(county => {
