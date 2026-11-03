@@ -3,6 +3,7 @@
  * headline, headline figures, % change by commodity, commodity scorecard, small trend charts and three
  * takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
  * `by` names what the change chart and scorecard rows are: commodities on a theme page, themes on a commodity page.
+ * Commodity pages do not show the change chart or scorecard (removed 2026-11-03 to keep them simple).
  * Every chart and figure block can be copied or downloaded as an image (CopyChart, Sprint 59).
  * Commodity pages (Sprint 58) also show the synthesis's `charts` ("In figures"), each citing its studies.
  * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
@@ -149,10 +150,13 @@ export default function ThemeView({ synthesis, by = 'commodity', studies = {} }:
       {b ? (
         <>
           <Figures figures={b.figures} />
-          <div className={styles.boardCharts}>
-            <ChangeChart rows={b.change} by={by} />
-            <Scorecard rows={b.scorecard} by={by} />
-          </div>
+          {/* Commodity pages skip "Change by theme" and "By theme" to stay simple (2026-11-03). */}
+          {by === 'commodity' && (
+            <div className={styles.boardCharts}>
+              <ChangeChart rows={b.change} by={by} />
+              <Scorecard rows={b.scorecard} by={by} />
+            </div>
+          )}
           {by === 'theme' && synthesis.charts && synthesis.charts.length > 0 && (
             <ThemeCharts charts={synthesis.charts} studies={studies} keep={() => true} />
           )}
