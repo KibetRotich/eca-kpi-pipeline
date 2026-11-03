@@ -150,6 +150,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           >
             Thematic Insights
           </a>
+
+          {/* Annual Reports — links to donor and country annual reports in the shared drive (Sprint 61) */}
+          <a
+            href="/annual-reports"
+            style={{
+              marginLeft: '.5rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '.4rem',
+              background: '#be123c',
+              color: '#fff',
+              fontSize: '.62rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              padding: '0 .9rem',
+              height: 26,
+              borderRadius: 4,
+              textDecoration: 'none',
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
+            }}
+          >
+            Annual Reports
+          </a>
         </nav>
 
         {/* ── Content ─────────────────────────────────────────────────────── */}
