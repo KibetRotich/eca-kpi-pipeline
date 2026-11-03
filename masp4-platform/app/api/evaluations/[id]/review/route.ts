@@ -35,10 +35,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try { action = String((await req.json()).action ?? '') } catch { /* handled below */ }
   if (!ALLOWED_FROM[action]) return NextResponse.json({ error: 'action must be publish, reject or retry' }, { status: 400 })
 
-  const { data: row } = await supabaseAdmin.from('evaluation_reports').select('status').eq('id', id).single()
+  const { data: row } = await supabaseAdmin.from('evaluation_reports').select('status, file_path').eq('id', id).single()
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!ALLOWED_FROM[action].includes(row.status)) {
     return NextResponse.json({ error: `A ${row.status} report cannot be ${action === 'retry' ? 'retried' : action + 'ed'}` }, { status: 409 })
+  }
+  if (action === 'retry' && !row.file_path) {
+    return NextResponse.json({ error: 'This study is linked from Google Drive; its summary is written from Claude Code' }, { status: 409 })
   }
 
   const now = new Date().toISOString()

@@ -91,8 +91,11 @@ export default function ReviewQueue() {
               )}
               {['draft', 'failed', 'uploading', 'queued'].includes(r.status) && (
                 <>
-                  <button type="button" className={`${styles.small} ${styles.retry}`} disabled={busyId === r.id}
-                          onClick={() => act(r.id, 'retry')}>Retry</button>
+                  {/* Drive-linked studies are summarised from Claude Code, not by the platform, so Retry would only fail. */}
+                  {!r.source_url && (
+                    <button type="button" className={`${styles.small} ${styles.retry}`} disabled={busyId === r.id}
+                            onClick={() => act(r.id, 'retry')}>Retry</button>
+                  )}
                   <button type="button" className={`${styles.small} ${styles.reject}`} disabled={busyId === r.id}
                           onClick={() => act(r.id, 'reject')}>Reject</button>
                 </>
