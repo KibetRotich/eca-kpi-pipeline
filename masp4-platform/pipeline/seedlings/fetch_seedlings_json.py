@@ -16,6 +16,7 @@ pseudonymous Solidaridad beneficiary / farmer IDs are kept.
 import os
 import csv
 import sys
+import time
 import httpx
 
 TOKEN = os.environ.get("KOBO_TOKEN")
@@ -128,14 +129,31 @@ def normalize_dist(sub):
     return ev, entries
 
 
+def _get_json(url, attempts=4):
+    """GET a Kobo page, retrying timeouts, connection errors and 429/5xx with backoff (30s, 60s, 120s).
+    A single slow Kobo response used to fail the whole nightly run (2026-11-03)."""
+    for i in range(attempts):
+        try:
+            r = httpx.get(url, headers=HEADERS,
+                          timeout=httpx.Timeout(connect=15, read=180, write=30, pool=10))
+            if r.status_code == 429 or r.status_code >= 500:
+                raise httpx.HTTPStatusError(f"Kobo returned {r.status_code}", request=r.request, response=r)
+            r.raise_for_status()
+            return r.json()
+        except (httpx.TransportError, httpx.HTTPStatusError) as e:
+            retryable = not isinstance(e, httpx.HTTPStatusError) or e.response.status_code == 429 or e.response.status_code >= 500
+            if not retryable or i == attempts - 1:
+                raise
+            wait = 30 * 2 ** i
+            print(f"  Kobo request failed ({e}); retrying in {wait}s", flush=True)
+            time.sleep(wait)
+
+
 def fetch_all(uid):
     out, start, total = [], 0, None
     while True:
         url = f"{BASE}/api/v2/assets/{uid}/data/?format=json&limit=5000&start={start}"
-        r = httpx.get(url, headers=HEADERS,
-                      timeout=httpx.Timeout(connect=15, read=180, write=30, pool=10))
-        r.raise_for_status()
-        data = r.json()
+        data = _get_json(url)
         if total is None:
             total = data.get("count")
             print(f"[{uid}] total submissions reported: {total:,}", flush=True)
