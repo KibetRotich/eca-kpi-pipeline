@@ -20,7 +20,7 @@ export const metadata = {
 export default async function AnnualReportsPage() {
   const { data } = await supabaseAdmin
     .from('annual_reports')
-    .select('id, title, report_type, programme, country, year, period_label, source_url, file_type')
+    .select('id, title, report_type, programme, country, year, period_label, drive_file_id, source_url, file_type')
     .order('year', { ascending: false })
     .order('programme')
     .order('title')

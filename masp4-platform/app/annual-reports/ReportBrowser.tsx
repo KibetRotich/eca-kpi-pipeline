@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useRole } from '@/lib/role-context'
-import { REPORT_TYPE_LABEL, type AnnualReport } from '@/lib/annual-reports'
+import { REPORT_TYPE_LABEL, reportOpenUrl, type AnnualReport } from '@/lib/annual-reports'
 import styles from './annual.module.css'
 
 const FILE_LABEL = { pdf: 'PDF', docx: 'Word', gdoc: 'Google Doc' } as const
@@ -93,7 +93,7 @@ export default function ReportBrowser({ reports }: { reports: AnnualReport[] }) 
             {list.map(r => (
               <li key={r.id} className={styles.item}>
                 <div className={styles.itemMain}>
-                  <a href={r.source_url} target="_blank" rel="noopener noreferrer">{r.title} ↗</a>
+                  <a href={reportOpenUrl(r)} target="_blank" rel="noopener noreferrer">{r.title} ↗</a>
                   <div className={styles.meta}>
                     <span className={`${styles.badge} ${r.report_type === 'donor' ? styles.donor : styles.country}`}>
                       {REPORT_TYPE_LABEL[r.report_type]}
@@ -103,7 +103,12 @@ export default function ReportBrowser({ reports }: { reports: AnnualReport[] }) 
                     {r.period_label && <span>· {r.period_label}</span>}
                   </div>
                 </div>
-                <span className={styles.fileType}>{FILE_LABEL[r.file_type]}</span>
+                <span className={styles.fileType}>
+                  {FILE_LABEL[r.file_type]}
+                  {r.file_type === 'docx' && (
+                    <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
+                  )}
+                </span>
                 {canEdit && (
                   <button type="button" className={styles.remove} onClick={() => remove(r)}
                           aria-label={`Remove ${r.title}`}>Remove</button>
