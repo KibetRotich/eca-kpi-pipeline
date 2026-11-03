@@ -1,15 +1,15 @@
 /**
  * Renders one theme synthesis as a board-level view (used by the theme page and the review queue):
- * headline, headline figures, % change by commodity, commodity scorecard, small trend charts and three
- * takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
- * `by` names what the change chart and scorecard rows are: commodities on a theme page, themes on a commodity page.
- * Commodity pages do not show the change chart or scorecard (removed 2026-11-03 to keep them simple).
+ * headline, headline figures, small trend charts and three takeaways per column. The full prose and citations stay in the stored synthesis but are not shown.
+ * `by` is 'commodity' on a theme page and 'theme' on a commodity page.
+ * The "Change by …" chart and "By …" scorecard were removed from both page types on 2026-11-03 to keep them simple;
+ * board.change and board.scorecard are still stored in each synthesis.
  * Every chart and figure block can be copied or downloaded as an image (CopyChart, Sprint 59).
  * Commodity pages (Sprint 58) also show the synthesis's `charts` ("In figures"), each citing its studies.
  * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
  */
 import {
-  BASIS_LABEL, STATUS_LABEL, type BoardView, type SourceStudy, type ThemeSynthesis,
+  BASIS_LABEL, type BoardView, type SourceStudy, type ThemeSynthesis,
 } from '@/lib/themes'
 import ThemeCharts from './ThemeCharts'
 import CopyChart from './CopyChart'
@@ -18,7 +18,6 @@ import styles from './themes.module.css'
 type By = 'commodity' | 'theme'
 
 const fmt = (v: number) => v.toLocaleString('en-GB', { maximumFractionDigits: 2 })
-const signed = (v: number) => `${v > 0 ? '+' : ''}${fmt(v)}%`
 
 function Figures({ figures }: { figures: BoardView['figures'] }) {
   if (!figures.length) return null
@@ -34,65 +33,6 @@ function Figures({ figures }: { figures: BoardView['figures'] }) {
         </div>
       ))}
     </div>
-  )
-}
-
-/** Horizontal bars from a zero line; self-reported figures are drawn hollow. */
-function ChangeChart({ rows, by }: { rows: BoardView['change']; by: By }) {
-  if (!rows.length) return null
-  const lo = Math.min(0, ...rows.map(r => r.pct))
-  const hi = Math.max(0, ...rows.map(r => r.pct))
-  const span = hi - lo || 1
-  const at = (v: number) => ((v - lo) / span) * 100
-  return (
-    <section className={styles.copyable} data-copy="">
-      <CopyChart title={`Change by ${by}`} />
-      <h3>Change by {by}</h3>
-      <figure className={styles.chart}>
-        <div className={styles.legend}>
-          <span><i className={styles.keySolid} /> Measured (comparison group or before → after)</span>
-          <span><i className={styles.keyHollow} /> Self-reported</span>
-        </div>
-        {rows.map((r, i) => {
-          const left = Math.min(at(0), at(r.pct)), width = Math.abs(at(r.pct) - at(0))
-          return (
-            <div key={i} className={styles.changeRow} tabIndex={0}>
-              <span className={styles.rowLabel}>
-                <b>{r.commodity}</b> · {r.indicator}
-                <span className={styles.changeFrom}>{r.from} → {r.to}</span>
-              </span>
-              <div className={styles.track}>
-                <span className={styles.zero} style={{ left: `${at(0)}%` }} />
-                <span className={r.basis === 'self_reported' ? styles.barHollow : styles.barSolid}
-                      style={{ left: `${left}%`, width: `${Math.max(width, 0.8)}%` }} />
-                <span className={styles.tip}>
-                  <strong>{r.commodity}: {signed(r.pct)}</strong><br />
-                  {r.from} → {r.to} · {BASIS_LABEL[r.basis]}
-                </span>
-              </div>
-              <span className={styles.changeValue}>{signed(r.pct)}</span>
-            </div>
-          )
-        })}
-      </figure>
-    </section>
-  )
-}
-
-function Scorecard({ rows, by }: { rows: BoardView['scorecard']; by: By }) {
-  if (!rows.length) return null
-  return (
-    <section className={styles.copyable} data-copy="">
-      <CopyChart title={`By ${by}`} />
-      <h3>By {by}</h3>
-      <div className={styles.scorecard}>
-        {rows.map(r => (
-          <span key={r.commodity} className={`${styles.chip} ${styles[`st_${r.status}`]}`}>
-            {r.commodity} <em>{STATUS_LABEL[r.status]}</em>
-          </span>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -150,13 +90,6 @@ export default function ThemeView({ synthesis, by = 'commodity', studies = {} }:
       {b ? (
         <>
           <Figures figures={b.figures} />
-          {/* Commodity pages skip "Change by theme" and "By theme" to stay simple (2026-11-03). */}
-          {by === 'commodity' && (
-            <div className={styles.boardCharts}>
-              <ChangeChart rows={b.change} by={by} />
-              <Scorecard rows={b.scorecard} by={by} />
-            </div>
-          )}
           {by === 'theme' && synthesis.charts && synthesis.charts.length > 0 && (
             <ThemeCharts charts={synthesis.charts} studies={studies} keep={() => true} />
           )}
