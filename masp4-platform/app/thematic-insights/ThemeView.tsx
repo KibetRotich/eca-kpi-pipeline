@@ -5,7 +5,8 @@
  * The "Change by …" chart and "By …" scorecard were removed from both page types on 2026-11-03 to keep them simple;
  * board.change and board.scorecard are still stored in each synthesis.
  * Every chart and figure block can be copied or downloaded as an image (CopyChart, Sprint 59).
- * Commodity pages (Sprint 58) also show the synthesis's `charts` ("In figures"), each citing its studies.
+ * Theme and commodity pages both show the synthesis's `charts` ("In figures"), each citing its studies
+ * (commodity pages since Sprint 58, theme pages since 2026-11-03).
  * A synthesis written before Sprint 51 has no `board` block; it falls back to its headline and top three points.
  */
 import {
@@ -90,7 +91,7 @@ export default function ThemeView({ synthesis, by = 'commodity', studies = {} }:
       {b ? (
         <>
           <Figures figures={b.figures} />
-          {by === 'theme' && synthesis.charts && synthesis.charts.length > 0 && (
+          {synthesis.charts && synthesis.charts.length > 0 && (
             <ThemeCharts charts={synthesis.charts} studies={studies} keep={() => true} />
           )}
           {b.series.length > 0 && (

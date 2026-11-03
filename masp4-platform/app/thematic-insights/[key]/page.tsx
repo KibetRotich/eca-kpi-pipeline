@@ -1,7 +1,7 @@
 /**
  * /thematic-insights/<key> — one theme's published cross-study synthesis as a board-level view
  * (Sprint 51: figures and charts; the source-study list and prose were removed). Reviewers read drafts in the review queue.
- * A commodity (Sprint 57, kind = 'commodity') uses the same page; its charts are broken down by theme.
+ * A commodity (Sprint 57, kind = 'commodity') uses the same page. Both kinds show the "In figures" charts.
  */
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -37,8 +37,8 @@ export default async function ThemePage({ params }: { params: Promise<{ key: str
 
   const n = ins?.source_report_ids.length ?? 0
 
-  // Commodity pages cite the studies behind each chart.
-  const { data: studyRows } = theme.kind === 'commodity' && n
+  // Theme and commodity pages cite the studies behind each chart.
+  const { data: studyRows } = n
     ? await supabaseAdmin.from('evaluation_reports')
         .select('id, title, programme, country, tags, period_start, period_end')
         .in('id', ins!.source_report_ids).eq('status', 'published')
