@@ -74,3 +74,55 @@
 .secondary { background: #fff; color: #333; border: 1px solid var(--border, #d0d0d0); border-radius: 4px; padding: .5rem 1rem; }
 .done { padding: .6rem 1.1rem 1.1rem; font-size: .78rem; color: #333; display: grid; gap: .8rem; }
 .done p { border-left: 4px solid var(--green, #2e7d32); background: #f1f8f2; padding: .6rem .75rem; margin: 0; }
+
+/* ── Tabs (Sprint 62) ── */
+.tabs { display: flex; gap: .25rem; border-bottom: 2px solid #f1d0d8; margin-bottom: .8rem; }
+.tabs a {
+  font-size: .72rem; font-weight: 700; color: #555; text-decoration: none; padding: .4rem .9rem;
+  border-radius: 4px 4px 0 0; margin-bottom: -2px; border-bottom: 2px solid transparent;
+}
+.tabs a:hover { color: #be123c; }
+.tabs a.tabOn { color: #be123c; border-bottom-color: #be123c; background: #fff; }
+
+/* ── Tracker table ── */
+.trackerActions { margin-left: auto; display: flex; gap: .4rem; align-self: flex-end; }
+.trackerActions .secondary { padding: .3rem .7rem; font-size: .68rem; }
+.tableWrap { overflow-x: auto; background: #fff; border: 1px solid var(--border, #d0d0d0); border-radius: 6px; }
+.tracker { width: 100%; border-collapse: collapse; font-size: .7rem; min-width: 900px; }
+.tracker th {
+  text-align: left; font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: #555;
+  background: #fafafa; padding: .45rem .55rem; border-bottom: 1px solid #e5e5e5; white-space: nowrap;
+}
+.tracker td { padding: .45rem .55rem; border-top: 1px solid #eee; vertical-align: top; }
+.tracker tbody tr:hover { background: #fffafb; }
+.tracker strong { font-size: .72rem; }
+.note { margin-top: .2rem; font-size: .62rem; color: #666; font-style: italic; }
+.date { white-space: nowrap; color: #444; }
+.nextDate { font-weight: 700; color: #111; }
+.overdue { background: #fdecee; color: #b42318; }
+.soon { background: #fff4e0; color: #8a4b00; }
+.flag { display: block; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; margin-top: .1rem; }
+.status { display: inline-block; border-radius: 999px; padding: .1rem .55rem; font-size: .6rem; font-weight: 700; white-space: nowrap; }
+.st_not_started { background: #f0f0f0; color: #555; }
+.st_drafting { background: #e8eef6; color: #1a3557; }
+.st_with_cm { background: #ede7f6; color: #4527a0; }
+.st_with_hop { background: #e0f2f1; color: #00695c; }
+.st_submitted { background: #fff4e0; color: #8a4b00; }
+.st_final_filed { background: #e8f5e9; color: #1b5e20; }
+.fileLink { display: block; font-size: .64rem; color: #be123c; text-decoration: none; margin-bottom: .15rem; overflow-wrap: anywhere; }
+.fileLink:hover { text-decoration: underline; }
+.rowActions { white-space: nowrap; text-align: right; }
+.linkBtn { background: none; border: 0; color: #be123c; font-size: .64rem; font-weight: 700; padding: .1rem .3rem; }
+.linkBtn:hover { text-decoration: underline; }
+.linkedRow { display: flex; justify-content: space-between; gap: .5rem; font-size: .7rem; }
+.linkedRow a { color: #be123c; overflow-wrap: anywhere; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: .45rem; }
+.fieldset legend { font-size: .66rem; font-weight: 700; color: #333; margin-bottom: .3rem; }
+.field textarea {
+  font: inherit; font-size: .74rem; border: 1px solid var(--border, #d0d0d0); border-radius: 4px;
+  padding: .38rem .5rem; width: 100%; resize: vertical;
+}
+.row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+@media (max-width: 559px) { .row3 { grid-template-columns: 1fr; } }
+.danger { margin-right: auto; background: #fff; color: var(--red, #c62828); border: 1px solid #f3c2c2; border-radius: 4px; padding: .5rem 1rem; }
