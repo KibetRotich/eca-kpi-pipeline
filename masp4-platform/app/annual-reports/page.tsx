@@ -20,7 +20,7 @@ import Tracker from './Tracker'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Annual Reports — ECA PMEL Platform',
+  title: 'Annual Reports Tracker and Library — ECA PMEL Platform',
 }
 
 type Search = Promise<{ [key: string]: string | string[] | undefined }>
@@ -33,7 +33,7 @@ export default async function AnnualReportsPage({ searchParams }: { searchParams
     <div>
       <header className={styles.header}>
         <div>
-          <h1>Annual Reports</h1>
+          <h1>Annual Reports Tracker and Library</h1>
           <p className={styles.intro}>
             {tab === 'tracker'
               ? 'Track each project’s annual report from drafting to the donor. When a report is final, its Drive link is filed in the Library.'
