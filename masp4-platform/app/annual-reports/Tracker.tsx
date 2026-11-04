@@ -20,8 +20,8 @@ import styles from './annual.module.css'
 import StaffPicker, { type Person } from './StaffPicker'
 
 const DEADLINES: { key: DeadlineKey; label: string }[] = [
-  { key: 'deadline_cm', label: 'Deadline to CM & Sylvia' },
-  { key: 'deadline_hop', label: 'Deadline to HoP' },
+  { key: 'deadline_cm', label: 'CM Deadline' },
+  { key: 'deadline_hop', label: 'HoP & MD Deadline' },
   { key: 'deadline_donor', label: 'Deadline to donor' },
 ]
 
