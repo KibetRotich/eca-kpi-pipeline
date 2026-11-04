@@ -14,7 +14,7 @@ import { useRole } from '@/lib/role-context'
 import { REPORT_COUNTRIES, REPORT_TYPE_LABEL, parseDriveLink, reportOpenUrl } from '@/lib/annual-reports'
 import {
   STATUS_LABEL, TRACKER_STATUSES, canEditRow, deadlineState, formatResponsible, nextDeadline,
-  type DeadlineKey, type LinkedReport, type ReportCycle, type TrackerRow, type TrackerStatus,
+  type DeadlineKey, type LinkedReport, type ReportCycle, type TrackerProject, type TrackerRow, type TrackerStatus,
 } from '@/lib/report-tracker'
 import styles from './annual.module.css'
 
@@ -35,9 +35,13 @@ async function send(url: string, method: string, body?: unknown) {
   return data
 }
 
-interface Props { cycles: ReportCycle[]; cycle: ReportCycle | null; rows: TrackerRow[]; reports: LinkedReport[]; today: string }
+interface Props {
+  cycles: ReportCycle[]; cycle: ReportCycle | null; rows: TrackerRow[]; reports: LinkedReport[]
+  projects: TrackerProject[]   // Projects' Progress
+  today: string
+}
 
-export default function Tracker({ cycles, cycle, rows, reports, today }: Props) {
+export default function Tracker({ cycles, cycle, rows, reports, projects, today }: Props) {
   const router = useRouter()
   const { email, canEdit } = useRole()
   const [person, setPerson] = useState('')
@@ -129,7 +133,7 @@ export default function Tracker({ cycles, cycle, rows, reports, today }: Props) 
                 const mine = canEditRow(r, email, canEdit)
                 return (
                   <tr key={r.id}>
-                    <td>{r.responsible_names.join(', ')}</td>
+                    <td>{r.responsible_names.length ? r.responsible_names.join(', ') : <span className={styles.unassigned}>Not assigned</span>}</td>
                     <td>
                       <strong>{r.project}</strong>
                       <div className={styles.meta}>
@@ -172,11 +176,11 @@ export default function Tracker({ cycles, cycle, rows, reports, today }: Props) 
                      onClose={() => setUpdating(null)} onSaved={() => { setUpdating(null); refresh() }} />
       )}
       {editing && cycle && (
-        <RowModal row={editing === 'new' ? null : editing} cycle={cycle}
+        <RowModal row={editing === 'new' ? null : editing} cycle={cycle} projects={projects}
                   onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh() }} />
       )}
       {newCycle && (
-        <CycleModal cycles={cycles} onClose={() => setNewCycle(false)}
+        <CycleModal cycles={cycles} projectCount={projects.length} onClose={() => setNewCycle(false)}
                     onSaved={id => { setNewCycle(false); router.push(`/annual-reports?cycle=${id}`); refresh() }} />
       )}
     </>
@@ -308,7 +312,15 @@ function UpdateModal({ row, cycle, linked, onClose, onSaved }: {
 }
 
 /* ── Add / edit a row (M&E Officers / Admins) ─────────────────────────────── */
-function RowModal({ row, cycle, onClose, onSaved }: { row: TrackerRow | null; cycle: ReportCycle; onClose: () => void; onSaved: () => void }) {
+const OTHER = '__other__'
+
+function RowModal({ row, cycle, projects, onClose, onSaved }: {
+  row: TrackerRow | null; cycle: ReportCycle; projects: TrackerProject[]; onClose: () => void; onSaved: () => void
+}) {
+  // A row tied to exactly one Projects' Progress project is edited through the dropdown; anything else
+  // (several projects, or a non-project report such as the Internal REC report) through "Other".
+  const single = row?.project_ids.length === 1 ? projects.find(p => p.id === row.project_ids[0]) : undefined
+  const [pick, setPick] = useState(row ? (single ? single.id : OTHER) : '')
   const [project, setProject] = useState(row?.project ?? '')
   const [type, setType] = useState<'donor' | 'country'>(row?.report_type ?? 'donor')
   const [country, setCountry] = useState(row?.country ?? '')
@@ -321,8 +333,14 @@ function RowModal({ row, cycle, onClose, onSaved }: { row: TrackerRow | null; cy
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    setError(null); setBusy(true)
-    const body = { project, report_type: type, country: country || null, responsible,
+    setError(null)
+    if (!pick) return setError('Choose the project, or “Other” for a report that is not one project.')
+    const chosen = projects.find(p => p.id === pick)
+    // "Other" keeps an existing row's project links (e.g. P2P Coffee = Kenya + Tanzania); a new "Other" row has none.
+    const projectIds = chosen ? [chosen.id] : (row && !single ? row.project_ids : [])
+    setBusy(true)
+    const body = { project: chosen ? chosen.project_name : project, project_ids: projectIds,
+      report_type: type, country: country || null, responsible,
       deadline_cm: dl.deadline_cm || null, deadline_hop: dl.deadline_hop || null, deadline_donor: dl.deadline_donor || null }
     try {
       if (row) await send(`/api/report-tracker/${row.id}`, 'PATCH', body)
@@ -344,9 +362,24 @@ function RowModal({ row, cycle, onClose, onSaved }: { row: TrackerRow | null; cy
     <Modal title={row ? `Edit: ${row.project}` : `Add report to ${cycle.name}`} busy={busy} onClose={onClose}>
       <form className={styles.form} onSubmit={save}>
         <label className={styles.field}>
-          <span>Project &amp; report <span className={styles.req}>*</span></span>
-          <input type="text" value={project} onChange={e => setProject(e.target.value)} required minLength={2} maxLength={200} />
+          <span>Project <span className={styles.req}>*</span> <span className={styles.hint}>(from Projects’ Progress)</span></span>
+          <select value={pick} required onChange={e => {
+            const v = e.target.value
+            setPick(v)
+            const p = projects.find(x => x.id === v)
+            if (p && (REPORT_COUNTRIES as readonly string[]).includes(p.country)) setCountry(p.country)
+          }}>
+            <option value="" disabled>Select…</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.project_name} ({p.country})</option>)}
+            <option value={OTHER}>Other: not one project (e.g. Internal REC report, or several projects)</option>
+          </select>
         </label>
+        {pick === OTHER && (
+          <label className={styles.field}>
+            <span>Report name <span className={styles.req}>*</span></span>
+            <input type="text" value={project} onChange={e => setProject(e.target.value)} required minLength={2} maxLength={200} />
+          </label>
+        )}
         <div className={styles.row2}>
           <label className={styles.field}>
             <span>Report type</span>
@@ -387,11 +420,13 @@ function RowModal({ row, cycle, onClose, onSaved }: { row: TrackerRow | null; cy
 }
 
 /* ── New reporting cycle (M&E Officers / Admins) ──────────────────────────── */
-function CycleModal({ cycles, onClose, onSaved }: { cycles: ReportCycle[]; onClose: () => void; onSaved: (id: string) => void }) {
+function CycleModal({ cycles, projectCount, onClose, onSaved }: {
+  cycles: ReportCycle[]; projectCount: number; onClose: () => void; onSaved: (id: string) => void
+}) {
   const nextYear = (cycles[0]?.year ?? new Date().getFullYear() - 1) + 1
   const [year, setYear] = useState(String(nextYear))
   const [name, setName] = useState(`${nextYear} Annual Reports`)
-  const [copyFrom, setCopyFrom] = useState(cycles[0]?.id ?? '')
+  const [carryFrom, setCarryFrom] = useState(cycles[0]?.id ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -399,7 +434,7 @@ function CycleModal({ cycles, onClose, onSaved }: { cycles: ReportCycle[]; onClo
     e.preventDefault()
     setError(null); setBusy(true)
     try {
-      const d = await send('/api/report-tracker/cycles', 'POST', { name, year: Number(year), copy_from: copyFrom || null })
+      const d = await send('/api/report-tracker/cycles', 'POST', { name, year: Number(year), carry_from: carryFrom || null })
       onSaved(d.id)
     } catch (err) { setError(err instanceof Error ? err.message : 'Something went wrong') }
     finally { setBusy(false) }
@@ -419,11 +454,15 @@ function CycleModal({ cycles, onClose, onSaved }: { cycles: ReportCycle[]; onClo
             <input type="text" value={name} onChange={e => setName(e.target.value)} required minLength={3} maxLength={100} />
           </label>
         </div>
+        <p className={styles.hint}>
+          The cycle lists the {projectCount} projects in Projects’ Progress, each “Not started” with no deadlines.
+          Add the deadlines with “Edit”, and reports that are not one project (e.g. the Internal REC report) with “Add report”.
+        </p>
         <label className={styles.field}>
-          <span>Start from</span>
-          <select value={copyFrom} onChange={e => setCopyFrom(e.target.value)}>
-            <option value="">An empty list</option>
-            {cycles.map(c => <option key={c.id} value={c.id}>{c.name}: same projects and responsible staff, new deadlines</option>)}
+          <span>Responsible staff</span>
+          <select value={carryFrom} onChange={e => setCarryFrom(e.target.value)}>
+            <option value="">Leave unassigned</option>
+            {cycles.map(c => <option key={c.id} value={c.id}>Carry over from {c.name} (matched by project)</option>)}
           </select>
         </label>
         {error && <div className={styles.error} role="alert">{error}</div>}

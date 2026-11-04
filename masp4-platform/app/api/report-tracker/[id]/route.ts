@@ -6,7 +6,7 @@
  *   final: { drive_url, file_type, title } — attach a final report: the Drive link is added to annual_reports
  *                                          (Library) if it is not there yet, and linked to this row
  *   remove_report_id                     — unlink a final report from the row (the Library entry stays)
- *   project, report_type, country, responsible, deadline_cm, deadline_hop, deadline_donor — M&E / Admin only
+ *   project, project_ids, report_type, country, responsible, deadline_cm, deadline_hop, deadline_donor — M&E / Admin only
  * "Final filed" needs at least one linked final report. Every change is logged in report_tracker_log.
  *
  * DELETE — M&E Officers / Admins only.
@@ -18,7 +18,7 @@ import { parseDriveLink } from '@/lib/annual-reports'
 import { NextRequest, NextResponse } from 'next/server'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const EDITOR_FIELDS = ['project', 'report_type', 'country', 'responsible', 'deadline_cm', 'deadline_hop', 'deadline_donor']
+const EDITOR_FIELDS = ['project', 'project_ids', 'report_type', 'country', 'responsible', 'deadline_cm', 'deadline_hop', 'deadline_donor']
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(req)

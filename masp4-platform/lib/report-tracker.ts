@@ -18,6 +18,9 @@ export const STATUS_LABEL: Record<TrackerStatus, string> = {
 
 export interface ReportCycle { id: string; name: string; year: number }
 
+/** An active project as listed in Projects' Progress (/api/projects). */
+export interface TrackerProject { id: string; project_code: string; project_name: string; country: string }
+
 export interface TrackerRow {
   id: string
   cycle_id: string
@@ -31,6 +34,7 @@ export interface TrackerRow {
   deadline_donor: string | null
   status: TrackerStatus
   annual_report_ids: string[]
+  project_ids: string[]      // Projects' Progress project(s) this report covers ('{}' for e.g. the Internal REC report)
   note: string | null
   sort_order: number
   updated_by: string | null
@@ -88,6 +92,7 @@ export function formatResponsible(names: string[], emails: string[]) {
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Validates the editable row fields shared by POST and PATCH. Returns the DB values or an error message. */
 export function rowFields(b: Record<string, unknown>, partial: boolean): Record<string, unknown> | string {
@@ -96,6 +101,11 @@ export function rowFields(b: Record<string, unknown>, partial: boolean): Record<
     const project = String(b.project ?? '').trim()
     if (project.length < 2 || project.length > 200) return 'Project & report must be 2–200 characters'
     out.project = project
+  }
+  if (!partial || 'project_ids' in b) {
+    const ids = Array.isArray(b.project_ids) ? b.project_ids.map(String) : []
+    if (ids.some(id => !UUID.test(id))) return 'Unknown project'
+    out.project_ids = [...new Set(ids)]
   }
   if (!partial || 'report_type' in b) {
     const t = String(b.report_type ?? 'donor')

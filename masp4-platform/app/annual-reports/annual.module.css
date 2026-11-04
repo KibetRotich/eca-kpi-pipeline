@@ -126,3 +126,6 @@
 .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
 @media (max-width: 559px) { .row3 { grid-template-columns: 1fr; } }
 .danger { margin-right: auto; background: #fff; color: var(--red, #c62828); border: 1px solid #f3c2c2; border-radius: 4px; padding: .5rem 1rem; }
+
+.unassigned { color: #b42318; font-style: italic; font-size: .66rem; }
+.form > .hint { margin: 0; font-size: .64rem; line-height: 1.4; }

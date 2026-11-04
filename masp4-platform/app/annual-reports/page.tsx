@@ -11,7 +11,7 @@
  */
 import { supabaseAdmin } from '@/lib/supabase'
 import type { AnnualReport } from '@/lib/annual-reports'
-import type { LinkedReport, ReportCycle, TrackerRow } from '@/lib/report-tracker'
+import type { LinkedReport, ReportCycle, TrackerProject, TrackerRow } from '@/lib/report-tracker'
 import styles from './annual.module.css'
 import AddReport from './AddReport'
 import ReportBrowser from './ReportBrowser'
@@ -84,8 +84,12 @@ async function TrackerTab({ cycleParam }: { cycleParam?: string }) {
       reports = (rep ?? []) as LinkedReport[]
     }
   }
+  // The projects in Projects' Progress (same list as /api/projects): new cycles and "Add report" use them.
+  const { data: projData } = await supabaseAdmin.from('projects')
+    .select('id, project_code, project_name, country').eq('active', true).order('project_name')
+  const projects = (projData ?? []) as TrackerProject[]
   // Deadlines are judged against today's date in East Africa.
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Nairobi' })
 
-  return <Tracker cycles={cycles} cycle={cycle} rows={rows} reports={reports} today={today} />
+  return <Tracker cycles={cycles} cycle={cycle} rows={rows} reports={reports} projects={projects} today={today} />
 }
