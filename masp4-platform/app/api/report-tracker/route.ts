@@ -1,7 +1,7 @@
 /**
  * POST /api/report-tracker — add a report to a tracker cycle (Sprint 62). M&E Officers / Admins only.
  * Body: { cycle_id, project, report_type, country, responsible, deadline_cm, deadline_hop, deadline_donor, note }
- *       `responsible` is "Name <email>" entries separated by new lines, commas or semicolons.
+ *       `responsible` is "Name <email>" entries separated by new lines or semicolons.
  */
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaff } from '@/lib/require-staff'
@@ -31,6 +31,18 @@ export async function POST(req: NextRequest) {
   if (error?.code === '23503') return NextResponse.json({ error: 'Unknown reporting cycle' }, { status: 400 })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  await rememberStaff(fields.responsible_names, fields.responsible_emails, staff.email)
   await supabaseAdmin.from('report_tracker_log').insert({ tracker_id: data.id, changed_by: staff.email, changes: { created: [null, fields.project] } })
   return NextResponse.json({ id: data.id }, { status: 201 })
+}
+
+/**
+ * Saves responsible staff typed into the tracker picker to staff_directory (Sprint 64), so they appear in the
+ * dropdown next time. Existing entries are left as they are. Best effort: a failure never blocks the tracker save.
+ */
+async function rememberStaff(names: unknown, emails: unknown, by: string) {
+  if (!Array.isArray(names) || !Array.isArray(emails)) return
+  const rows = emails.map((e, i) => ({ email: String(e), name: String(names[i] ?? e), source: 'manual', added_by: by }))
+    .filter(r => r.email)
+  if (rows.length) await supabaseAdmin.from('staff_directory').upsert(rows, { onConflict: 'email', ignoreDuplicates: true })
 }

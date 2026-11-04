@@ -73,10 +73,10 @@ export function canEditRow(row: Pick<TrackerRow, 'responsible_emails'>, email: s
 
 const EMAIL = /^[a-z0-9._%+-]+@solidaridadnetwork\.org$/
 
-/** "Name <email>, Name2 <email2>" or one email per line → names + emails (staff domain only). */
+/** "Name <email>" entries, one per line (or separated by ";") → names + emails (staff domain only). */
 export function parseResponsible(raw: string): { names: string[]; emails: string[]; error?: string } {
   const names: string[] = [], emails: string[] = []
-  for (const part of raw.split(/[\n;,]+/).map(s => s.trim()).filter(Boolean)) {
+  for (const part of raw.split(/[\n;]+/).map(s => s.trim()).filter(Boolean)) {
     const m = part.match(/^(.*?)\s*<\s*([^>]+)\s*>$/)
     const name = (m ? m[1] : '').trim()
     const email = (m ? m[2] : part.includes('@') ? part : '').trim().toLowerCase()

@@ -17,6 +17,7 @@ import {
   type DeadlineKey, type LinkedReport, type ReportCycle, type TrackerProject, type TrackerRow, type TrackerStatus,
 } from '@/lib/report-tracker'
 import styles from './annual.module.css'
+import StaffPicker, { type Person } from './StaffPicker'
 
 const DEADLINES: { key: DeadlineKey; label: string }[] = [
   { key: 'deadline_cm', label: 'Deadline to CM & Sylvia' },
@@ -324,7 +325,7 @@ function RowModal({ row, cycle, projects, onClose, onSaved }: {
   const [project, setProject] = useState(row?.project ?? '')
   const [type, setType] = useState<'donor' | 'country'>(row?.report_type ?? 'donor')
   const [country, setCountry] = useState(row?.country ?? '')
-  const [responsible, setResponsible] = useState(row ? formatResponsible(row.responsible_names, row.responsible_emails) : '')
+  const [people, setPeople] = useState<Person[]>(row ? row.responsible_names.map((name, i) => ({ name, email: row.responsible_emails[i] ?? '' })) : [])
   const [dl, setDl] = useState<Record<DeadlineKey, string>>({
     deadline_cm: row?.deadline_cm ?? '', deadline_hop: row?.deadline_hop ?? '', deadline_donor: row?.deadline_donor ?? '',
   })
@@ -335,12 +336,14 @@ function RowModal({ row, cycle, projects, onClose, onSaved }: {
     e.preventDefault()
     setError(null)
     if (!pick) return setError('Choose the project, or “Other” for a report that is not one project.')
+    if (!people.length) return setError('Choose at least one responsible person.')
     const chosen = projects.find(p => p.id === pick)
     // "Other" keeps an existing row's project links (e.g. P2P Coffee = Kenya + Tanzania); a new "Other" row has none.
     const projectIds = chosen ? [chosen.id] : (row && !single ? row.project_ids : [])
     setBusy(true)
     const body = { project: chosen ? chosen.project_name : project, project_ids: projectIds,
-      report_type: type, country: country || null, responsible,
+      report_type: type, country: country || null,
+      responsible: formatResponsible(people.map(p => p.name), people.map(p => p.email)),
       deadline_cm: dl.deadline_cm || null, deadline_hop: dl.deadline_hop || null, deadline_donor: dl.deadline_donor || null }
     try {
       if (row) await send(`/api/report-tracker/${row.id}`, 'PATCH', body)
@@ -396,10 +399,10 @@ function RowModal({ row, cycle, projects, onClose, onSaved }: {
             </select>
           </label>
         </div>
-        <label className={styles.field}>
-          <span>Responsible <span className={styles.req}>*</span> <span className={styles.hint}>one per line: Name &lt;name@solidaridadnetwork.org&gt; — they can then update this row</span></span>
-          <textarea value={responsible} onChange={e => setResponsible(e.target.value)} rows={2} required />
-        </label>
+        <div className={styles.field}>
+          <span>Responsible <span className={styles.req}>*</span> <span className={styles.hint}>they can then update this report themselves</span></span>
+          <StaffPicker value={people} onChange={setPeople} />
+        </div>
         <div className={styles.row3}>
           {DEADLINES.map(d => (
             <label key={d.key} className={styles.field}>

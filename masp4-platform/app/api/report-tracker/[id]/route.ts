@@ -97,6 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { error } = await supabaseAdmin.from('report_tracker')
     .update({ ...fields, updated_by: staff.email, updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (changes.responsible_emails) await rememberStaff(fields.responsible_names, fields.responsible_emails, staff.email)
   await supabaseAdmin.from('report_tracker_log').insert({ tracker_id: id, changed_by: staff.email, changes })
   return NextResponse.json({ ok: true })
 }
@@ -111,4 +112,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data?.length) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * Saves responsible staff typed into the tracker picker to staff_directory (Sprint 64), so they appear in the
+ * dropdown next time. Existing entries are left as they are. Best effort: a failure never blocks the tracker save.
+ */
+async function rememberStaff(names: unknown, emails: unknown, by: string) {
+  if (!Array.isArray(names) || !Array.isArray(emails)) return
+  const rows = emails.map((e, i) => ({ email: String(e), name: String(names[i] ?? e), source: 'manual', added_by: by }))
+    .filter(r => r.email)
+  if (rows.length) await supabaseAdmin.from('staff_directory').upsert(rows, { onConflict: 'email', ignoreDuplicates: true })
 }
