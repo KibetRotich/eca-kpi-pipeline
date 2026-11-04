@@ -26,7 +26,6 @@ const DEADLINES: { key: DeadlineKey; label: string }[] = [
 ]
 
 const fmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
-const fmtMonth = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 const showDate = (d: string | null) => (d ? fmt.format(new Date(d + 'T00:00:00Z')) : '—')
 
 async function send(url: string, method: string, body?: unknown) {
@@ -45,10 +44,6 @@ interface Props {
 export default function Tracker({ cycles, cycle, rows, reports, projects, today }: Props) {
   const router = useRouter()
   const { email, canEdit } = useRole()
-  const [person, setPerson] = useState('')
-  const [country, setCountry] = useState('')
-  const [status, setStatus] = useState('')
-  const [month, setMonth] = useState('')
   const [updating, setUpdating] = useState<TrackerRow | null>(null)
   const [presetStatus, setPresetStatus] = useState<TrackerStatus | undefined>()   // status chosen in the table before the dialog opened
   const [statusOverride, setStatusOverride] = useState<Record<string, TrackerStatus>>({})   // shown while a change saves
@@ -58,17 +53,6 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
   const [newCycle, setNewCycle] = useState(false)
 
   const byId = useMemo(() => new Map(reports.map(r => [r.id, r])), [reports])
-  const people = useMemo(() => [...new Set(rows.flatMap(r => r.responsible_names))].sort(), [rows])
-  const countries = useMemo(() => [...new Set(rows.map(r => r.country).filter(Boolean) as string[])].sort(), [rows])
-  const months = useMemo(() => [...new Set(rows.map(r => r.deadline_donor?.slice(0, 7)).filter(Boolean) as string[])].sort(), [rows])
-
-  const shown = rows.filter(r =>
-    (!person || r.responsible_names.includes(person)) &&
-    (!country || r.country === country) &&
-    (!status || r.status === status) &&
-    (!month || r.deadline_donor?.startsWith(month)))
-  const filtered = !!(person || country || status || month)
-
   const refresh = () => router.refresh()
 
   // The table's status dropdown. "Final filed" needs the final report's Drive link, so when none is linked yet
@@ -104,34 +88,6 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
             {cycles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
-        <label>Responsible
-          <select value={person} onChange={e => setPerson(e.target.value)}>
-            <option value="">All</option>
-            {people.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </label>
-        <label>Country
-          <select value={country} onChange={e => setCountry(e.target.value)}>
-            <option value="">All</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-        <label>Status
-          <select value={status} onChange={e => setStatus(e.target.value)}>
-            <option value="">All</option>
-            {TRACKER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-          </select>
-        </label>
-        <label>Donor deadline
-          <select value={month} onChange={e => setMonth(e.target.value)}>
-            <option value="">Any month</option>
-            {months.map(m => <option key={m} value={m}>{fmtMonth.format(new Date(m + '-01T00:00:00Z'))}</option>)}
-          </select>
-        </label>
-        <span className={styles.count}>{shown.length} of {rows.length} reports</span>
-        {filtered && (
-          <button type="button" className={styles.clear} onClick={() => { setPerson(''); setCountry(''); setStatus(''); setMonth('') }}>Clear</button>
-        )}
         {canEdit && (
           <span className={styles.trackerActions}>
             {cycle && <button type="button" className={styles.secondary} onClick={() => setEditing('new')}>+ Add report</button>}
@@ -158,7 +114,7 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
               </tr>
             </thead>
             <tbody>
-              {shown.map(r => {
+              {rows.map(r => {
                 const next = nextDeadline(r)
                 const mine = canEditRow(r, email, canEdit)
                 return (
