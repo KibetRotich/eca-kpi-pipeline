@@ -50,6 +50,10 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
   const [status, setStatus] = useState('')
   const [month, setMonth] = useState('')
   const [updating, setUpdating] = useState<TrackerRow | null>(null)
+  const [presetStatus, setPresetStatus] = useState<TrackerStatus | undefined>()   // status chosen in the table before the dialog opened
+  const [statusOverride, setStatusOverride] = useState<Record<string, TrackerStatus>>({})   // shown while a change saves
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<{ id: string; message: string } | null>(null)
   const [editing, setEditing] = useState<TrackerRow | 'new' | null>(null)
   const [newCycle, setNewCycle] = useState(false)
 
@@ -66,6 +70,31 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
   const filtered = !!(person || country || status || month)
 
   const refresh = () => router.refresh()
+
+  // The table's status dropdown. "Final filed" needs the final report's Drive link, so when none is linked yet
+  // it opens the Update dialog with that status chosen instead of saving straight away.
+  async function changeStatus(r: TrackerRow, next: TrackerStatus) {
+    setStatusError(null)
+    if (next === 'final_filed' && r.annual_report_ids.length === 0) {
+      setPresetStatus(next); setUpdating(r)
+      return
+    }
+    setStatusOverride(o => ({ ...o, [r.id]: next })); setSavingId(r.id)
+    try {
+      await send(`/api/report-tracker/${r.id}`, 'PATCH', { status: next })
+      refresh()
+    } catch (err) {
+      setStatusOverride(o => { const c = { ...o }; delete c[r.id]; return c })
+      setStatusError({ id: r.id, message: err instanceof Error ? err.message : 'Could not save the status' })
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  // Drop optimistic values once the refreshed rows carry them.
+  useEffect(() => {
+    setStatusOverride(o => Object.fromEntries(Object.entries(o).filter(([id, st]) => rows.find(r => r.id === id)?.status !== st)))
+  }, [rows])
 
   return (
     <>
@@ -154,14 +183,29 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
                         </td>
                       )
                     })}
-                    <td><span className={`${styles.status} ${styles['st_' + r.status]}`}>{STATUS_LABEL[r.status]}</span></td>
+                    <td>
+                      {mine ? (() => {
+                        const st = statusOverride[r.id] ?? r.status
+                        return (
+                          <>
+                            <select className={`${styles.status} ${styles.statusSelect} ${styles['st_' + st]}`} value={st}
+                                    disabled={savingId === r.id} aria-label={`Status of ${r.project}`}
+                                    onChange={e => changeStatus(r, e.target.value as TrackerStatus)}>
+                              {TRACKER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                            </select>
+                            {savingId === r.id && <span className={styles.savingNote}>Saving…</span>}
+                            {statusError?.id === r.id && <span className={styles.statusErr} role="alert">{statusError.message}</span>}
+                          </>
+                        )
+                      })() : <span className={`${styles.status} ${styles['st_' + r.status]}`}>{STATUS_LABEL[r.status]}</span>}
+                    </td>
                     <td>
                       {r.annual_report_ids.map(id => byId.get(id)).filter(Boolean).map(rep => (
                         <a key={rep!.id} href={reportOpenUrl(rep!)} target="_blank" rel="noopener noreferrer" className={styles.fileLink}>{rep!.title} ↗</a>
                       ))}
                     </td>
                     <td className={styles.rowActions}>
-                      {mine && <button type="button" className={styles.linkBtn} onClick={() => setUpdating(r)}>Update</button>}
+                      {mine && <button type="button" className={styles.linkBtn} onClick={() => { setPresetStatus(undefined); setUpdating(r) }}>Update</button>}
                       {canEdit && <button type="button" className={styles.linkBtn} onClick={() => setEditing(r)}>Edit</button>}
                     </td>
                   </tr>
@@ -173,8 +217,9 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
       )}
 
       {updating && cycle && (
-        <UpdateModal row={updating} cycle={cycle} linked={updating.annual_report_ids.map(id => byId.get(id)).filter(Boolean) as LinkedReport[]}
-                     onClose={() => setUpdating(null)} onSaved={() => { setUpdating(null); refresh() }} />
+        <UpdateModal row={updating} cycle={cycle} initialStatus={presetStatus} linked={updating.annual_report_ids.map(id => byId.get(id)).filter(Boolean) as LinkedReport[]}
+                     onClose={() => { setUpdating(null); setPresetStatus(undefined) }}
+                     onSaved={() => { setUpdating(null); setPresetStatus(undefined); refresh() }} />
       )}
       {editing && cycle && (
         <RowModal row={editing === 'new' ? null : editing} cycle={cycle} projects={projects}
@@ -209,10 +254,10 @@ function Modal({ title, busy, onClose, children }: { title: string; busy: boolea
 }
 
 /* ── Status / final report (responsible staff and M&E) ────────────────────── */
-function UpdateModal({ row, cycle, linked, onClose, onSaved }: {
-  row: TrackerRow; cycle: ReportCycle; linked: LinkedReport[]; onClose: () => void; onSaved: () => void
+function UpdateModal({ row, cycle, linked, initialStatus, onClose, onSaved }: {
+  row: TrackerRow; cycle: ReportCycle; linked: LinkedReport[]; initialStatus?: TrackerStatus; onClose: () => void; onSaved: () => void
 }) {
-  const [status, setStatus] = useState<TrackerStatus>(row.status)
+  const [status, setStatus] = useState<TrackerStatus>(initialStatus ?? row.status)
   const [note, setNote] = useState(row.note?.startsWith('Imported from the Google Doc') ? '' : row.note ?? '')
   const [link, setLink] = useState('')
   const [fileType, setFileType] = useState<'' | 'pdf' | 'docx'>('')

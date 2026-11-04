@@ -151,3 +151,16 @@
 .options li { padding: .35rem .6rem; font-size: .72rem; cursor: pointer; display: flex; gap: .4rem; align-items: baseline; }
 .options li span { color: #777; font-size: .64rem; }
 .optionOn { background: #fff1f3; }
+
+/* ── Inline status dropdown ── */
+.statusSelect {
+  border: 1px solid transparent; font: inherit; font-size: .6rem; font-weight: 700; cursor: pointer;
+  padding: .12rem 1.3rem .12rem .5rem; appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - .55rem) 55%, calc(100% - .35rem) 55%;
+  background-size: .2rem .2rem; background-repeat: no-repeat;
+}
+.statusSelect:hover, .statusSelect:focus { border-color: currentColor; outline: none; }
+.statusSelect:disabled { opacity: .6; cursor: progress; }
+.savingNote { display: block; font-size: .56rem; color: #777; margin-top: .15rem; }
+.statusErr { display: block; font-size: .58rem; color: #b42318; margin-top: .15rem; max-width: 160px; }
