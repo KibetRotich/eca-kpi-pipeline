@@ -9,6 +9,16 @@ const lbl: React.CSSProperties = {
 }
 const sel: React.CSSProperties = { minWidth: 110, fontSize: '.7rem', padding: '.15rem .3rem' }
 
+const MONTH_FMT = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+const monthLabel = (ym: string) => MONTH_FMT.format(new Date(`${ym}-01T00:00:00Z`))
+
+/** First and last day of a 'YYYY-MM' month — the from/to the queries filter on. */
+function monthRange(ym: string) {
+  const [y, m] = ym.split('-').map(Number)
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  return { from: `${ym}-01`, to: `${ym}-${String(last).padStart(2, '0')}` }
+}
+
 export default function FilterBar({ options }: { options: FilterOptions }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -26,6 +36,13 @@ export default function FilterBar({ options }: { options: FilterOptions }) {
   const country = get('country')
   const admin1 = get('admin1')
   const a1Opts = country ? (options.admin1ByCountry[country] ?? []) : []
+  // The Month dropdown writes from/to as that month's first and last day; an older link with any other
+  // from/to shows as "Custom dates" until a month is picked.
+  const from = get('from'), to = get('to')
+  const month = from ? from.slice(0, 7) : ''
+  const isMonth = !!from && JSON.stringify(monthRange(month)) === JSON.stringify({ from, to })
+  const monthValue = !from && !to ? '' : isMonth ? month : 'custom'
+
   const hasFilter = ['from', 'to', 'country', 'admin1', 'admin2', 'project', 'commodity',
     'eventType', 'trainingType', 'includeTest'].some(k => get(k))
 
@@ -46,14 +63,13 @@ export default function FilterBar({ options }: { options: FilterOptions }) {
       marginBottom: '.9rem', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '.5rem .9rem',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={lbl}>From</span>
-        <input type="date" style={sel} value={get('from')} min={options.dateMin ?? undefined}
-          max={options.dateMax ?? undefined} onChange={e => set({ from: e.target.value })} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={lbl}>To</span>
-        <input type="date" style={sel} value={get('to')} min={options.dateMin ?? undefined}
-          max={options.dateMax ?? undefined} onChange={e => set({ to: e.target.value })} />
+        <span style={lbl}>Month</span>
+        <select style={sel} value={monthValue}
+          onChange={e => set(e.target.value ? monthRange(e.target.value) : { from: '', to: '' })}>
+          <option value="">All months</option>
+          {monthValue === 'custom' && <option value="custom" disabled>Custom dates</option>}
+          {options.months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
       </div>
       {/* Cascade: changing country/admin1 clears the dependent level(s). */}
       <Select k="country" label="Country" opts={options.countries} extra={{ admin1: '', admin2: '' }} />

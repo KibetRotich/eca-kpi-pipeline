@@ -1,9 +1,9 @@
 /**
- * Overview (management view) — headline KPIs, reach/events trend, female/youth
+ * Overview (management view) — headline KPIs, new & continuing farmers by month, female/youth
  * share, reach by commodity and the project league table. Reads the PII-free Supabase views via
  * the query layer.
  */
-import { parseFilters, getOverview, getProjects, getFarmerDepth, getGenderYouth } from '@/lib/eca-events/queries'
+import { parseFilters, getOverview, getProjects, getFarmerDepth, getGenderYouth, getNewContinuing } from '@/lib/eca-events/queries'
 import { Kpi, Card, BarChart, Caption } from './charts'
 
 export const dynamic = 'force-dynamic'
@@ -12,9 +12,8 @@ export default async function OverviewPage(
   { searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> },
 ) {
   const f = parseFilters(await searchParams)
-  const [o, p, fd, gy] = await Promise.all([getOverview(f), getProjects(f), getFarmerDepth(f), getGenderYouth(f)])
-
-  const months = o.byMonth.map(m => m.month)
+  const [o, p, fd, gy, nc] = await Promise.all([
+    getOverview(f), getProjects(f), getFarmerDepth(f), getGenderYouth(f), getNewContinuing(f)])
 
   return (
     <div>
@@ -34,11 +33,11 @@ export default async function OverviewPage(
       </Caption>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '.7rem', marginTop: '.8rem' }}>
-        <Card title="Reach & events by month" height={240}
-          note={`Monthly reported reach and event count. n=${o.totalEvents.toLocaleString()} events.`}>
-          <BarChart labels={months} series={[
-            { label: 'Reach', data: o.byMonth.map(m => m.reach), color: '#FFC800' },
-            { label: 'Events', data: o.byMonth.map(m => m.events), color: '#111' },
+        <Card title="New & continuing farmers" height={240}
+          note="Individually recorded farmers trained each month. New = first trained that calendar year; continuing = first trained in an earlier year (MASP convention). A farmer trained in several months is counted in each.">
+          <BarChart stacked labels={nc.map(m => m.month)} series={[
+            { label: 'New', data: nc.map(m => m.new), color: '#FFC800' },
+            { label: 'Continuing', data: nc.map(m => m.continuing), color: '#111' },
           ]} />
         </Card>
 

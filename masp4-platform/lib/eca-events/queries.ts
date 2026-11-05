@@ -57,6 +57,8 @@ export interface FilterOptions {
   admin2ByAdmin1: Record<string, string[]>
   dateMin: string | null
   dateMax: string | null
+  /** Months with real events, newest first ('YYYY-MM') — the Month filter's options. */
+  months: string[]
 }
 
 const uniqSort = (xs: (string | null | undefined)[]) =>
@@ -72,6 +74,7 @@ export async function getFilterOptions(): Promise<FilterOptions> {
   const a1: Record<string, Set<string>> = {}
   const a2: Record<string, Set<string>> = {}
   let dmin: string | null = null, dmax: string | null = null
+  const months = new Set<string>()
   for (const r of rows) {
     if (r.country_label && r.admin_level_1_label) {
       (a1[r.country_label] ??= new Set()).add(r.admin_level_1_label)
@@ -82,6 +85,7 @@ export async function getFilterOptions(): Promise<FilterOptions> {
     if (r.training_date) {
       if (!dmin || r.training_date < dmin) dmin = r.training_date
       if (!dmax || r.training_date > dmax) dmax = r.training_date
+      months.add(String(r.training_date).slice(0, 7))
     }
   }
   const mapSets = (m: Record<string, Set<string>>) =>
@@ -95,6 +99,7 @@ export async function getFilterOptions(): Promise<FilterOptions> {
     admin1ByCountry: mapSets(a1),
     admin2ByAdmin1: mapSets(a2),
     dateMin: dmin, dateMax: dmax,
+    months: Array.from(months).sort().reverse(),
   }
 }
 
@@ -363,6 +368,24 @@ export async function getFarmerDepth(f: Filters) {
     monthly: (d.monthly ?? []) as { month: string; new: number; returning: number }[],
     freq: (d.freq ?? []) as { bucket: string; farmers: number }[],
   }
+}
+
+// ── New & continuing farmers by month (Sprint 65 RPC) ─────────────────────────
+
+/**
+ * Distinct farmers per month, split MASP-style by year: "new" = first recorded training in that calendar year,
+ * "continuing" = first recorded in an earlier year. First-year is taken over all dates under the other filters,
+ * so the Month filter narrows the bars without making everyone "new".
+ */
+export async function getNewContinuing(f: Filters) {
+  const { data, error } = await supabase.rpc('eca_new_continuing', {
+    p_country: f.country ?? null, p_admin1: f.admin1 ?? null, p_admin2: f.admin2 ?? null,
+    p_project: f.project ?? null, p_commodity: f.commodity ?? null,
+    p_event_type: f.eventType ?? null, p_training_type: f.trainingType ?? null,
+    p_from: f.from ?? null, p_to: f.to ?? null, p_include_test: f.includeTest,
+  })
+  if (error) throw new Error(`eca_new_continuing: ${error.message}`)
+  return (data ?? []) as { month: string; new: number; continuing: number }[]
 }
 
 // ── i) Data Quality & M&E ────────────────────────────────────────────────────────
