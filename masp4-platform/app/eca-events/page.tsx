@@ -1,9 +1,9 @@
 /**
- * Overview (management view) — headline KPIs, new & continuing farmers by month, female/youth
+ * Overview (management view) — headline KPIs, new & returning farmers by month, female/youth
  * share, reach by commodity and the project league table. Reads the PII-free Supabase views via
  * the query layer.
  */
-import { parseFilters, getOverview, getProjects, getFarmerDepth, getGenderYouth, getNewContinuing } from '@/lib/eca-events/queries'
+import { parseFilters, getOverview, getProjects, getFarmerDepth, getGenderYouth, getNewReturning } from '@/lib/eca-events/queries'
 import { Kpi, Card, BarChart, Caption } from './charts'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,7 @@ export default async function OverviewPage(
 ) {
   const f = parseFilters(await searchParams)
   const [o, p, fd, gy, nc] = await Promise.all([
-    getOverview(f), getProjects(f), getFarmerDepth(f), getGenderYouth(f), getNewContinuing(f)])
+    getOverview(f), getProjects(f), getFarmerDepth(f), getGenderYouth(f), getNewReturning(f)])
 
   return (
     <div>
@@ -33,11 +33,11 @@ export default async function OverviewPage(
       </Caption>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '.7rem', marginTop: '.8rem' }}>
-        <Card title="New & continuing farmers" height={240}
-          note="Farmers recorded by name each month, typed in or picked from the registered-farmer list. New = first trained that calendar year; continuing = first trained in an earlier year (MASP convention). A farmer trained in several months is counted in each.">
+        <Card title="New & returning farmers" height={240}
+          note="Farmers recorded by name each month, typed in or picked from the registered-farmer list. New = first training ever; returning = trained in an earlier month. A farmer trained in several months is counted in each.">
           <BarChart stacked labels={nc.map(m => m.month)} series={[
             { label: 'New', data: nc.map(m => m.new), color: '#FFC800' },
-            { label: 'Continuing', data: nc.map(m => m.continuing), color: '#111' },
+            { label: 'Returning', data: nc.map(m => m.returning), color: '#111' },
           ]} />
         </Card>
 

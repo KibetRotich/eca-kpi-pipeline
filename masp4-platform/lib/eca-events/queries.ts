@@ -374,22 +374,22 @@ export async function getFarmerDepth(f: Filters) {
   }
 }
 
-// ── New & continuing farmers by month (Sprint 65 RPC) ─────────────────────────
+// ── New & returning farmers by month (Sprint 67 RPC) ──────────────────────────
 
 /**
- * Distinct farmers per month (typed in + picked from the registry list, Sprint 66), split MASP-style by year: "new" = first recorded training in that calendar year,
- * "continuing" = first recorded in an earlier year. First-year is taken over all dates under the other filters,
- * so the Month filter narrows the bars without making everyone "new".
+ * Distinct farmers per month (typed in + picked from the registry list): "new" = first-ever recorded training
+ * in that month, "returning" = trained in an earlier month. First month is taken over all dates under the
+ * other filters, so the Month filter narrows the bars without making everyone "new".
  */
-export async function getNewContinuing(f: Filters) {
-  const { data, error } = await supabase.rpc('eca_new_continuing', {
+export async function getNewReturning(f: Filters) {
+  const { data, error } = await supabase.rpc('eca_new_returning', {
     p_country: f.country ?? null, p_admin1: f.admin1 ?? null, p_admin2: f.admin2 ?? null,
     p_project: f.project ?? null, p_commodity: f.commodity ?? null,
     p_event_type: f.eventType ?? null, p_training_type: f.trainingType ?? null,
     p_from: f.from ?? null, p_to: f.to ?? null, p_include_test: f.includeTest,
   })
-  if (error) throw new Error(`eca_new_continuing: ${error.message}`)
-  return (data ?? []) as { month: string; new: number; continuing: number }[]
+  if (error) throw new Error(`eca_new_returning: ${error.message}`)
+  return (data ?? []) as { month: string; new: number; returning: number }[]
 }
 
 // ── i) Data Quality & M&E ────────────────────────────────────────────────────────

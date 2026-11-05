@@ -1,4 +1,4 @@
-import { parseFilters, getFarmerDepth, getNewContinuing } from '@/lib/eca-events/queries'
+import { parseFilters, getFarmerDepth, getNewReturning } from '@/lib/eca-events/queries'
 import { Card, BarChart, Kpi, Caption } from '../charts'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +7,7 @@ export default async function FarmersPage(
   { searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> },
 ) {
   const f = parseFilters(await searchParams)
-  const [d, nc] = await Promise.all([getFarmerDepth(f), getNewContinuing(f)])
+  const [d, nc] = await Promise.all([getFarmerDepth(f), getNewReturning(f)])
 
   return (
     <div>
@@ -29,11 +29,11 @@ export default async function FarmersPage(
       </Caption>
 
       <div style={{ marginTop: '.7rem' }}>
-        <Card title="New & continuing farmers" height={240}
-          note="Distinct farmers trained each month. New = first trained that calendar year; continuing = first trained in an earlier year (MASP convention) — same as the Overview.">
+        <Card title="New & returning farmers" height={240}
+          note="Distinct farmers trained each month. New = first training ever; returning = trained in an earlier month — same as the Overview.">
           <BarChart stacked labels={nc.map(m => m.month)} series={[
             { label: 'New', data: nc.map(m => m.new), color: '#FFC800' },
-            { label: 'Continuing', data: nc.map(m => m.continuing), color: '#111' },
+            { label: 'Returning', data: nc.map(m => m.returning), color: '#111' },
           ]} />
         </Card>
       </div>
