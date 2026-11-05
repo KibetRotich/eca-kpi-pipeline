@@ -53,7 +53,8 @@ export type ThemeChart =
 export type Basis = 'comparison' | 'before_after' | 'self_reported'
 
 export const BASIS_LABEL: Record<Basis, string> = {
-  comparison: 'vs comparison group', before_after: 'measured before → after', self_reported: 'self-reported',
+  comparison: 'compared with a group outside the project', before_after: 'measured at the start and the end',
+  self_reported: "participants' own reports",
 }
 
 /** A commodity's overall direction on one theme (the overview grid and the theme scorecard). */
