@@ -448,9 +448,23 @@ def round_coords(o, nd=3):
         return [round_coords(x, nd) for x in o]
     return o
 
+def light_coords(o):
+    """Round to 2 dp (~1 km) and drop repeated points: ~45% smaller page. Neighbouring districts
+    share the same input points, so they round the same way and borders stay gap-free. A ring that
+    would collapse (tiny district) keeps 3 dp."""
+    if o and isinstance(o[0][0], (int, float)):          # a ring
+        out = []
+        for pt in round_coords(o, 2):
+            if not out or out[-1] != pt:
+                out.append(pt)
+        if out[0] != out[-1]:
+            out.append(out[0])
+        return out if len(out) >= 4 else round_coords(o, 3)
+    return [light_coords(x) for x in o]
+
 geo = json.load(open(GEO_PATH, encoding="utf-8"))
 for ft in geo["features"]:
-    ft["geometry"]["coordinates"] = round_coords(ft["geometry"]["coordinates"])
+    ft["geometry"]["coordinates"] = light_coords(ft["geometry"]["coordinates"])
     ft["properties"] = {"name": ft["properties"].get("shapeName", "")}
 
 mc_d = mc.copy()
@@ -761,11 +775,19 @@ records = [[r.region_norm, r.district or "(blank)", r.proj, r.ym,
             int(r.served), int(r.given_n) if not pd.isna(r.given_n) else 0,
             r.dist_dt.strftime("%Y-%m") if not pd.isna(r.dist_dt) else ""]
            for r in rec.itertuples()]
+# Most applications share every field above, so store each distinct row once with a count
+# (last field "n"); the page weights its sums by n. 54,919 rows → ~1,700, 5.5 MB → ~0.2 MB.
+_cnt = {}
+for row in records:
+    k = tuple(row)
+    _cnt[k] = _cnt.get(k, 0) + 1
+records = [list(k) + [c] for k, c in _cnt.items()]
+n_applications = sum(_cnt.values())
 
 EXEC = {
     "records": records,
     "fields": ["region", "district", "project", "ym", "seedlings", "cost", "coop_type", "seedlings_cost",
-               "served", "given", "dym"],
+               "served", "given", "dym", "n"],
     "dist_era": "0000-00",           # fulfilment counts all applications
     "regions": sorted(rec["region_norm"].unique().tolist()),
     "projects": sorted(rec["proj"].unique().tolist()),
@@ -788,7 +810,7 @@ GLOBAL = {
 
 DATA = to_native({"sections": SECTIONS, "exec": EXEC, "global": GLOBAL})
 payload = json.dumps(DATA, separators=(",", ":"))
-print(f"  payload size: {len(payload)/1e6:.1f} MB  | records embedded: {len(records):,}")
+print(f"  payload size: {len(payload)/1e6:.1f} MB  | record rows embedded: {len(records):,} (= {n_applications:,} applications)")
 
 with open(os.path.join(HERE, "dashboard_template.html"), "r", encoding="utf-8") as f:
     template = f.read()
