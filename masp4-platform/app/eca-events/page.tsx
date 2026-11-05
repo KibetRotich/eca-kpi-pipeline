@@ -34,7 +34,7 @@ export default async function OverviewPage(
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '.7rem', marginTop: '.8rem' }}>
         <Card title="New & continuing farmers" height={240}
-          note="Individually recorded farmers trained each month. New = first trained that calendar year; continuing = first trained in an earlier year (MASP convention). A farmer trained in several months is counted in each.">
+          note="Farmers recorded by name each month, typed in or picked from the registered-farmer list. New = first trained that calendar year; continuing = first trained in an earlier year (MASP convention). A farmer trained in several months is counted in each.">
           <BarChart stacked labels={nc.map(m => m.month)} series={[
             { label: 'New', data: nc.map(m => m.new), color: '#FFC800' },
             { label: 'Continuing', data: nc.map(m => m.continuing), color: '#111' },

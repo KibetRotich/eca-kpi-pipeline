@@ -356,16 +356,20 @@ export async function getFarmerDepth(f: Filters) {
   ])
   if (error) throw new Error(`eca_farmer_depth: ${error.message}`)
   const d = (data ?? {}) as any
+  // ID/phone capture measure how well names are typed in, so their denominator is typed-in rows only
+  // (Sprint 66; falls back to all rows if the RPC predates typed_records).
+  const typed = d.typed_records != null ? num(d.typed_records) : num(d.raw_records)
   return {
     reportedReach: evRows.reduce((a, r) => a + num(r.total_participants), 0),
     individualRecords: evRows.reduce((a, r) => a + num(r.n_individual_records), 0),
     rawRecords: num(d.raw_records),
+    typedRecords: typed,
+    selectedRecords: num(d.selected_records),
     uniqueFarmers: num(d.unique_farmers),
     verified: num(d.verified),
     withPhone: num(d.with_phone),
-    idCaptureRate: pct(num(d.verified), num(d.raw_records)),
-    phoneCaptureRate: pct(num(d.with_phone), num(d.raw_records)),
-    monthly: (d.monthly ?? []) as { month: string; new: number; returning: number }[],
+    idCaptureRate: pct(num(d.verified), typed),
+    phoneCaptureRate: pct(num(d.with_phone), typed),
     freq: (d.freq ?? []) as { bucket: string; farmers: number }[],
   }
 }
@@ -373,7 +377,7 @@ export async function getFarmerDepth(f: Filters) {
 // ── New & continuing farmers by month (Sprint 65 RPC) ─────────────────────────
 
 /**
- * Distinct farmers per month, split MASP-style by year: "new" = first recorded training in that calendar year,
+ * Distinct farmers per month (typed in + picked from the registry list, Sprint 66), split MASP-style by year: "new" = first recorded training in that calendar year,
  * "continuing" = first recorded in an earlier year. First-year is taken over all dates under the other filters,
  * so the Month filter narrows the bars without making everyone "new".
  */
