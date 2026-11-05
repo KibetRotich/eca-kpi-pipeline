@@ -4,7 +4,8 @@
  */
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
-import { FILE_TYPE_LABEL, formatPeriod, type EvaluationFileType, type EvaluationSummary } from '@/lib/evaluations'
+import { FILE_TYPE_LABEL, formatPeriod, parseDriveLink, type EvaluationFileType, type EvaluationSummary } from '@/lib/evaluations'
+import PreviewLink from '@/components/DocPreview'
 import SummaryView from '../SummaryView'
 import styles from '../evaluation.module.css'
 
@@ -51,10 +52,11 @@ export default async function StudyPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
           {study.source_url ? (
-            <a href={study.source_url} className={styles.download} target="_blank" rel="noopener noreferrer"
-               title="Opens in Google Drive for Solidaridad staff with access to the folder">
-              Full report ({FILE_TYPE_LABEL[study.file_type]}, Google Drive) <span aria-hidden="true">↗</span>
-            </a>
+            <PreviewLink href={study.source_url} driveId={parseDriveLink(study.source_url)?.id} fileType={study.file_type}
+                         title={study.title} className={styles.download}
+                         linkTitle="Preview the report here (Google Drive, Solidaridad staff with access to the folder)">
+              Read full report ({FILE_TYPE_LABEL[study.file_type]})
+            </PreviewLink>
           ) : (
             <a href={`/api/evaluations/${study.id}/file`} className={styles.download}
                title="Signed-in Solidaridad staff only">

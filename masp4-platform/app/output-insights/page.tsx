@@ -8,84 +8,16 @@
  * screen readers). Styling lives in ./page.module.css and reuses the global
  * design tokens (app/globals.css) — no other page is affected.
  *
- * To add a dashboard: append an entry to DASHBOARDS below. The grid grows
- * downward automatically.
+ * To add a dashboard: append an entry to DASHBOARDS in ./dashboards.ts. Every tile opens in the
+ * same window — static dashboards inside the platform viewer (/output-insights/view/<slug>).
  */
+import Link from 'next/link'
 import styles from './page.module.css'
+import { DASHBOARDS, dashboardLink, type Dashboard } from './dashboards'
 
 export const metadata = {
   title: 'Output Insights — ECA PMEL Platform',
 }
-
-type Dashboard = {
-  href: string
-  external?: boolean
-  title: string
-  blurb: string
-  chips: string[]
-}
-
-const DASHBOARDS: Dashboard[] = [
-  {
-    href: '/eca-events',
-    title: 'ECA Trainings & Events Tracker',
-    blurb: 'Training & event delivery analytics across Kenya, Uganda, Tanzania & Ethiopia — an overview of reach, events and commodities; where & who (geography, gender & youth, beneficiaries); what was delivered (curriculum, facilitators, timing); farmer-level depth; and data quality & notes. Global filters (date, country, project, event type) apply across every page.',
-    chips: ['Overview', 'Where & Who', 'What Was Delivered', 'Farmer Depth', 'Data quality & notes'],
-  },
-  {
-    href: '/Seedlings_Dashboard.html',
-    external: true,
-    title: 'Climate Heroes / REAP Projects',
-    blurb: 'Tree-seedlings request & distribution analytics for the Climate Heroes / REAP projects — seedlings requested and distributed by species and district, coverage maps, distribution progress and beneficiary reach. Refreshed nightly from KoboToolbox.',
-    chips: ['Species', 'District coverage', 'Distribution', 'Beneficiaries', 'Trends'],
-  },
-  {
-    href: '/SAVE_KE_Seedlings_Dashboard.html',
-    external: true,
-    title: 'Seedlings Distribution — Kenya (SAVE KE)',
-    blurb: 'Tree-seedling distribution analytics for SAVE KE (Nyandarua, Kenya) — unique farmers reached and seedlings handed out by sub-county, ward and village, automatically detected distribution rounds with new vs returning farmers, species mix (fodder, fruit, indigenous/timber), farmer groups, GPS map of distribution events, and data-quality checks including probable duplicate entries. Summary filters by sub-county, ward and round. Refreshed nightly from KoboToolbox.',
-    chips: ['Summary', 'Reach & Geography', 'Distribution rounds', 'Species', 'Farmer groups', 'Operations', 'Data quality', 'Feedback'],
-  },
-  {
-    href: '/HC_Survival_UG_Dashboard.html',
-    external: true,
-    title: 'Tree Survival — Uganda (Harvesting Carbon)',
-    blurb: 'Tree-survival monitoring for the Harvesting Carbon agroforestry programme (Uganda). Per-visit (batch) survival & establishment rates, loss reasons, growth-perception vs actual survival, and a coffee sub-section — with a regression Insights tab. Refreshed nightly from KoboToolbox.',
-    chips: ['Survival by district', 'Species', 'Transport', 'Growth perception', 'Coffee', 'Insights'],
-  },
-  {
-    href: '/SAVE_KE_Survival_Dashboard.html',
-    external: true,
-    title: 'Tree Survival — Kenya (SAVE KE)',
-    blurb: 'Tree-survival monitoring for SAVE KE (Kenya, Nyandarua). Per-species survival on monitored farms across four monitoring waves, crop & environmental/economic outcomes, loss reasons, and a regression/risk Insights tab. Refreshed nightly from KoboToolbox.',
-    chips: ['Survival by species', 'Sub-county', 'Monitoring waves', 'Environment', 'Transport', 'Insights'],
-  },
-  {
-    href: '/Climate_Vulnerability_Dashboard.html',
-    external: true,
-    title: 'Climate Vulnerability Assessment',
-    blurb: 'Household climate-vulnerability analytics across Kenya & Uganda — exposure to 10 climate hazards (severity & frequency), impacts on production, harvest/storage, marketing & social wellbeing, sensitivity & adaptive-capacity indicators, and uptake of 10 adaptation-practice domains, with a vulnerability matrix flagging high-exposure / low-capacity households for targeting. Global filters apply across every tab. Refreshed nightly from KoboToolbox.',
-    chips: ['Coverage', 'Hazard exposure', 'Impacts', 'Sensitivity & adaptive capacity',
-      'Adaptation uptake', 'Vulnerability matrix'],
-  },
-  {
-    href: '/Cool_Farm_Dashboard.html',
-    external: true,
-    title: 'Cool Farm Crop Assessment',
-    blurb: 'Cool Farm Tool–style carbon-assessment analytics for coffee & cocoa smallholdings (Uganda) — residue management and burning (81.8% of farms burn end-of-life residue), farmer & farm profile, production and yield intensity, fertiliser nitrogen parsed from product labels, crop protection, agroforestry & shade cover, land-use transition matrix, transport tonne-km, a grid-aggregated geography view, and an Advanced Analytics tier of normalised ratios (yield per plant, nitrogen-use efficiency, residue circularity, agroforestry integration). Reports practice adoption and derived input intensities — deliberately not CO2e, as the form carries no emission factors. Refreshed nightly from KoboToolbox.',
-    chips: ['Residues & Burning', 'Farmer Profile', 'Crop & Farm', 'Production',
-      'Fertiliser & Nutrients', 'Crop Protection', 'Agroforestry', 'Land Use & Forest',
-      'Transport', 'Geography', 'Advanced Analytics', 'Data Quality'],
-  },
-  {
-    href: '/VSLA_Performance_Dashboard.html',
-    external: true,
-    title: 'VSLA Performance',
-    blurb: 'Village Savings & Loan Association performance analytics (Uganda) — membership growth, gender/youth/PWD inclusion, governance & leadership completeness, savings & loans with repayment/default benchmarking, social welfare fund adoption, institutional linkage, outcomes & sustainability, plus a theme-tagged qualitative insights panel (GBV/welfare handled aggregate-only). Global sub-county / parish / village / date filters apply across every tab. Refreshed nightly from KoboToolbox.',
-    chips: ['Overview', 'Membership & Inclusion', 'Governance', 'Savings & Loans',
-      'Social Welfare Fund', 'Institutional Linkage', 'Outcomes & Sustainability', 'Qualitative Insights', 'Geography'],
-  },
-]
 
 const MAX_VISIBLE_CHIPS = 3
 
@@ -93,11 +25,7 @@ function DashboardTile({ d }: { d: Dashboard }) {
   const visible = d.chips.slice(0, MAX_VISIBLE_CHIPS)
   const hidden = d.chips.slice(MAX_VISIBLE_CHIPS)
   return (
-    <a
-      href={d.href}
-      className={styles.tile}
-      {...(d.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-    >
+    <Link href={dashboardLink(d)} className={styles.tile}>
       {/* Heading level h2 matches the previous section headings. */}
       <h2 className={styles.title}>{d.title}</h2>
       {/* Full description kept in the DOM (line-clamped visually, tooltip + read in full by screen readers). */}
@@ -115,9 +43,9 @@ function DashboardTile({ d }: { d: Dashboard }) {
       {/* Complete tag list preserved for screen readers / future-proofing. */}
       <span className={styles.srOnly}>Topics: {d.chips.join(', ')}.</span>
       <span className={styles.cta}>
-        Open dashboard <span aria-hidden="true">{d.external ? '↗' : '→'}</span>
+        Open dashboard <span aria-hidden="true">→</span>
       </span>
-    </a>
+    </Link>
   )
 }
 
@@ -133,7 +61,7 @@ export default function OutputInsightsPage() {
 
       <div className={styles.grid}>
         {DASHBOARDS.map((d) => (
-          <DashboardTile key={d.href} d={d} />
+          <DashboardTile key={d.slug} d={d} />
         ))}
       </div>
     </div>

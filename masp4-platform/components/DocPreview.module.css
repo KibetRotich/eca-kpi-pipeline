@@ -1,0 +1,76 @@
+/* Report preview panel (components/DocPreview.tsx). Sits above the sticky header (z 600) and the
+   page modals (z 1000) — it can be opened from the Annual Reports "Update" form. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, .55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 2vw;
+}
+
+.panel {
+  background: #fff;
+  width: 100%;
+  max-width: 1200px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .35);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: .55rem .9rem;
+  border-bottom: 1px solid var(--border, #d0d0d0);
+}
+
+.title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: .85rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drive, .close {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  padding: .35rem .7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.drive { background: #1565c0; color: #fff; }
+.drive:hover { background: #0d47a1; text-decoration: none; }
+.close { background: #fff; color: #333; border: 1px solid var(--border, #d0d0d0); }
+.close:hover { border-color: #333; }
+
+.frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #f4f4f4;
+}
+
+.hint {
+  margin: 0;
+  padding: .35rem .9rem;
+  font-size: .62rem;
+  color: #666;
+  border-top: 1px solid var(--border, #d0d0d0);
+}

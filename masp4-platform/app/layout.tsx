@@ -3,6 +3,7 @@ import Script from 'next/script'
 import './globals.css'
 import { RoleProvider } from '@/lib/role-context'
 import AuthButton from '@/components/AuthButton'
+import MainNav from '@/components/MainNav'
 
 export const metadata: Metadata = {
   title: 'ECA PMEL Platform — Solidaridad ECA',
@@ -55,126 +56,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-        {/* ── Nav bar ─────────────────────────────────────────────────────── */}
-        <nav style={{
-          background: '#fff',
-          borderBottom: '1px solid #d4d4d4',
-          padding: '0 1.4rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0',
-          position: 'sticky',
-          top: 56,
-          zIndex: 500,
-          boxShadow: '0 1px 4px rgba(0,0,0,.07)',
-          height: 38,
-        }}>
-          {[
-            { href: '/targets',      label: "Projects' Progress"      },
-            { href: '/dashboard',    label: 'Network KPIs'            },
-            { href: '/instructions', label: 'Network KPI Measurement' },
-          ].map(({ href, label }) => (
-            <a key={href} href={href} className="nav-link">{label}</a>
-          ))}
-
-          {/* Granular Data — Output Insights hub of Kobo-form analytics (Climate Heroes / REAP, etc.) */}
-          <a
-            href="/output-insights"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              marginLeft: 'auto',
-              marginRight: '.5rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '.4rem',
-              background: '#2e7d32',
-              color: '#fff',
-              fontSize: '.62rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              padding: '0 .9rem',
-              height: 26,
-              borderRadius: 4,
-              textDecoration: 'none',
-              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
-            }}
-          >
-            Granular Data <span aria-hidden="true">↗</span>
-          </a>
-
-          {/* Evaluation Insights — key insights from studies carried out by projects (placeholder hub) */}
-          <a
-            href="/evaluation-insights"
-            style={{
-              marginRight: '.5rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '.4rem',
-              background: '#1565c0',
-              color: '#fff',
-              fontSize: '.62rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              padding: '0 .9rem',
-              height: 26,
-              borderRadius: 4,
-              textDecoration: 'none',
-              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
-            }}
-          >
-            Evaluation Insights
-          </a>
-
-          {/* Thematic Insights — cross-study syntheses by theme (replaced the MASP III Dashboard tab, Sprint 49) */}
-          <a
-            href="/thematic-insights"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '.4rem',
-              background: '#FFC800',
-              color: '#000',
-              fontSize: '.62rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              padding: '0 .9rem',
-              height: 26,
-              borderRadius: 4,
-              textDecoration: 'none',
-              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.12)',
-            }}
-          >
-            Thematic Insights
-          </a>
-
-          {/* Annual Reports — links to donor and country annual reports in the shared drive (Sprint 61) */}
-          <a
-            href="/annual-reports"
-            style={{
-              marginLeft: '.5rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '.4rem',
-              background: '#be123c',
-              color: '#fff',
-              fontSize: '.62rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              padding: '0 .9rem',
-              height: 26,
-              borderRadius: 4,
-              textDecoration: 'none',
-              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.18)',
-            }}
-          >
-            Annual Reports
-          </a>
-        </nav>
+        {/* ── Nav bar (same-window navigation, current section highlighted) ── */}
+        <MainNav />
 
         {/* ── Content ─────────────────────────────────────────────────────── */}
         <main style={{ padding: '.9rem 1.4rem 4rem' }}>

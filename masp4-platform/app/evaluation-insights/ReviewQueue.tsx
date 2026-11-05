@@ -8,8 +8,9 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useRole } from '@/lib/role-context'
-import { formatPeriod, type EvaluationReport } from '@/lib/evaluations'
+import { formatPeriod, parseDriveLink, type EvaluationReport } from '@/lib/evaluations'
 import SummaryView from './SummaryView'
+import PreviewLink from '@/components/DocPreview'
 import styles from './evaluation.module.css'
 
 const LABEL: Record<string, string> = {
@@ -72,9 +73,10 @@ export default function ReviewQueue() {
                 {r.evaluator ? ` · evaluated by ${r.evaluator}` : ''}
                 {' · '}{r.uploaded_by.includes('@') ? `uploaded by ${r.uploaded_by}` : r.uploaded_by}
                 {' on '}{new Date(r.uploaded_at).toLocaleDateString('en-GB')}
-                {' · '}<a href={r.source_url ?? `/api/evaluations/${r.id}/file`} target="_blank" rel="noopener noreferrer">
+                {' · '}<PreviewLink href={r.source_url ?? `/api/evaluations/${r.id}/file`} driveId={r.source_url ? parseDriveLink(r.source_url)?.id : null}
+                             fileType={r.file_type} title={r.title}>
                   {r.file_name}{r.source_url ? ' (Google Drive)' : ''}
-                </a>
+                </PreviewLink>
               </div>
               {r.review_note && <div className={styles.reviewNote}><strong>Check before publishing:</strong> {r.review_note}</div>}
               {r.status === 'failed' && r.error && <div className={styles.meta} style={{ color: 'var(--red)' }}>{r.error}</div>}

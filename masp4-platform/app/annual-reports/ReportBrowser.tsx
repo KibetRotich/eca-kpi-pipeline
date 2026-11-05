@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react'
 import { useRole } from '@/lib/role-context'
 import { REPORT_TYPE_LABEL, reportOpenUrl, type AnnualReport } from '@/lib/annual-reports'
+import PreviewLink from '@/components/DocPreview'
 import styles from './annual.module.css'
 
 const FILE_LABEL = { pdf: 'PDF', docx: 'Word', gdoc: 'Google Doc' } as const
@@ -93,7 +94,7 @@ export default function ReportBrowser({ reports }: { reports: AnnualReport[] }) 
             {list.map(r => (
               <li key={r.id} className={styles.item}>
                 <div className={styles.itemMain}>
-                  <a href={reportOpenUrl(r)} target="_blank" rel="noopener noreferrer">{r.title} ↗</a>
+                  <PreviewLink href={reportOpenUrl(r)} driveId={r.drive_file_id} fileType={r.file_type} title={r.title}>{r.title}</PreviewLink>
                   <div className={styles.meta}>
                     <span className={`${styles.badge} ${r.report_type === 'donor' ? styles.donor : styles.country}`}>
                       {REPORT_TYPE_LABEL[r.report_type]}

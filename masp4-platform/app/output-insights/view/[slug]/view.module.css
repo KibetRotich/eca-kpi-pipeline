@@ -1,0 +1,55 @@
+/* Granular Data dashboard viewer — a slim bar above the embedded dashboard. */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin-bottom: .5rem;
+}
+
+.back {
+  flex-shrink: 0;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--green, #2e7d32);
+  text-decoration: none;
+}
+.back:hover { text-decoration: underline; }
+
+.title {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.full {
+  margin-left: auto;
+  flex-shrink: 0;
+  font: inherit;
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  background: #fff;
+  color: #333;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 4px;
+  padding: .3rem .7rem;
+  cursor: pointer;
+}
+.full:hover { border-color: var(--green, #2e7d32); color: var(--green, #2e7d32); }
+
+/* Fills the window below the sticky header (56px) + nav (38px) + bar and page padding. */
+.frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 150px);
+  min-height: 560px;
+  border: 1px solid var(--border, #d0d0d0);
+  background: #fff;
+}

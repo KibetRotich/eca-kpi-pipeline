@@ -16,6 +16,7 @@ import {
   STATUS_LABEL, TRACKER_STATUSES, canEditRow, deadlineState, formatResponsible, nextDeadline,
   type DeadlineKey, type LinkedReport, type ReportCycle, type TrackerProject, type TrackerRow, type TrackerStatus,
 } from '@/lib/report-tracker'
+import PreviewLink from '@/components/DocPreview'
 import styles from './annual.module.css'
 import StaffPicker, { type Person } from './StaffPicker'
 
@@ -157,7 +158,7 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
                     </td>
                     <td>
                       {r.annual_report_ids.map(id => byId.get(id)).filter(Boolean).map(rep => (
-                        <a key={rep!.id} href={reportOpenUrl(rep!)} target="_blank" rel="noopener noreferrer" className={styles.fileLink}>{rep!.title} ↗</a>
+                        <PreviewLink key={rep!.id} href={reportOpenUrl(rep!)} driveId={rep!.drive_file_id} fileType={rep!.file_type} title={rep!.title} className={styles.fileLink}>{rep!.title}</PreviewLink>
                       ))}
                     </td>
                     <td className={styles.rowActions}>
@@ -265,7 +266,7 @@ function UpdateModal({ row, cycle, linked, initialStatus, onClose, onSaved }: {
             <span>Final report{linked.length > 1 ? 's' : ''} filed</span>
             {linked.map(l => (
               <div key={l.id} className={styles.linkedRow}>
-                <a href={reportOpenUrl(l)} target="_blank" rel="noopener noreferrer">{l.title} ↗</a>
+                <PreviewLink href={reportOpenUrl(l)} driveId={l.drive_file_id} fileType={l.file_type} title={l.title}>{l.title}</PreviewLink>
                 <button type="button" className={styles.linkBtn} disabled={busy} onClick={() => unlink(l.id)}>Unlink</button>
               </div>
             ))}
