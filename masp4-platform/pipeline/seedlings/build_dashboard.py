@@ -694,9 +694,20 @@ ge = oth_enum.groupby("enum").agg(n=("_id", "size"), others=("is_other", "sum"))
 ge = ge[ge["n"] >= 30]
 ge["other_rate"] = (ge["others"] / ge["n"] * 100).round(1)
 ge = ge.sort_values("other_rate", ascending=False).head(15)
+# The page is committed to a PUBLIC repo, so enumerators appear as codes, never names.
+# ENU-001 = the enumerator with the earliest submission, and so on; past submissions don't
+# change, so a code stays with the same person from night to night. M&E can look a code up
+# by running this script with --enumerator-codes (prints locally; names stay out of the page).
+def enumerator_codes(df):
+    first = (df[df["enum"].notna()].groupby("enum")["start_dt"].min()
+             .reset_index().sort_values(["start_dt", "enum"], na_position="last"))
+    return {e: f"ENU-{i:03d}" for i, e in enumerate(first["enum"], start=1)}
+ENUM_CODE = enumerator_codes(m)
 add(s, {"type": "table", "title": "Enumerators with high 'other' no-ID-reason rate (training flag)",
-        "columns": ["enumerator", "submissions", "'other' count", "other rate %"],
-        "rows": [[i, int(r.n), int(r.others), r.other_rate] for i, r in ge.iterrows()]})
+        "columns": ["enumerator code", "submissions", "'other' count", "other rate %"],
+        "rows": [[ENUM_CODE[i], int(r.n), int(r.others), r.other_rate] for i, r in ge.iterrows()],
+        "note": "Enumerators are shown as codes (ENU-001 = earliest first submission). To match a code to a "
+                "name, run pipeline/seedlings/build_dashboard.py --enumerator-codes locally."})
 
 big = it[it["qty"] > 1000].sort_values("qty", ascending=False)
 add(s, {"type": "table", "title": "Outlier single-species quantities (fraud/error review)",
@@ -807,6 +818,11 @@ GLOBAL = {
     "excluded": int(it["implausible"].sum()),
     "served": n_srv, "fulfil_pct": round(FULFIL, 1), "delivered": DELIVERED,
 }
+
+if "--enumerator-codes" in sys.argv:          # local lookup for M&E; nothing is written
+    for e, c in sorted(ENUM_CODE.items(), key=lambda kv: kv[1]):
+        print(f"{c}	{e}")
+    sys.exit(0)
 
 DATA = to_native({"sections": SECTIONS, "exec": EXEC, "global": GLOBAL})
 payload = json.dumps(DATA, separators=(",", ":"))
