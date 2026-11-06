@@ -1,0 +1,111 @@
+name: HC Uganda Seedlings Distribution Dashboard Refresh
+
+# Keeps masp4-platform/public/HC_Seedlings_UG_Dashboard.html (Granular Data tile "Seedlings
+# Distribution – Uganda (Harvesting Carbon)") in sync with the Kobo form
+# "Harvesting Carbon Project - Agroforestry Seedling Distribution" (afH6NHNNZmVHQfCnuxGx3p).
+# Pipeline (Supabase is the source of truth, Sprint 68):
+#   Kobo API → transform → Supabase hc_dist_* → dashboard built FROM Supabase → commit → Vercel deploy.
+# Modelled on save_seedlings.yml.
+#
+# Triggers: nightly 03:40 UTC (06:40 EAT), on push to the pipeline files, and manually.
+# Secrets: KOBO_TOKEN, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (same as the other
+# Kobo workflows). Until all three are set the job skips cleanly instead of failing.
+on:
+  schedule:
+    - cron: "40 3 * * *"
+  push:
+    paths:
+      - "masp4-platform/pipeline/hc_seedlings/**"
+      - ".github/workflows/hc_seedlings.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: hc-seedlings-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Fetch Kobo → Supabase → rebuild dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Check required secrets
+        id: check
+        run: |
+          if [ -n "$KOBO_TOKEN" ] && [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::HC seedlings refresh skipped — KOBO_TOKEN / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not all set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: masp4-platform/pipeline/hc_seedlings/requirements.txt
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: pip install -r pipeline/hc_seedlings/requirements.txt
+
+      # 1. All submissions, farmer names and phones stripped → hc_dist_raw.json (gitignored)
+      - name: Fetch Kobo submissions
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/hc_seedlings/fetch_hc_seedlings.py
+
+      # 2. Clean + derive month / first-receipt / duplicate / quality flags → clean_entries.json
+      - name: Transform
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/hc_seedlings/transform.py
+
+      # 3. Upsert into Supabase hc_dist_* and prune submissions deleted in Kobo
+      - name: Load Supabase
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/hc_seedlings/load_supabase.py
+
+      # 4. Rebuild the dashboard into masp4-platform/public/ reading FROM Supabase
+      - name: Rebuild dashboard
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: python pipeline/hc_seedlings/build_dashboard.py
+
+      # 5. Commit only when the page changed (quiet nights → no deploy). Rebase-and-retry on push.
+      - name: Commit updated dashboard
+        if: steps.check.outputs.ready == 'true'
+        working-directory: masp4-platform
+        run: |
+          if git diff --quiet -- public/HC_Seedlings_UG_Dashboard.html; then
+            echo "No dashboard changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/HC_Seedlings_UG_Dashboard.html
+          git commit -m "chore: HC Uganda seedlings dashboard refresh $(date -u '+%Y-%m-%d %H:%M UTC')"
+          n=0
+          until git push; do
+            n=$((n+1))
+            if [ "$n" -ge 5 ]; then echo "::error::push failed after $n attempts"; exit 1; fi
+            echo "push rejected (main moved); rebasing — attempt $n"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" \
+              || { echo "::error::rebase conflict on generated dashboard"; git rebase --abort; exit 1; }
+          done

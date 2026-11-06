@@ -42,6 +42,13 @@ export const DASHBOARDS: Dashboard[] = [
     chips: ['Summary', 'Reach & Geography', 'Distribution rounds', 'Species', 'Farmer groups', 'Operations', 'Data quality', 'Feedback'],
   },
   {
+    slug: 'hc-seedlings-uganda',
+    file: '/HC_Seedlings_UG_Dashboard.html',
+    title: 'Seedlings Distribution — Uganda (Harvesting Carbon)',
+    blurb: 'Agroforestry seedling distribution for the Harvesting Carbon project (Uganda) — farmers reached and seedlings handed out by district, sub-county and village, distribution months with new vs returning farmers, the four-species mix (Albizia, Ficus mucuso, Ficus natalensis, Calliandra), sex and age group of farmers reached, field operations and data-quality checks including probable duplicate entries. Summary filters by district, sub-county and month. Refreshed nightly from KoboToolbox.',
+    chips: ['Summary', 'Reach & Geography', 'Distribution months', 'Species', 'Who was reached', 'Operations', 'Data quality'],
+  },
+  {
     slug: 'tree-survival-uganda',
     file: '/HC_Survival_UG_Dashboard.html',
     title: 'Tree Survival — Uganda (Harvesting Carbon)',

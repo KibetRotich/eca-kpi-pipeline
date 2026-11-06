@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Seedlings Distribution — Uganda (Harvesting Carbon)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--g:#FFC800;--g2:#e6b400;--t:#2a2a2a;--b:#1565c0;--accent:#e65100;--bg:#e6e6e6;--card:#fff;--ink:#222;--mut:#6b6b6b;--bd:#d8d8d8;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Open Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#FFC800;color:#000;padding:14px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20;border-bottom:3px solid #2a2a2a}
+  header h1{font-size:18px;margin:0;font-weight:800}
+  header .sub{font-size:12px;color:#000;opacity:.7}
+  .wrap{display:flex;min-height:calc(100vh - 50px)}
+  nav{width:230px;background:#fff;border-right:1px solid var(--bd);padding:10px 0;position:sticky;top:50px;height:calc(100vh - 50px);overflow:auto;flex:none}
+  nav a{display:block;padding:10px 18px;color:var(--ink);text-decoration:none;font-size:13px;border-left:3px solid transparent;cursor:pointer}
+  nav a:hover{background:#fffce8}
+  nav a.active{border-left-color:#FFC800;background:#fffce8;font-weight:700;color:#000}
+  main{flex:1;padding:20px 26px;max-width:1500px}
+  .sec-title{font-size:20px;font-weight:800;color:var(--accent);margin:6px 0 2px}
+  .sec-desc{color:var(--mut);font-size:13px;margin-bottom:16px;max-width:900px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .block{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .block.full{grid-column:1/-1}
+  .block h3{margin:0 0 10px;font-size:14px;font-weight:650}
+  .note{color:var(--mut);font-size:11.5px;margin-top:8px;line-height:1.5}
+  .chartbox{position:relative;height:300px}
+  .chartbox.tall{height:560px}
+  .kpis{display:flex;flex-wrap:wrap;gap:12px}
+  .kpi{flex:1;min-width:150px;background:#faf8f0;border:1px solid var(--bd);border-top:3px solid #FFC800;border-radius:8px;padding:12px 14px}
+  .kpi .v{font-size:22px;font-weight:800;color:var(--accent)}
+  .kpi .l{font-size:11.5px;color:var(--mut);margin-top:3px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left}
+  th{background:#f5f5f5;font-weight:650;position:sticky;top:0}
+  .tablebox{max-height:420px;overflow:auto}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  img.map{width:100%;border-radius:8px;border:1px solid var(--bd)}
+  .hm{overflow:auto}
+  .hm td{text-align:center;font-size:11px;color:#222;border:1px solid #fff;min-width:48px}
+  .hm th{font-size:11px}
+  .filters{display:flex;flex-wrap:wrap;gap:14px;align-items:end;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .filters label{font-size:11px;color:var(--mut);display:block;margin-bottom:4px}
+  .filters select{padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font-size:13px;min-width:140px}
+  .filters button{padding:7px 14px;border:0;background:#FFC800;color:#000;font-weight:600;border-radius:6px;cursor:pointer;font-size:13px}
+  .filters button:hover{background:#e6b400}
+  .rag-g{background:#c8e6c9}.rag-a{background:#fff3cd}.rag-r{background:#f8d7da}
+  .footer{color:var(--mut);font-size:11px;margin-top:30px;padding-top:14px;border-top:1px solid var(--bd)}
+  .pill{display:inline-block;background:#fffce8;border:1px solid var(--bd);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px}
+  .mapbox{height:540px;border-radius:8px;border:1px solid var(--bd);overflow:hidden;background:#eef3f5}
+  .leaflet-container{background:#eef3f5;font-family:inherit;font-size:12px}
+  .mapctl{margin-bottom:8px;font-size:12px}
+  .mapctl select{padding:5px 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px}
+  .legend{background:#fff;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:11px;line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .legend i{display:inline-block;width:14px;height:12px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.1)}
+</style>
+<!-- Vercel Web Analytics (anonymous page views) -->
+<script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
+<script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+<header>
+  <h1>🌳 Seedlings Distribution — Uganda (Harvesting Carbon)</h1>
+  <span class="sub" id="hdr-sub"></span>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script>
+const DATA = {"sections":[{"id":"s1","title":"Reach & Geography","desc":"Where seedlings went: district, sub-county and village.","blocks":[{"type":"table","title":"Reach by sub-county","columns":["district","sub-county","farmer entries","unique farmers","seedlings","villages","seedlings / farmer"],"rows":[["Sheema","Kagango",137,128,4377,17,34.2],["Rwampara","Kibingo",20,20,720,2,36.0],["Sheema","Karuhama",1,1,20,1,20.0],["Sheema","Masheruka",1,1,5,1,5.0]],"note":"Sub-county and village are typed by enumerators; spelling variants may split a place."},{"type":"bar","title":"Unique farmers reached by district","labels":["Sheema","Rwampara"],"values":[130,20],"horizontal":false,"axisLabel":"farmers","note":"","tall":false},{"type":"bar","title":"Seedlings distributed by district","labels":["Sheema","Rwampara"],"values":[4402,720],"horizontal":false,"axisLabel":"seedlings","note":"","tall":false},{"type":"bar","title":"Villages by farmers reached (19 villages)","labels":["Nyamiko","Nyakabungo","Oburama","Butagatsi","Kagongi","Rwembogo","Nyakizinga","Nyampikye","Katwe","Rwembirizi","Muyenje","Karuhama","Bugarama","Kyarino","Kiteete","Biiti","Kyagaju","Ekihena","Bwambari"],"values":[19,19,16,15,15,13,11,9,9,8,6,4,2,2,2,1,1,1,1],"horizontal":true,"axisLabel":"farmers","note":"","tall":true},{"type":"heatmap","title":"Sub-county × species — seedlings distributed","ylabels":["Kagango","Karuhama","Kibingo","Masheruka"],"xlabels":["Albizia coriaria (Mugavu / Omusisa)","Ficus mucuso (Mukunyu / Omukunyu)","Ficus natalensis (Mutuuba / Omutooma)","Calliandra"],"matrix":[[1769,1725,587,296],[10,10,0,0],[260,245,125,90],[2,3,0,0]]}]},{"id":"s2","title":"Distribution Months","desc":"Distribution month = the month of the distribution date. A farmer is “new” the first time their farmer code receives seedlings and “returning” in any later month.","blocks":[{"type":"table","title":"Distribution months","columns":["month","first day","last day","distribution days","farmer entries","unique farmers","new farmers","seedlings","seedlings / farmer"],"rows":[["Mar 2026","2026-03-25","2026-03-31",3,89,89,89,2903,32.6],["May 2026","2026-05-04","2026-05-07",3,56,55,52,1889,34.3],["Jul 2026","2026-07-05","2026-07-30",4,14,14,9,330,23.6]]},{"type":"line","title":"Cumulative seedlings distributed","labels":["2026-03-25","2026-03-30","2026-03-31","2026-05-04","2026-05-05","2026-05-07","2026-07-05","2026-07-07","2026-07-22","2026-07-30"],"series":[{"label":"cumulative seedlings","data":[720,2858,2903,3634,4292,4792,4812,4942,5072,5122]}]},{"type":"stacked","title":"New vs returning farmers per month","labels":["Mar 2026","May 2026","Jul 2026"],"series":[{"label":"new","data":[89,52,9]},{"label":"returning","data":[0,3,5]}],"note":"Returning = the farmer code already received seedlings in an earlier month."},{"type":"bar","title":"Farmers by number of months they received seedlings in","labels":["1 month","2 months"],"values":[142,8],"horizontal":false,"axisLabel":"farmers","note":"","tall":false},{"type":"bar","title":"Farmers served per distribution day","labels":["2026-03-25","2026-03-30","2026-03-31","2026-05-04","2026-05-05","2026-05-07","2026-07-05","2026-07-07","2026-07-22","2026-07-30"],"values":[20,68,1,22,19,15,1,2,10,1],"horizontal":false,"axisLabel":"farmer entries","note":"","tall":false}]},{"id":"s3","title":"Species","desc":"Which of the four agroforestry species were distributed, and how the mix varies.","blocks":[{"type":"bar","title":"Seedlings by species","labels":["Albizia coriaria (Mugavu / Omusisa)","Ficus mucuso (Mukunyu / Omukunyu)","Ficus natalensis (Mutuuba / Omutooma)","Calliandra"],"values":[2041,1983,712,386],"horizontal":true,"axisLabel":"seedlings","note":"","tall":false},{"type":"kpi","title":"Share of seedlings","cards":[{"label":"Albizia coriaria (Mugavu / Omusisa)","value":"40% (2,041)"},{"label":"Ficus mucuso (Mukunyu / Omukunyu)","value":"39% (1,983)"},{"label":"Ficus natalensis (Mutuuba / Omutooma)","value":"14% (712)"},{"label":"Calliandra","value":"8% (386)"}]},{"type":"stacked","title":"Species mix by month","labels":["Mar 2026","May 2026","Jul 2026"],"series":[{"label":"Albizia coriaria (Mugavu / Omusisa)","data":[907,959,175]},{"label":"Ficus mucuso (Mukunyu / Omukunyu)","data":[908,920,155]},{"label":"Ficus natalensis (Mutuuba / Omutooma)","data":[702,10,0]},{"label":"Calliandra","data":[386,0,0]}],"note":""},{"type":"stacked","title":"Species mix by district","labels":["Rwampara","Sheema"],"series":[{"label":"Albizia coriaria (Mugavu / Omusisa)","data":[260,1781]},{"label":"Ficus mucuso (Mukunyu / Omukunyu)","data":[245,1738]},{"label":"Ficus natalensis (Mutuuba / Omutooma)","data":[125,587]},{"label":"Calliandra","data":[90,296]}],"note":""},{"type":"bar","title":"Farmer entries receiving each species","labels":["Albizia coriaria (Mugavu / Omusisa)","Ficus mucuso (Mukunyu / Omukunyu)","Ficus natalensis (Mutuuba / Omutooma)","Calliandra"],"values":[150,154,72,34],"horizontal":true,"axisLabel":"entries","note":"","tall":false},{"type":"bar","title":"Species per farmer entry","labels":["1 species","2 species","3 species","4 species"],"values":[9,78,43,29],"horizontal":false,"axisLabel":"entries","note":"","tall":false}]},{"id":"s4","title":"Who Was Reached","desc":"Sex and age group of farmers who received seedlings, as recorded on the form (each farmer counted once).","blocks":[{"type":"kpi","title":"Farmers reached","cards":[{"label":"Unique farmers","value":"150"},{"label":"Women","value":"26%"},{"label":"Youth (18–35)","value":"18%"},{"label":"Young women","value":"5"}]},{"type":"bar","title":"Farmers by sex","labels":["Men","Women"],"values":[111,39],"horizontal":false,"axisLabel":"farmers","note":"","tall":false},{"type":"bar","title":"Farmers by age group","labels":["Youth (18–35)","Adults (35–65)","Elderly (65+)"],"values":[27,107,16],"horizontal":false,"axisLabel":"farmers","note":"","tall":false},{"type":"stacked","title":"Age group by sex","labels":["Youth (18–35)","Adults (35–65)","Elderly (65+)"],"series":[{"label":"Men","data":[22,75,14]},{"label":"Women","data":[5,32,2]}],"note":""},{"type":"bar","title":"Average seedlings per farmer, by sex","labels":["Men","Women"],"values":[35.8,29.5],"horizontal":false,"axisLabel":"seedlings","note":"","tall":false},{"type":"bar","title":"Average seedlings per farmer, by age group","labels":["Youth (18–35)","Adults (35–65)","Elderly (65+)"],"values":[34.2,34.0,34.8],"horizontal":false,"axisLabel":"seedlings","note":"","tall":false}]},{"id":"s5","title":"Operations","desc":"Workload and timing. Staff and enumerators are shown as codes, not names (S01 / E01 = the first to submit, and so on — codes stay the same from day to day).","blocks":[{"type":"bar","title":"Farmer entries per staff member in charge","labels":["S05","S02","S01","S04","S03","S06"],"values":[60,48,38,11,1,1],"horizontal":false,"axisLabel":"entries","note":"","tall":false},{"type":"bar","title":"Farmer entries per enumerator","labels":["E01","E02"],"values":[100,59],"horizontal":false,"axisLabel":"entries","note":"","tall":false},{"type":"bar","title":"Form open time (start → end)","labels":["<2 min","2–5","5–15","15–60","1–24 h",">1 day"],"values":[76,78,4,0,1,0],"horizontal":false,"axisLabel":"entries","note":"Long open times usually mean the form was saved and finalised later.","tall":false},{"type":"bar","title":"Time from distribution to upload","labels":["same day","next day","2–7 days","8–30 days",">30 days"],"values":[11,0,0,3,145],"horizontal":false,"axisLabel":"entries","note":"","tall":false}]},{"id":"s6","title":"Data Quality","desc":"Checks that protect the headline numbers. Totals elsewhere use every recorded entry.","blocks":[{"type":"kpi","title":"Data-quality checks","cards":[{"label":"Probable duplicate entries (same farmer code within 7 days)","value":"1"},{"label":"Seedlings in probable duplicates","value":"20"},{"label":"Farmer codes recorded more than once","value":"9"},{"label":"Farmer codes not in the AA-99-99 format","value":"1"},{"label":"Month picked ≠ month of the date","value":"4"},{"label":"Species ticked ≠ species counted","value":"0"},{"label":"Entries with more than 100 seedlings","value":"1"},{"label":"Entries with no seedlings","value":"0"}]},{"type":"bar","title":"Seedlings per farmer entry","labels":["1–10","11–20","21–30","31–50","51–100",">100"],"values":[24,55,33,25,21,1],"horizontal":false,"axisLabel":"entries","note":"median 22 seedlings; largest 370. Entries above 100 are worth checking with the field team (e.g. a group or institution).","tall":false},{"type":"table","title":"Month picked vs distribution date (mismatches)","columns":["month picked","month of the date","entries"],"rows":[["March","Jul 2026",1],["May","Jul 2026",3]],"note":"The dashboard groups by the distribution date; the month picked in the form is only checked against it."},{"type":"note","title":"Form versions","text":"Data spans <b>1</b> deployed form version(s). Fields are matched by name, so version changes do not break the pipeline."}]}],"exec":{"records":[["Rwampara","Kibingo","Mar 2026","2026-03",0,55,0,1,"female","adult",20,20,5,10],["Rwampara","Kibingo","Mar 2026","2026-03",1,80,0,1,"male","adult",30,30,20,0],["Rwampara","Kibingo","Mar 2026","2026-03",2,40,0,1,"male","adult",10,10,10,10],["Rwampara","Kibingo","Mar 2026","2026-03",3,40,0,1,"male","adult",20,10,10,0],["Rwampara","Kibingo","Mar 2026","2026-03",4,30,0,1,"female","adult",10,5,5,10],["Rwampara","Kibingo","Mar 2026","2026-03",5,45,0,1,"male","elderly",20,20,5,0],["Rwampara","Kibingo","Mar 2026","2026-03",6,35,0,1,"male","adult",10,10,5,10],["Rwampara","Kibingo","Mar 2026","2026-03",7,30,0,1,"female","adult",10,5,5,10],["Rwampara","Kibingo","Mar 2026","2026-03",8,18,0,1,"female","adult",5,5,3,5],["Rwampara","Kibingo","Mar 2026","2026-03",9,20,0,1,"female","youth",5,7,3,5],["Rwampara","Kibingo","Mar 2026","2026-03",10,35,0,1,"female","adult",10,10,5,10],["Rwampara","Kibingo","Mar 2026","2026-03",11,80,0,1,"male","elderly",30,30,0,20],["Rwampara","Kibingo","Mar 2026","2026-03",12,10,0,1,"female","adult",5,5,0,0],["Rwampara","Kibingo","Mar 2026","2026-03",13,30,0,1,"female","elderly",10,10,10,0],["Rwampara","Kibingo","Mar 2026","2026-03",14,18,0,1,"female","adult",10,3,5,0],["Rwampara","Kibingo","Mar 2026","2026-03",15,55,0,1,"female","adult",20,30,5,0],["Rwampara","Kibingo","Mar 2026","2026-03",16,14,0,1,"female","adult",5,5,4,0],["Rwampara","Kibingo","Mar 2026","2026-03",17,10,0,1,"male","adult",5,5,0,0],["Rwampara","Kibingo","Mar 2026","2026-03",18,60,0,1,"female","adult",20,20,20,0],["Rwampara","Kibingo","Mar 2026","2026-03",19,15,0,1,"female","adult",5,5,5,0],["Sheema","Kagango","Mar 2026","2026-03",20,20,0,1,"male","adult",10,10,0,0],["Sheema","Kagango","Mar 2026","2026-03",21,12,0,1,"male","adult",6,4,2,0],["Sheema","Kagango","Mar 2026","2026-03",22,6,0,1,"male","adult",0,6,0,0],["Sheema","Kagango","Mar 2026","2026-03",23,12,0,1,"male","adult",4,4,4,0],["Sheema","Kagango","Mar 2026","2026-03",24,12,0,1,"male","adult",7,5,0,0],["Sheema","Kagango","Mar 2026","2026-03",25,9,0,1,"male","youth",4,3,2,0],["Sheema","Kagango","Mar 2026","2026-03",26,18,0,1,"male","adult",7,7,4,0],["Sheema","Kagango","Mar 2026","2026-03",27,22,0,1,"male","adult",10,10,2,0],["Sheema","Kagango","Mar 2026","2026-03",28,15,0,1,"male","adult",5,5,5,0],["Sheema","Kagango","Mar 2026","2026-03",29,4,0,1,"female","adult",2,2,0,0],["Sheema","Kagango","Mar 2026","2026-03",30,20,0,1,"male","adult",10,10,0,0],["Sheema","Kagango","Mar 2026","2026-03",31,30,0,1,"male","adult",10,10,10,0],["Sheema","Kagango","Mar 2026","2026-03",32,30,0,1,"male","adult",0,0,30,0],["Sheema","Kagango","Mar 2026","2026-03",33,14,0,1,"male","youth",5,5,4,0],["Sheema","Kagango","Mar 2026","2026-03",34,17,0,1,"female","adult",10,5,2,0],["Sheema","Kagango","Mar 2026","2026-03",35,25,0,1,"male","adult",5,10,5,5],["Sheema","Kagango","Mar 2026","2026-03",36,46,0,1,"male","adult",10,10,20,6],["Sheema","Kagango","Mar 2026","2026-03",37,15,0,1,"male","adult",0,0,0,15],["Sheema","Kagango","Mar 2026","2026-03",38,17,0,1,"male","adult",5,5,2,5],["Sheema","Kagango","Mar 2026","2026-03",39,20,0,1,"male","adult",5,5,5,5],["Sheema","Kagango","Mar 2026","2026-03",40,24,0,1,"male","adult",4,6,4,10],["Sheema","Kagango","Mar 2026","2026-03",41,15,0,1,"male","youth",3,5,3,4],["Sheema","Kagango","Mar 2026","2026-03",42,17,0,1,"female","adult",4,6,3,4],["Sheema","Kagango","Mar 2026","2026-03",43,70,0,1,"female","youth",20,30,10,10],["Sheema","Kagango","Mar 2026","2026-03",44,40,0,1,"male","adult",10,10,10,10],["Sheema","Kagango","Mar 2026","2026-03",45,370,0,1,"male","adult",100,100,70,100],["Sheema","Kagango","Mar 2026","2026-03",46,50,0,1,"male","adult",20,10,10,10],["Sheema","Kagango","Mar 2026","2026-03",47,50,0,1,"male","adult",20,10,10,10],["Sheema","Kagango","Mar 2026","2026-03",48,50,0,1,"male","adult",20,10,10,10],["Sheema","Kagango","Mar 2026","2026-03",49,60,0,1,"male","adult",20,20,10,10],["Sheema","Kagango","Mar 2026","2026-03",50,20,0,1,"female","adult",5,5,0,10],["Sheema","Kagango","Mar 2026","2026-03",51,50,0,1,"female","adult",15,15,10,10],["Sheema","Kagango","Mar 2026","2026-03",52,20,0,1,"male","adult",5,10,5,0],["Sheema","Kagango","Mar 2026","2026-03",53,22,0,1,"male","elderly",11,5,6,0],["Sheema","Kagango","Mar 2026","2026-03",54,13,0,1,"male","adult",5,6,2,0],["Sheema","Kagango","Mar 2026","2026-03",55,30,0,1,"male","adult",10,10,10,0],["Sheema","Kagango","Mar 2026","2026-03",56,18,0,1,"female","adult",5,5,8,0],["Sheema","Kagango","Mar 2026","2026-03",57,10,0,1,"male","adult",5,5,0,0],["Sheema","Kagango","Mar 2026","2026-03",58,25,0,1,"male","adult",15,5,5,0],["Sheema","Kagango","Mar 2026","2026-03",59,15,0,1,"male","adult",5,5,5,0],["Sheema","Kagango","Mar 2026","2026-03",60,10,0,1,"male","adult",4,6,0,0],["Sheema","Kagango","Mar 2026","2026-03",61,25,0,1,"male","adult",10,10,5,0],["Sheema","Kagango","Mar 2026","2026-03",62,25,0,1,"male","adult",10,10,5,0],["Sheema","Kagango","Mar 2026","2026-03",63,20,0,1,"male","youth",10,5,5,0],["Sheema","Kagango","Mar 2026","2026-03",64,15,0,1,"male","adult",10,5,0,0],["Sheema","Kagango","Mar 2026","2026-03",65,13,0,1,"female","adult",5,5,3,0],["Sheema","Kagango","Mar 2026","2026-03",66,30,0,1,"male","adult",15,10,5,0],["Sheema","Kagango","Mar 2026","2026-03",67,11,0,1,"female","adult",5,5,1,0],["Sheema","Kagango","Mar 2026","2026-03",68,16,0,1,"male","adult",5,10,1,0],["Sheema","Kagango","Mar 2026","2026-03",69,20,0,1,"male","youth",12,6,2,0],["Sheema","Kagango","Mar 2026","2026-03",70,25,0,1,"male","youth",10,15,0,0],["Sheema","Kagango","Mar 2026","2026-03",71,10,0,1,"male","youth",6,4,0,0],["Sheema","Kagango","Mar 2026","2026-03",72,20,0,1,"female","adult",5,5,10,0],["Sheema","Kagango","Mar 2026","2026-03",73,24,0,1,"male","adult",6,6,6,6],["Sheema","Kagango","Mar 2026","2026-03",74,40,0,1,"male","adult",10,10,10,10],["Sheema","Kagango","Mar 2026","2026-03",75,50,0,1,"male","youth",20,20,10,0],["Sheema","Kagango","Mar 2026","2026-03",76,68,0,1,"male","youth",10,20,30,8],["Sheema","Kagango","Mar 2026","2026-03",77,40,0,1,"male","adult",10,10,10,10],["Sheema","Kagango","Mar 2026","2026-03",78,40,0,1,"male","adult",10,10,20,0],["Sheema","Kagango","Mar 2026","2026-03",79,100,0,1,"male","adult",0,0,100,0],["Sheema","Kagango","Mar 2026","2026-03",80,14,0,1,"female","youth",0,5,6,3],["Sheema","Kagango","Mar 2026","2026-03",81,5,0,1,"male","adult",0,5,0,0],["Sheema","Kagango","Mar 2026","2026-03",82,31,0,1,"male","youth",10,10,6,5],["Sheema","Kagango","Mar 2026","2026-03",83,14,0,1,"male","youth",7,7,0,0],["Sheema","Kagango","Mar 2026","2026-03",84,24,0,1,"male","elderly",10,10,4,0],["Sheema","Kagango","Mar 2026","2026-03",85,25,0,1,"male","elderly",0,5,10,10],["Sheema","Kagango","Mar 2026","2026-03",86,60,0,1,"female","adult",10,20,20,10],["Sheema","Kagango","Mar 2026","2026-03",87,30,0,1,"male","youth",10,20,0,0],["Sheema","Kagango","Mar 2026","2026-03",88,45,0,1,"male","youth",10,15,20,0],["Sheema","Kagango","May 2026","2026-05",89,10,0,1,"male","adult",10,0,0,0],["Sheema","Kagango","May 2026","2026-05",29,10,0,0,"female","adult",5,5,0,0],["Sheema","Kagango","May 2026","2026-05",90,30,0,1,"male","adult",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",91,30,0,1,"male","adult",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",92,40,0,1,"male","adult",20,20,0,0],["Sheema","Kagango","May 2026","2026-05",93,40,0,1,"female","youth",20,20,0,0],["Sheema","Kagango","May 2026","2026-05",94,20,0,1,"male","adult",10,10,0,0],["Sheema","Kagango","May 2026","2026-05",95,7,0,1,"female","adult",2,5,0,0],["Sheema","Kagango","May 2026","2026-05",96,42,0,1,"female","adult",21,21,0,0],["Sheema","Kagango","May 2026","2026-05",97,30,0,1,"male","elderly",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",98,100,0,1,"male","youth",50,50,0,0],["Sheema","Kagango","May 2026","2026-05",99,38,0,1,"female","adult",14,24,0,0],["Sheema","Kagango","May 2026","2026-05",100,18,0,1,"male","elderly",12,6,0,0],["Sheema","Kagango","May 2026","2026-05",101,5,0,1,"female","adult",3,2,0,0],["Sheema","Kagango","May 2026","2026-05",102,30,0,1,"male","adult",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",103,10,0,1,"male","elderly",0,10,0,0],["Sheema","Kagango","May 2026","2026-05",104,15,0,1,"male","adult",5,10,0,0],["Sheema","Kagango","May 2026","2026-05",105,6,0,1,"male","adult",3,3,0,0],["Sheema","Kagango","May 2026","2026-05",106,80,0,1,"male","adult",50,30,0,0],["Sheema","Kagango","May 2026","2026-05",107,90,0,1,"male","adult",50,40,0,0],["Sheema","Kagango","May 2026","2026-05",108,60,0,1,"male","adult",30,30,0,0],["Sheema","Kagango","May 2026","2026-05",108,20,1,0,"male","adult",20,0,0,0],["Sheema","Kagango","May 2026","2026-05",109,20,0,1,"female","adult",10,10,0,0],["Sheema","Kagango","May 2026","2026-05",53,8,0,0,"male","adult",0,8,0,0],["Sheema","Kagango","May 2026","2026-05",110,15,0,1,"male","youth",10,5,0,0],["Sheema","Kagango","May 2026","2026-05",111,15,0,1,"male","youth",10,5,0,0],["Sheema","Kagango","May 2026","2026-05",112,14,0,1,"male","youth",10,4,0,0],["Sheema","Kagango","May 2026","2026-05",113,45,0,1,"male","adult",5,40,0,0],["Sheema","Kagango","May 2026","2026-05",114,20,0,1,"male","elderly",10,10,0,0],["Sheema","Kagango","May 2026","2026-05",115,20,0,1,"male","elderly",10,10,0,0],["Sheema","Kagango","May 2026","2026-05",116,20,0,1,"male","adult",10,10,0,0],["Sheema","Masheruka","May 2026","2026-05",117,5,0,1,"male","adult",2,3,0,0],["Sheema","Kagango","May 2026","2026-05",118,20,0,1,"male","youth",16,4,0,0],["Sheema","Kagango","May 2026","2026-05",119,30,0,1,"male","youth",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",120,15,0,1,"male","elderly",11,4,0,0],["Sheema","Kagango","May 2026","2026-05",121,16,0,1,"female","adult",10,6,0,0],["Sheema","Kagango","May 2026","2026-05",122,15,0,1,"male","adult",10,5,0,0],["Sheema","Kagango","May 2026","2026-05",123,100,0,1,"female","elderly",50,50,0,0],["Sheema","Kagango","May 2026","2026-05",124,100,0,1,"male","adult",50,50,0,0],["Sheema","Kagango","May 2026","2026-05",125,100,0,1,"male","adult",50,50,0,0],["Sheema","Kagango","May 2026","2026-05",126,80,0,1,"male","adult",40,40,0,0],["Sheema","Kagango","May 2026","2026-05",127,15,0,1,"male","adult",10,5,0,0],["Sheema","Kagango","May 2026","2026-05",87,25,0,0,"male","youth",5,20,0,0],["Sheema","Kagango","May 2026","2026-05",128,40,0,1,"male","elderly",20,20,0,0],["Sheema","Kagango","May 2026","2026-05",129,60,0,1,"male","adult",30,30,0,0],["Sheema","Kagango","May 2026","2026-05",130,80,0,1,"male","youth",40,40,0,0],["Sheema","Kagango","May 2026","2026-05",131,30,0,1,"male","youth",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",132,30,0,1,"male","adult",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",133,30,0,1,"male","adult",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",134,40,0,1,"male","elderly",20,20,0,0],["Sheema","Kagango","May 2026","2026-05",135,20,0,1,"female","adult",10,10,0,0],["Sheema","Kagango","May 2026","2026-05",136,30,0,1,"female","adult",15,15,0,0],["Sheema","Kagango","May 2026","2026-05",137,30,0,1,"male","elderly",10,10,10,0],["Sheema","Kagango","May 2026","2026-05",138,30,0,1,"male","youth",20,10,0,0],["Sheema","Kagango","May 2026","2026-05",139,10,0,1,"female","youth",5,5,0,0],["Sheema","Kagango","May 2026","2026-05",140,30,0,1,"female","adult",15,15,0,0],["Sheema","Kagango","Jul 2026","2026-07",141,20,0,1,"female","adult",10,10,0,0],["Sheema","Kagango","Jul 2026","2026-07",142,100,0,1,"male","adult",50,50,0,0],["Sheema","Kagango","Jul 2026","2026-07",143,30,0,1,"female","adult",15,15,0,0],["Sheema","Kagango","Jul 2026","2026-07",51,20,0,0,"female","adult",15,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",50,10,0,0,"female","adult",5,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",55,10,0,0,"male","adult",5,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",144,10,0,1,"male","adult",5,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",145,10,0,1,"male","adult",5,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",146,10,0,1,"male","adult",5,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",147,15,0,1,"male","adult",5,10,0,0],["Sheema","Kagango","Jul 2026","2026-07",63,10,0,0,"male","youth",5,5,0,0],["Sheema","Karuhama","Jul 2026","2026-07",148,20,0,1,"male","adult",10,10,0,0],["Sheema","Kagango","Jul 2026","2026-07",149,15,0,1,"male","adult",10,5,0,0],["Sheema","Kagango","Jul 2026","2026-07",98,50,0,0,"male","youth",30,20,0,0]],"fields":["subcounty","ward","round","ym","farmer","seedlings","dup","first","sex","age","albizia","ficus_mucuso","ficus_natalensis","calliandra"],"species":[["albizia","Albizia coriaria (Mugavu / Omusisa)"],["ficus_mucuso","Ficus mucuso (Mukunyu / Omukunyu)"],["ficus_natalensis","Ficus natalensis (Mutuuba / Omutooma)"],["calliandra","Calliandra"]],"subcounties":["Rwampara","Sheema"],"wards":["Kagango","Karuhama","Kibingo","Masheruka"],"ward_sc":{"Kibingo":"Rwampara","Kagango":"Sheema","Masheruka":"Sheema","Karuhama":"Sheema"},"rounds":["Mar 2026","May 2026","Jul 2026"],"profiled":null},"global":{"entries":159,"farmers":150,"seedlings":5122,"villages":19,"rounds":3,"date_min":"2026-03-25","date_max":"2026-07-30","built":"2026-08-06 18:03 EAT"}};
+const PAL = ["#FFC800","#2e7d32","#1565c0","#e65100","#7b1fa2","#888888","#00838f","#c62828","#4527a0","#ad1457","#9e9d24","#0277bd"];
+const fmt = n => (n==null?"–":n.toLocaleString());
+const charts = [];
+const leafletMaps = [];   // {map, refit} — refit on section show (Leaflet inits in hidden divs)
+const CHORO_STOPS = ["#fff7cc","#ffe066","#ffc800","#ff9a00","#e65100","#a31515"];
+
+function el(tag, cls, html){const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;}
+
+// ── generic block renderers ───────────────────────────────────────────────
+function renderBlock(b){
+  const box = el("div","block"+((b.tall||b.type=="table"||b.type=="heatmap"||b.type=="pointmap"||b.type=="scorecard"||b.type=="iframe"||b.full)?" full":""));
+  if(b.title) box.appendChild(el("h3",null,b.title));
+  if(b.type=="kpi"){
+    const k=el("div","kpis");
+    b.cards.forEach(c=>{const d=el("div","kpi"); d.appendChild(el("div","v",c.value)); d.appendChild(el("div","l",c.label)); k.appendChild(d);});
+    box.appendChild(k);
+  } else if(b.type=="bar"||b.type=="line"||b.type=="stacked"){
+    const cb=el("div","chartbox"+(b.tall?" tall":"")); const cv=el("canvas"); cb.appendChild(cv); box.appendChild(cb);
+    setTimeout(()=>drawChart(cv,b),0);
+  } else if(b.type=="image"){
+    const im=el("img","map"); im.src=b.src; box.appendChild(im);
+  } else if(b.type=="table"){
+    box.appendChild(buildTable(b.columns,b.rows));
+  } else if(b.type=="heatmap"){
+    box.appendChild(buildHeatmap(b));
+  } else if(b.type=="pointmap"){
+    box.appendChild(buildPointMap(b));
+  } else if(b.type=="scorecard"){
+    box.appendChild(buildScorecard(b));
+  } else if(b.type=="iframe"){
+    const lk=el("div","mapctl",'<a href="'+b.link+'" target="_blank" rel="noopener">Open the sheet in Google Sheets ↗</a>');
+    box.appendChild(lk);
+    const fr=el("iframe"); fr.src=b.src; fr.loading="lazy"; fr.title=b.title;
+    fr.style.cssText="width:100%;height:620px;border:1px solid var(--bd);border-radius:8px;background:#fff";
+    box.appendChild(fr);
+  } else if(b.type=="note"){
+    box.appendChild(el("div","note","⚠ "+b.text));
+  }
+  if(b.note) box.appendChild(el("div","note",b.note));
+  return box;
+}
+
+function buildScorecard(b){
+  const wrap=el("div","tablebox"); wrap.style.maxHeight="none"; const t=el("table");
+  const hd=el("tr"); ["Indicator","Level","End target","Progress","As of","% of target",""].forEach((h,i)=>hd.appendChild(el("th",(i>=2&&i!=4)?"num":null,h))); t.appendChild(hd);
+  b.rows.forEach(r=>{
+    const tr=el("tr");
+    const nm=el("td",null,"<b>"+r.id+"</b> "+r.indicator+(r.notes?'<div class="note" style="margin:2px 0 0">⚠ '+r.notes+'</div>':""));
+    tr.appendChild(nm); tr.appendChild(el("td",null,r.level));
+    tr.appendChild(el("td","num",r.target==null?"–":fmt(r.target)+" "+r.unit));
+    tr.appendChild(el("td","num",r.progress==null?"–":fmt(r.progress)));
+    tr.appendChild(el("td",null,r.when+(r.how&&r.how!="latest"?'<div class="note" style="margin:0">'+r.how+'</div>':"")));
+    const pc=r.pct, cls=pc==null?"":pc>=100?"rag-g":pc>=50?"rag-a":"rag-r";
+    tr.appendChild(el("td","num "+cls,pc==null?"–":pc.toFixed(1)+"%"));
+    const bar=el("td"); bar.style.minWidth="140px";
+    if(pc!=null) bar.innerHTML='<div style="background:#eee;border-radius:4px;height:10px"><div style="width:'+Math.min(100,pc)+'%;height:10px;border-radius:4px;background:'+(pc>=100?"#2e7d32":pc>=50?"#FFC800":"#e65100")+'"></div></div>';
+    tr.appendChild(bar); t.appendChild(tr);
+  });
+  wrap.appendChild(t); return wrap;
+}
+
+function buildTable(cols,rows){
+  const wrap=el("div","tablebox"); const t=el("table");
+  const thead=el("thead"); const tr=el("tr");
+  cols.forEach((c,i)=>{const th=el("th",i>0?"num":null,c); tr.appendChild(th);}); thead.appendChild(tr); t.appendChild(thead);
+  const tb=el("tbody");
+  rows.forEach(r=>{const tr=el("tr"); r.forEach((v,i)=>{const td=el("td",(i>0&&typeof v=="number")?"num":null, typeof v=="number"?fmt(v):v); tr.appendChild(td);}); tb.appendChild(tr);});
+  t.appendChild(tb); wrap.appendChild(t); return wrap;
+}
+
+function buildHeatmap(b){
+  const wrap=el("div","hm"); const t=el("table");
+  const max=Math.max(...b.matrix.flat(),1);
+  const head=el("tr"); head.appendChild(el("th",null,""));
+  b.xlabels.forEach(x=>head.appendChild(el("th",null,x.replace(/_/g," ")))); t.appendChild(head);
+  b.ylabels.forEach((y,i)=>{const tr=el("tr"); tr.appendChild(el("th",null,y));
+    b.matrix[i].forEach(v=>{const a=v/max; const td=el("td",null,fmt(v));
+      td.style.background=`rgba(230,81,0,${0.06+a*0.9})`; td.style.color=a>0.5?"#fff":"#222"; tr.appendChild(td);});
+    t.appendChild(tr);});
+  wrap.appendChild(t); return wrap;
+}
+
+function drawChart(cv,b){
+  let cfg;
+  if(b.type=="bar"){
+    cfg={type:"bar",data:{labels:b.labels,datasets:[{label:b.axisLabel||"",data:b.values,backgroundColor:PAL[0]}]},
+      options:{indexAxis:b.horizontal?"y":"x",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{autoSkip:!b.horizontal,maxRotation:b.horizontal?0:60,minRotation:0,font:{size:9}}},y:{ticks:{font:{size:9},autoSkip:false}}}}};
+  } else if(b.type=="line"){
+    cfg={type:"line",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+"33",borderWidth:1.6,pointRadius:(b.labels.length<20?3:0),tension:.25,fill:false,spanGaps:true,borderDash:(/target/.test(sx.label)?[6,4]:[])}))},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:14,font:{size:9}}},y:{ticks:{font:{size:9}}}}}};
+  } else if(b.type=="stacked"){
+    cfg={type:"bar",data:{labels:b.labels,datasets:b.series.map((sx,i)=>({label:sx.label,data:sx.data,backgroundColor:PAL[i%PAL.length]}))},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:60}},y:{stacked:true,ticks:{font:{size:9}}}}}};
+  }
+  charts.push(new Chart(cv,cfg));
+}
+
+// ── GPS point map (Leaflet + OpenStreetMap tiles) ─────────────────────────
+function buildPointMap(b){
+  const wrap=el("div"); const md=el("div","mapbox"); wrap.appendChild(md);
+  setTimeout(()=>{
+    const map=L.map(md,{scrollWheelZoom:false}).setView([-0.25,36.4],10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+    const col={}; b.groups.forEach((g,i)=>col[g]=PAL[(i+1)%PAL.length]);
+    const lyr=L.featureGroup().addTo(map);
+    b.points.forEach(([lat,lon,ward,n,rnd])=>L.circleMarker([lat,lon],{radius:4+Math.sqrt(n)*1.6,color:"#333",weight:.5,fillColor:col[ward],fillOpacity:.7})
+      .bindTooltip("<b>"+ward+"</b><br>"+n+" farmers<br>"+rnd).addTo(lyr));
+    const fit=()=>{ if(map.getSize().x>0 && b.points.length) map.fitBounds(lyr.getBounds(),{padding:[12,12]}); };
+    const lg=L.control({position:"bottomright"});
+    lg.onAdd=()=>{const d=el("div","legend"); d.innerHTML="<b>Ward</b><br>"+b.groups.map(g=>'<i style="background:'+col[g]+'"></i>'+g).join("<br>"); return d;};
+    lg.addTo(map);
+    leafletMaps.push({map,refit:()=>{map.invalidateSize(); fit();}});
+    fit();
+    if(window.ResizeObserver) new ResizeObserver(()=>{ if(map.getSize().x>0) map.invalidateSize(); }).observe(md);
+  },0);
+  return wrap;
+}
+
+// ── navigation & sections ─────────────────────────────────────────────────
+function show(id){
+  document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("active",a.dataset.id==id));
+  document.querySelectorAll("main > .section").forEach(sd=>sd.style.display=sd.id==id?"block":"none");
+  window.scrollTo(0,0);
+  setTimeout(()=>leafletMaps.forEach(m=>m.refit()),0);
+}
+
+const FOOT="Source: KoBoToolbox form afH6NHNNZmVHQfCnuxGx3p (Harvesting Carbon Project – Agroforestry Seedling Distribution) · refreshed nightly. Farmer names, phone numbers and codes are never included; staff and enumerators appear as codes.";
+
+function build(){
+  const g=DATA.global;
+  document.getElementById("hdr-sub").textContent =
+    fmt(g.farmers)+" farmers · "+fmt(g.seedlings)+" seedlings · "+g.rounds+" distribution months · "+g.date_min+" → "+g.date_max+" · latest submission "+g.built;
+  const nav=document.getElementById("nav"), main=document.getElementById("main");
+  const exNav=el("a",null,"1 · Summary Dashboard"); exNav.dataset.id="exec"; exNav.onclick=()=>show("exec"); nav.appendChild(exNav);
+  main.appendChild(buildExec());
+  DATA.sections.forEach((sc,n)=>{
+    // number tabs by display order (Summary = 1), ignoring any number baked into the title
+    sc.title=`${n+2} · ${sc.title.replace(/^(★|\d+\s*·)\s*/,"")}`;
+    const a=el("a",null,sc.title); a.dataset.id=sc.id; a.onclick=()=>show(sc.id); nav.appendChild(a);
+    const sd=el("div","section"); sd.id=sc.id; sd.style.display="none";
+    sd.appendChild(el("div","sec-title",sc.title));
+    if(sc.desc) sd.appendChild(el("div","sec-desc",sc.desc));
+    const grid=el("div","grid"); sc.blocks.forEach(b=>grid.appendChild(renderBlock(b))); sd.appendChild(grid);
+    sd.appendChild(el("div","footer",FOOT));
+    main.appendChild(sd);
+  });
+  show("exec");
+}
+
+// ── Summary (interactive) section ─────────────────────────────────────────
+const EX=DATA.exec; const IDX={}; EX.fields.forEach((f,i)=>IDX[f]=i);
+function buildExec(){
+  const sd=el("div","section"); sd.id="exec";
+  sd.appendChild(el("div","sec-title","1 · Summary Dashboard"));
+  sd.appendChild(el("div","sec-desc","Headline reach, species and who was reached, filterable by district, sub-county and distribution month."));
+  const fb=el("div","filters");
+  const mkSel=(id,label,opts)=>{const w=el("div"); w.appendChild(el("label",null,label));
+    const s=el("select"); s.id=id; s.appendChild(new Option("All","")); opts.forEach(o=>s.appendChild(new Option(o,o))); w.appendChild(s); return w;};
+  fb.appendChild(mkSel("f-sc","District",EX.subcounties));
+  fb.appendChild(mkSel("f-ward","Sub-county",EX.wards));
+  fb.appendChild(mkSel("f-round","Distribution month",EX.rounds));
+  const ck=el("div"); ck.innerHTML='<label>&nbsp;</label><label style="font-size:13px;color:#222"><input type="checkbox" id="f-dedup"> Exclude probable duplicates</label>'; fb.appendChild(ck);
+  const btn=el("button",null,"Reset");
+  btn.onclick=()=>{["f-sc","f-ward","f-round"].forEach(i=>document.getElementById(i).value=""); document.getElementById("f-dedup").checked=false;
+    [...document.getElementById("f-ward").options].forEach(o=>o.hidden=false); applyExec();};
+  fb.appendChild(btn); sd.appendChild(fb);
+  const kp=el("div","block full"); kp.appendChild(el("h3",null,"Key indicators (filtered)")); const kc=el("div","kpis"); kc.id="exec-kpis"; kp.appendChild(kc); sd.appendChild(kp);
+  if(EX.profiled){
+    const P=EX.profiled, pb=el("div","block full");
+    pb.appendChild(el("h3",null,"Profiled farmers vs reached (filtered)"));
+    const pk=el("div","kpis"); pk.id="exec-prof"; pb.appendChild(pk);
+    const pg=el("div","grid"); pg.style.marginTop="14px";
+    const t=el("div"); t.id="exec-prof-tbl"; pg.appendChild(t);
+    const cb=el("div","chartbox"); const cv=el("canvas"); cv.id="exec-prof-chart"; cb.appendChild(cv); pg.appendChild(cb);
+    pb.appendChild(pg);
+    pb.appendChild(el("div","note","Register: <b>"+P.source+"</b>"+(P.synced?" (loaded "+P.synced+")":"")+
+      ". A farmer counts as reached once they received seedlings in any round up to the selected round. "+
+      P.out_of_area+" registered farmers are outside the three project wards; "+
+      P.not_in_register+" farmers who received seedlings are not in this register; "+
+      P.zero_plot_reached+" of the "+P.zero_plot+" farmers with no approved plot received seedlings."));
+    sd.appendChild(pb);
+    const gb=el("div","block full"); gb.appendChild(el("h3",null,"Gender and youth of farmers reached (filtered)"));
+    const gg=el("div","grid");
+    [["exec-pie-gender","Gender"],["exec-pie-youth","Youth (register age group)"]].forEach(([id,t])=>{
+      const c=el("div"); c.appendChild(el("div","sec-desc",t)); const cb=el("div","chartbox"); const cv=el("canvas"); cv.id=id; cb.appendChild(cv); c.appendChild(cb); gg.appendChild(c);});
+    gb.appendChild(gg);
+    gb.appendChild(el("div","note","Gender and age group come from the profiled-farmer register, matched on the beneficiary ID — the distribution form itself does not record them. "+
+      "Farmers who received seedlings but are not in the register are shown as “not in register”."));
+    sd.appendChild(gb);
+  }
+  const db=el("div","block full"); db.appendChild(el("h3",null,"Sex and age group of farmers reached (filtered)"));
+  const dg=el("div","grid");
+  [["exec-pie-sex","Sex"],["exec-pie-age","Age group"]].forEach(([id,t])=>{
+    const c=el("div"); c.appendChild(el("div","sec-desc",t)); const cb=el("div","chartbox"); const cv=el("canvas"); cv.id=id; cb.appendChild(cv); c.appendChild(cb); dg.appendChild(c);});
+  db.appendChild(dg); db.appendChild(el("div","note","Each farmer is counted once, as recorded on the distribution form."));
+  sd.appendChild(db);
+  const grid=el("div","grid");
+  [["exec-sp","Seedlings by species (filtered)"],["exec-rnd","Farmers per month — new vs returning (filtered)"],
+   ["exec-ward","Seedlings by sub-county (filtered)"],["exec-mon","Seedlings by distribution month (filtered)"]]
+    .forEach(([id,t])=>{const c=el("div","block"); c.appendChild(el("h3",null,t)); const cb=el("div","chartbox"); const cv=el("canvas"); cv.id=id; cb.appendChild(cv); c.appendChild(cb); grid.appendChild(c);});
+  sd.appendChild(grid);
+  setTimeout(()=>{
+    document.getElementById("f-sc").onchange=()=>{
+      const sc=document.getElementById("f-sc").value, w=document.getElementById("f-ward");
+      [...w.options].forEach(o=>o.hidden=!!(sc&&o.value&&EX.ward_sc[o.value]!=sc));
+      if(w.value&&sc&&EX.ward_sc[w.value]!=sc) w.value="";
+      applyExec();};
+    ["f-ward","f-round","f-dedup"].forEach(i=>document.getElementById(i).onchange=applyExec);
+    applyExec();},0);
+  return sd;
+}
+
+let profChart=null; const pieCharts={};
+function drawPie(id,parts){
+  parts=parts.filter(p=>p[1]>0);                      // drop empty slices (e.g. no "other" in a ward)
+  const tot=parts.reduce((a,p)=>a+p[1],0);
+  const lab=p=>p[0]+" — "+(tot?(p[1]/tot*100).toFixed(1):0)+"% ("+fmt(p[1])+")";
+  if(pieCharts[id]) pieCharts[id].destroy();
+  pieCharts[id]=new Chart(document.getElementById(id),{type:"doughnut",
+    data:{labels:parts.map(lab),datasets:[{data:parts.map(p=>p[1]),backgroundColor:parts.map(p=>p[2]),borderColor:"#fff",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"58%",
+      plugins:{legend:{position:"right",labels:{font:{size:11},boxWidth:12,color:"#222"}},
+        tooltip:{callbacks:{label:c=>" "+c.label}}}}});
+}
+function applyProfiled(sc,w,r){
+  const P=EX.profiled, I={}; P.fields.forEach((f,i)=>I[f]=i);
+  const upto=r?EX.rounds.indexOf(r):EX.rounds.length-1;      // cumulative: reached by end of round
+  const rows=P.records.filter(x=>(!sc||x[I.subcounty]==sc)&&(!w||x[I.ward]==w));
+  const hit=x=>x[I.first]>=0&&x[I.first]<=upto;
+  const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"–";
+  const n=rows.length, got=rows.filter(hit).length;
+  const pk=document.getElementById("exec-prof"); pk.innerHTML="";
+  [["Profiled farmers",fmt(n)],["Reached with seedlings",fmt(got)],["Coverage",pct(got,n)],["Not yet reached",fmt(n-got)]]
+   .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); pk.appendChild(d);});
+  const by={}; rows.forEach(x=>{const k=x[I.ward]; by[k]=by[k]||{sc:x[I.subcounty],n:0,g:0,f:0,fg:0,y:0,yg:0};
+    const b=by[k], h=hit(x); b.n++; if(h)b.g++; if(x[I.gender]=="female"){b.f++; if(h)b.fg++;} if(x[I.youth]){b.y++; if(h)b.yg++;}});
+  const wards=Object.keys(by).sort((a,b)=>by[b].n-by[a].n);
+  const tb=document.getElementById("exec-prof-tbl"); tb.innerHTML="";
+  tb.appendChild(buildTable(["Ward","Sub-county","Profiled","Reached","Coverage","Women","Youth"],
+    wards.map(k=>{const b=by[k]; return [k,b.sc,b.n,b.g,pct(b.g,b.n),pct(b.fg,b.f),pct(b.yg,b.y)];})));
+  // Gender / youth donuts — farmers reached under the current filters
+  const got_rows=rows.filter(hit);
+  const unreg=(P.unregistered||[]).filter(x=>(!sc||x[0]==sc)&&(!w||x[1]==w)&&x[2]>=0&&x[2]<=upto).length;
+  const cnt=(f)=>got_rows.filter(f).length;
+  const other=cnt(x=>x[I.gender]!="female"&&x[I.gender]!="male");
+  drawPie("exec-pie-gender",[["Women",cnt(x=>x[I.gender]=="female"),"#d81b60"],["Men",cnt(x=>x[I.gender]=="male"),"#1565c0"],
+    ["Other / not stated",other,"#9e9e9e"],["Not in register",unreg,"#d8d8d8"]]);
+  drawPie("exec-pie-youth",[["Youth",cnt(x=>x[I.youth]),"#e65100"],["Non-youth",cnt(x=>!x[I.youth]),"#6b6b6b"],["Not in register",unreg,"#d8d8d8"]]);
+  if(profChart) profChart.destroy();
+  profChart=new Chart(document.getElementById("exec-prof-chart"),{type:"bar",data:{labels:wards,datasets:[
+    {label:"reached",data:wards.map(k=>by[k].g),backgroundColor:PAL[1]},
+    {label:"not yet reached",data:wards.map(k=>by[k].n-by[k].g),backgroundColor:"#d8d8d8"}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},
+      scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9}}}}}});
+}
+
+let execCharts=[];
+function applyExec(){
+  const sc=document.getElementById("f-sc").value, w=document.getElementById("f-ward").value,
+        r=document.getElementById("f-round").value, dd=document.getElementById("f-dedup").checked;
+  const rows=EX.records.filter(x=>(!sc||x[IDX.subcounty]==sc)&&(!w||x[IDX.ward]==w)&&(!r||x[IDX.round]==r)&&(!dd||!x[IDX.dup]));
+  const seed=rows.reduce((a,x)=>a+x[IDX.seedlings],0), farmers=new Set(rows.map(x=>x[IDX.farmer])).size;
+  const dupN=rows.filter(x=>x[IDX.dup]).length, newN=rows.filter(x=>x[IDX.first]).length;
+  const kc=document.getElementById("exec-kpis"); kc.innerHTML="";
+  [["Unique farmers reached",fmt(farmers)],["Seedlings distributed",fmt(seed)],["Farmer entries",fmt(rows.length)],
+   ["Avg seedlings / farmer",farmers?(seed/farmers).toFixed(1):"–"],["First-time farmers",fmt(newN)],["Probable duplicate entries",fmt(dupN)]]
+   .forEach(([l,v])=>{const d=el("div","kpi"); d.appendChild(el("div","v",v)); d.appendChild(el("div","l",l)); kc.appendChild(d);});
+  if(EX.profiled) applyProfiled(sc,w,r);
+  const once={}; rows.forEach(x=>{once[x[IDX.farmer]]=x;}); const fu=Object.values(once);
+  const c=f=>fu.filter(f).length;
+  drawPie("exec-pie-sex",[["Women",c(x=>x[IDX.sex]=="female"),"#d81b60"],["Men",c(x=>x[IDX.sex]=="male"),"#1565c0"],
+    ["Not stated",c(x=>x[IDX.sex]!="female"&&x[IDX.sex]!="male"),"#9e9e9e"]]);
+  drawPie("exec-pie-age",[["Youth (18–35)",c(x=>x[IDX.age]=="youth"),"#e65100"],["Adults (35–65)",c(x=>x[IDX.age]=="adult"),"#6b6b6b"],
+    ["Elderly (65+)",c(x=>x[IDX.age]=="elderly"),"#00838f"],["Not stated",c(x=>!x[IDX.age]),"#d8d8d8"]]);
+  const sp=EX.species.map(([k,n])=>[n,rows.reduce((a,x)=>a+x[IDX[k]],0)]).sort((a,b)=>b[1]-a[1]);
+  const byWard={}, byMon={}, rnd={}; EX.rounds.forEach(k=>rnd[k]={n:new Set(),all:new Set()});
+  rows.forEach(x=>{
+    byWard[x[IDX.ward]]=(byWard[x[IDX.ward]]||0)+x[IDX.seedlings];
+    byMon[x[IDX.round]]=(byMon[x[IDX.round]]||0)+x[IDX.seedlings];   // labelled like the month filter (Mar 2026)
+    const R=rnd[x[IDX.round]]; if(R){R.all.add(x[IDX.farmer]); if(x[IDX.first]) R.n.add(x[IDX.farmer]);}});
+  const wl=Object.keys(byWard).sort((a,b)=>byWard[b]-byWard[a]), ml=EX.rounds.filter(k=>byMon[k]);
+  const rl=EX.rounds.filter(k=>rnd[k].all.size);
+  execCharts.forEach(c=>c.destroy()); execCharts=[];
+  const o=extra=>Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}},extra||{});
+  execCharts.push(new Chart(document.getElementById("exec-sp"),{type:"bar",
+    data:{labels:sp.map(s=>s[0]),datasets:[{data:sp.map(s=>s[1]),backgroundColor:PAL[0]}]},options:o({indexAxis:"y"})}));
+  execCharts.push(new Chart(document.getElementById("exec-rnd"),{type:"bar",data:{labels:rl,datasets:[
+    {label:"new",data:rl.map(k=>rnd[k].n.size),backgroundColor:PAL[1]},
+    {label:"returning",data:rl.map(k=>rnd[k].all.size-rnd[k].n.size),backgroundColor:PAL[0]}]},
+    options:o({plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}}},
+      scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9}}}}})}));
+  execCharts.push(new Chart(document.getElementById("exec-ward"),{type:"bar",
+    data:{labels:wl,datasets:[{data:wl.map(k=>byWard[k]),backgroundColor:PAL[2]}]},options:o()}));
+  execCharts.push(new Chart(document.getElementById("exec-mon"),{type:"bar",
+    data:{labels:ml,datasets:[{data:ml.map(k=>byMon[k]),backgroundColor:PAL[3]}]},options:o()}));
+}
+build();
+</script>
+</body>
+</html>
