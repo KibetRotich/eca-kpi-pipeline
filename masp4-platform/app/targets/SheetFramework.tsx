@@ -3,17 +3,11 @@
 /**
  * Google-Sheet measurement framework inside a project's window on /targets
  * (Sprint 29) — the same view as tab "8 · Measurement Framework" of the SAVE KE
- * Seedlings Distribution dashboard: progress scorecard, progress graphs and the
- * embedded, editable Google Sheet. Values come from the nightly sheet sync
+ * Seedlings Distribution dashboard: progress scorecard and the embedded, editable
+ * Google Sheet (progress graphs removed from /targets on 2026-11-06 at the user's request). Values come from the nightly sheet sync
  * (save_mf_indicator_values), so this page and tab 8 always show the same numbers.
  * The logic mirrors pipeline/save_seedlings/build_dashboard.py (section 8).
  */
-import { useState } from 'react'
-import { Bar, Line } from 'react-chartjs-2'
-import { Chart as ChartJS, CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement,
-         BarController, LineController, Tooltip, Legend } from 'chart.js'
-
-ChartJS.register(CategoryScale, LinearScale, ArcElement, BarElement, LineElement, PointElement, BarController, LineController, Tooltip, Legend)
 
 export interface SheetRow {
   indicator_id: string; period_end: string; level: string | null; indicator: string; unit: string | null
@@ -44,16 +38,10 @@ const plab6 = (pe: string) => new Date(`${pe}-01T00:00:00`).toLocaleString('en-G
 const nowYM = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 const card = { background: '#fff', border: '1px solid #e8e0a0', padding: '.5rem .6rem' }
 const small = { fontSize: '.52rem', color: '#888' }
-const lineOpts = (pct = false): any => ({
-  responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-  plugins: { legend: { labels: { font: { size: 9 }, boxWidth: 10 } } },
-  scales: { x: { ticks: { font: { size: 9 } } }, y: { ticks: { font: { size: 9 }, callback: (v: any) => (pct ? `${v}%` : Number(v).toLocaleString()) } } },
-})
 
 export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   const annual = sheet.cadence === 'annual'
   const plab = (pe: string) => (annual ? pe.slice(0, 4) : plab6(pe))     // annual frameworks label periods by year
-  const [pick, setPick] = useState('')
   const rows = [...sheet.rows].map(r => ({ ...r, total: r.total == null ? null : Number(r.total) }))
   const ids = [...new Set(rows.map(r => r.indicator_id))].sort()
   const byId = (id: string) => rows.filter(r => r.indicator_id === id).sort((a, b) => a.period_end.localeCompare(b.period_end))
@@ -91,7 +79,7 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
   })
 
   // A framework with end-of-project figures (KE-CSV-001) lists only those indicators in the scorecard,
-  // not the ones whose progress is a partial sum to an earlier year; the charts keep every indicator.
+  // not the ones whose progress is a partial sum to an earlier year.
   const cardRows = score.some(s => s.eop != null) ? score.filter(s => s.eop != null) : score
   // one progress column per year / period, up to the last period with any reported value
   // (all of the framework's periods while nothing has been reported yet)
@@ -104,27 +92,6 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
 
   const reported = rows.filter(r => r.total != null).map(r => r.period_end)
   const last = reported.length ? reported.sort().slice(-1)[0] : ''
-  const axis = [...new Set(rows.map(r => r.period_end))].sort().filter(p => p <= last)
-  const series = (id: string) => Object.fromEntries(byId(id).filter(r => r.total != null).map(r => [r.period_end, r.total as number]))
-  const tgtOf = (id: string) => score.find(s => s.id === id)?.tgt ?? null
-  const short = (t: string) => t.replace(/^# of /, '').split(' (')[0]
-
-  // Graph 1 — the indicator with a reference series (trees planted vs Kobo seedlings distributed)
-  const ref = sheet.reference && ids.includes(sheet.reference.indicator_id) ? sheet.reference : undefined
-  const refInd = ref ? score.find(s => s.id === ref.indicator_id) : undefined
-  // Graph 2 — reported rates (survival %)
-  const rateRows = rows.filter(r => r.survival_pct != null).sort((a, b) => a.period_end.localeCompare(b.period_end))
-  // Graph 3 — people indicators vs targets (series identical to an earlier one are skipped)
-  const seen: string[] = []
-  const people = score.filter(s => /farmer|people/i.test(s.unit) && byId(s.id).filter(r => r.total != null).length >= 2)
-    .sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))
-    .filter(s => { const k = JSON.stringify(series(s.id)); if (seen.includes(k)) return false; seen.push(k); return true }).slice(0, 2)
-  const pickId = pick || [...score].sort((a, b) => (b.prog ?? 0) - (a.prog ?? 0))[0]?.id || ''
-  const pickRows = byId(pickId).filter(r => r.total != null)
-
-  const hasCounties = (sheet.counties?.length ?? 0) > 0
-  // Annual / county frameworks (P2P Kenya / Tanzania): scorecard and sheet only (charts removed Nov 2026)
-  const yearLayout = hasCounties || annual
 
   const src = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit?gid=${sheet.gid}&rm=minimal`
   const link = `https://docs.google.com/spreadsheets/d/${sheet.sheet_id}/edit#gid=${sheet.gid}`
@@ -188,65 +155,6 @@ export default function SheetFramework({ sheet }: { sheet: SheetLink }) {
           {cardRows.length < score.length && ` Only the ${cardRows.length} indicators with an end-of-project figure are listed; the other ${score.length - cardRows.length} are in the sheet below.`}
         </div>
       </div>
-
-      {!yearLayout && (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '.6rem' }}>
-        {refInd && ref && (
-          <div style={card}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>{short(refInd.indicator)} vs end target (with {ref.label.split(' (')[0]})</div>
-            <div style={{ height: 210 }}>
-              <Line options={lineOpts()} data={{ labels: axis.map(plab), datasets: [
-                { label: `${short(refInd.indicator)} (logframe)`, data: axis.map(p => series(refInd.id)[p] ?? null), borderColor: '#FFC800', backgroundColor: '#FFC800', spanGaps: true, pointRadius: 3 },
-                { label: ref.label, data: axis.map(p => ref.series.find(x => x.period_end === p)?.value ?? null), borderColor: '#2e7d32', backgroundColor: '#2e7d32', spanGaps: true, pointRadius: 3 },
-                { label: 'end target', data: axis.map(() => refInd.tgt), borderColor: '#1565c0', borderDash: [6, 4], pointRadius: 0 },
-              ] }} />
-            </div>
-            <div style={small}>Distributed counts come from the Kobo distribution form, cut at each reporting month; planted counts are as reported in the framework.</div>
-          </div>
-        )}
-        {rateRows.length > 0 && (
-          <div style={card}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>Reported tree survival rate (%)</div>
-            <div style={{ height: 210 }}>
-              <Line options={lineOpts(true)} data={{ labels: rateRows.map(r => plab(r.period_end)), datasets: [
-                { label: 'survival rate %', data: rateRows.map(r => Number(r.survival_pct)), borderColor: '#FFC800', backgroundColor: '#FFC800', pointRadius: 3 }] }} />
-            </div>
-            <div style={small}>From the “{short(rows.find(r => r.survival_pct != null)?.indicator ?? '')}” indicator.</div>
-          </div>
-        )}
-        {people.length > 0 && (
-          <div style={card}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700 }}>{people.map(p => short(p.indicator)).join(' and ')} vs targets</div>
-            <div style={{ height: 210 }}>
-              <Line options={lineOpts()} data={{ labels: axis.map(plab), datasets: people.flatMap((p, k) => [
-                { label: short(p.indicator), data: axis.map(x => series(p.id)[x] ?? null), borderColor: ['#FFC800', '#2e7d32'][k], backgroundColor: ['#FFC800', '#2e7d32'][k], spanGaps: true, pointRadius: 3 },
-                { label: `target (${fmt(p.tgt)})`, data: axis.map(() => p.tgt), borderColor: ['#1565c0', '#e65100'][k], borderDash: [6, 4], pointRadius: 0 },
-              ]) }} />
-            </div>
-            <div style={small}>Values as reported each period. Whether these are running totals is set by the sheet’s cumulative column.</div>
-          </div>
-        )}
-        {!ref && pickRows.length > 0 && (
-          <div style={card}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-              <span style={{ fontSize: '.6rem', fontWeight: 700 }}>Values by {annual ? 'year' : 'period'}</span>
-              <select value={pickId} onChange={e => setPick(e.target.value)} style={{ fontSize: '.56rem', marginLeft: 'auto', maxWidth: 230 }}>
-                {score.map(s => <option key={s.id} value={s.id}>{s.id} — {short(s.indicator)}</option>)}
-              </select>
-            </div>
-            <div style={{ height: 210 }}>
-              <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { size: 9 }, boxWidth: 10 } } },
-                  scales: { x: { stacked: true, ticks: { font: { size: 9 } } }, y: { stacked: true, ticks: { font: { size: 9 } } } } }}
-                data={{ labels: pickRows.map(r => plab(r.period_end)), datasets: [
-                  { label: 'female', data: pickRows.map(r => Number(r.female) || 0), backgroundColor: '#d81b60', borderRadius: 3 },
-                  { label: 'male', data: pickRows.map(r => Number(r.male) || 0), backgroundColor: '#1565c0', borderRadius: 3 },
-                  { label: 'non-individual / not disaggregated', data: pickRows.map(r => Math.max(0, Number(r.total) - (Number(r.female) || 0) - (Number(r.male) || 0))), backgroundColor: '#bdbdbd', borderRadius: 3 }] }} />
-            </div>
-            <div style={small}>Each bar is the value reported for that {annual ? 'year' : 'period'}.</div>
-          </div>
-        )}
-      </div>
-      )}
 
       {/* Editable sheet */}
       <div style={card}>

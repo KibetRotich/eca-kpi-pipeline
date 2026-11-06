@@ -10,11 +10,8 @@
  * Reads and writes /api/framework; editing needs an M&E Officer or Admin role.
  */
 import { useState, useEffect, useCallback } from 'react'
-import { Bar } from 'react-chartjs-2'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
 import SheetFramework, { type SheetLink } from './SheetFramework'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const YEARS = [2026, 2027, 2028, 2029, 2030]
 const LEVELS = ['Goal', 'Outcome', 'Output']
@@ -66,7 +63,6 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
   const [valForm, setValForm] = useState(emptyVal)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const [chartInd, setChartInd] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true); setErr('')
@@ -133,15 +129,12 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
     if (await send('POST', { action: 'value', ...valEdit, ...valForm })) setValEdit(null)
   }
 
-  // ── charts ────────────────────────────────────────────────────────────────
+  // ── progress per indicator (feeds the table) ──────────────────────────────
   const scored = inds.map(i => {
     const p = progress(i, valsOf(i.id))
     const tgt = i.end_target ?? null
     return { i, p, pct: p.value != null && tgt ? Math.round((p.value / tgt) * 1000) / 10 : null }
   })
-  const withPct = scored.filter(s => s.pct != null)
-  const selInd = inds.find(i => i.id === chartInd) ?? inds[0]
-  const selVals = selInd ? valsOf(selInd.id).filter(v => v.total != null).sort((a, b) => a.period_end.localeCompare(b.period_end)) : []
 
   const th = { textAlign: 'right' as const }
   const small = { fontSize: '.52rem', color: '#888' }
@@ -315,40 +308,6 @@ export default function ProjectFramework({ projectId, year, canEdit }: { project
             </table>
           </div>
 
-          {/* Progress charts */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '.6rem', padding: '0 .9rem .7rem' }}>
-            <div style={{ background: '#fff', border: '1px solid #e8e0a0', padding: '.5rem .6rem' }}>
-              <div style={{ fontSize: '.6rem', fontWeight: 700, marginBottom: '.3rem' }}>Progress against end-of-project targets</div>
-              {withPct.length ? (
-                <div style={{ height: Math.max(140, withPct.length * 28) }}>
-                  <Bar data={{ labels: withPct.map(s => s.i.indicator_code), datasets: [{ label: '% of end target', data: withPct.map(s => Math.min(150, s.pct as number)),
-                      backgroundColor: withPct.map(s => (s.pct as number) >= 100 ? '#2e7d32' : (s.pct as number) >= 50 ? '#FFC800' : '#e65100'), borderRadius: 4 }] }}
-                    options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false },
-                      tooltip: { callbacks: { label: c => { const s = withPct[c.dataIndex]; return ` ${s.pct}% — ${fmt(s.p.value)} of ${fmt(s.i.end_target)} ${s.i.unit ?? ''}` } } } },
-                      scales: { x: { min: 0, max: 150, ticks: { callback: v => `${v}%`, font: { size: 9 } } }, y: { ticks: { font: { size: 9 } } } } }} />
-                </div>
-              ) : <div style={{ ...small, fontStyle: 'italic' }}>Add end-of-project targets and values to see progress.</div>}
-              <div style={{ ...small, marginTop: 4 }}>Bars stop at 150%; the tooltip shows the true figure.</div>
-            </div>
-            <div style={{ background: '#fff', border: '1px solid #e8e0a0', padding: '.5rem .6rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '.3rem' }}>
-                <span style={{ fontSize: '.6rem', fontWeight: 700 }}>Values by 6-month period</span>
-                <select value={selInd?.id ?? ''} onChange={e => setChartInd(e.target.value)} style={{ fontSize: '.56rem', marginLeft: 'auto', maxWidth: 220 }}>
-                  {inds.map(i => <option key={i.id} value={i.id}>{i.indicator_code} — {i.indicator}</option>)}
-                </select>
-              </div>
-              {selVals.length ? (
-                <div style={{ height: 180 }}>
-                  <Bar data={{ labels: selVals.map(v => plab(v.period_end)), datasets: [
-                      { label: 'female', data: selVals.map(v => v.female ?? 0), backgroundColor: '#d81b60', borderRadius: 3, stack: 's' },
-                      { label: 'male', data: selVals.map(v => v.male ?? 0), backgroundColor: '#1565c0', borderRadius: 3, stack: 's' },
-                      { label: 'not disaggregated', data: selVals.map(v => Math.max(0, Number(v.total) - (v.female ?? 0) - (v.male ?? 0))), backgroundColor: '#bdbdbd', borderRadius: 3, stack: 's' }] }}
-                    options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { size: 9 }, boxWidth: 10 } } },
-                      scales: { x: { stacked: true, ticks: { font: { size: 9 } } }, y: { stacked: true, ticks: { font: { size: 9 } } } } }} />
-                </div>
-              ) : <div style={{ ...small, fontStyle: 'italic' }}>No values recorded for this indicator yet.</div>}
-            </div>
-          </div>
         </>)}
       </>)}
     </div>
