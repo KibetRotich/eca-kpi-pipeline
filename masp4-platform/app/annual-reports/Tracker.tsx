@@ -4,8 +4,9 @@
  * Annual report tracker (Sprint 62) — the default tab of /annual-reports.
  *
  * One row per project report in the selected cycle. The deadline the report is currently working towards
- * (see nextDeadline) is shown amber within 14 days and red once missed. Responsible staff update the status,
- * note and final report of their own rows; M&E Officers / Admins also add, edit and delete rows and start cycles.
+ * (see nextDeadline) is shown amber within 14 days and red once missed. Responsible staff have full edit rights
+ * on their own rows (status, note, final report, project, responsible, deadlines); M&E Officers / Admins can do
+ * that on every row and also add and delete rows and start cycles.
  * Marking a report "Final filed" asks for the final report's Drive link, which is filed in the Library.
  */
 import { useEffect, useMemo, useState } from 'react'
@@ -163,7 +164,7 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
                     </td>
                     <td className={styles.rowActions}>
                       {mine && <button type="button" className={styles.linkBtn} onClick={() => { setPresetStatus(undefined); setUpdating(r) }}>Update</button>}
-                      {canEdit && <button type="button" className={styles.linkBtn} onClick={() => setEditing(r)}>Edit</button>}
+                      {mine && <button type="button" className={styles.linkBtn} onClick={() => setEditing(r)}>Edit</button>}
                     </td>
                   </tr>
                 )
@@ -179,7 +180,7 @@ export default function Tracker({ cycles, cycle, rows, reports, projects, today 
                      onSaved={() => { setUpdating(null); setPresetStatus(undefined); refresh() }} />
       )}
       {editing && cycle && (
-        <RowModal row={editing === 'new' ? null : editing} cycle={cycle} projects={projects}
+        <RowModal row={editing === 'new' ? null : editing} cycle={cycle} projects={projects} canDelete={canEdit}
                   onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh() }} />
       )}
       {newCycle && (
@@ -314,11 +315,11 @@ function UpdateModal({ row, cycle, linked, initialStatus, onClose, onSaved }: {
   )
 }
 
-/* ── Add / edit a row (M&E Officers / Admins) ─────────────────────────────── */
+/* ── Add (M&E) / edit a row (responsible staff and M&E) ───────────────────── */
 const OTHER = '__other__'
 
-function RowModal({ row, cycle, projects, onClose, onSaved }: {
-  row: TrackerRow | null; cycle: ReportCycle; projects: TrackerProject[]; onClose: () => void; onSaved: () => void
+function RowModal({ row, cycle, projects, canDelete, onClose, onSaved }: {
+  row: TrackerRow | null; cycle: ReportCycle; projects: TrackerProject[]; canDelete: boolean; onClose: () => void; onSaved: () => void
 }) {
   // A row tied to exactly one Projects' Progress project is edited through the dropdown; anything else
   // (several projects, or a non-project report such as the Internal REC report) through "Other".
@@ -415,7 +416,7 @@ function RowModal({ row, cycle, projects, onClose, onSaved }: {
         </div>
         {error && <div className={styles.error} role="alert">{error}</div>}
         <div className={styles.actions}>
-          {row && <button type="button" className={styles.danger} onClick={remove} disabled={busy}>Remove</button>}
+          {row && canDelete && <button type="button" className={styles.danger} onClick={remove} disabled={busy}>Remove</button>}
           <button type="button" className={styles.secondary} onClick={onClose} disabled={busy}>Cancel</button>
           <button type="submit" className={styles.primary} disabled={busy}>{busy ? 'Saving…' : row ? 'Save' : 'Add report'}</button>
         </div>

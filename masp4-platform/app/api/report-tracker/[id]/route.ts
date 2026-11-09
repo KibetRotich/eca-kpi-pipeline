@@ -6,7 +6,8 @@
  *   final: { drive_url, file_type, title } — attach a final report: the Drive link is added to annual_reports
  *                                          (Library) if it is not there yet, and linked to this row
  *   remove_report_id                     — unlink a final report from the row (the Library entry stays)
- *   project, project_ids, report_type, country, responsible, deadline_cm, deadline_hop, deadline_donor — M&E / Admin only
+ *   project, project_ids, report_type, country, responsible, deadline_cm, deadline_hop, deadline_donor
+ *                                        — also the responsible staff or M&E / Admin (full edit rights on their own rows)
  * "Final filed" needs at least one linked final report. Every change is logged in report_tracker_log.
  *
  * DELETE — M&E Officers / Admins only.
@@ -18,7 +19,7 @@ import { parseDriveLink } from '@/lib/annual-reports'
 import { NextRequest, NextResponse } from 'next/server'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const EDITOR_FIELDS = ['project', 'project_ids', 'report_type', 'country', 'responsible', 'deadline_cm', 'deadline_hop', 'deadline_donor']
+const ROW_FIELDS = ['project', 'project_ids', 'report_type', 'country', 'responsible', 'deadline_cm', 'deadline_hop', 'deadline_donor']
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(req)
@@ -35,13 +36,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!canEditRow(row, staff.email, staff.canEdit)) {
     return NextResponse.json({ error: 'Only the responsible staff or an M&E Officer / Admin can update this report' }, { status: 403 })
   }
-  if (!staff.canEdit && EDITOR_FIELDS.some(k => k in b)) {
-    return NextResponse.json({ error: 'Only an M&E Officer or Admin can change the project, responsible staff or deadlines' }, { status: 403 })
-  }
 
-  // Editable fields (M&E) + note (anyone allowed on the row)
+  // Row fields + note (the responsible staff of this row, or M&E / Admin)
   const fields: Record<string, unknown> = {}
-  const editable = Object.fromEntries(Object.entries(b).filter(([k]) => [...EDITOR_FIELDS, 'note'].includes(k)))
+  const editable = Object.fromEntries(Object.entries(b).filter(([k]) => [...ROW_FIELDS, 'note'].includes(k)))
   if (Object.keys(editable).length) {
     const f = rowFields(editable, true)
     if (typeof f === 'string') return NextResponse.json({ error: f }, { status: 400 })
