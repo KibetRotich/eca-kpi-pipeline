@@ -110,6 +110,26 @@ Named users get roles via `masp4-platform/pipeline/masp4_migration_sprint13_role
 
 To add a new user: they must log in first, then run an `INSERT ... ON CONFLICT DO UPDATE` against `user_roles`.
 
+### Supabase project & keys
+- Project: **MASPIV_Platform**, ref `qzvkhocrmpvegmawrlkg` (`https://qzvkhocrmpvegmawrlkg.supabase.co`).
+- Since Nov 2026 the project uses the **new API keys**, stored under the old variable names (no code change needed):
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable key (`sb_publishable_…`), `SUPABASE_SERVICE_ROLE_KEY` = secret key (`sb_secret_…`).
+  The Python pipelines' `apikey` + `Authorization: Bearer` headers work with the secret key (verified with the VSLA workflow).
+- Where keys live: local `masp4-platform/.env.local` (gitignored, never commit), Vercel env vars, GitHub Actions secrets. **This repo is public — never put keys, passwords or connection strings in tracked files.**
+- Vercel: the secret key is a *Sensitive* variable, so it is set for **Production + Preview only** (Vercel does not allow Sensitive variables in Development). Redeploy after changing env vars.
+- Rotating a key: create a new secret key in Supabase → update Vercel + GitHub secret + `.env.local` → redeploy and run one workflow manually → revoke the old key.
+
+### Annual Reports library (`/annual-reports?tab=library`)
+- The page **does not read Google Drive**. It lists rows of the Supabase table `public.annual_reports` (schema: `pipeline/masp4_migration_sprint61_annual_reports.sql`). The page is `force-dynamic`, so new rows show on the next page load.
+- Row fields: `title`, `report_type` (`donor` | `country`), `programme` (free text), `country` (`Ethiopia` | `Kenya` | `Tanzania` | `Uganda` | `Regional (ECA)`), `year`, `period_label`, `drive_file_id` (unique), `source_url`, `file_type` (`pdf` | `docx` | `gdoc`), `added_by`.
+- Files are kept in Drive folder **ANNUAL REPORTS** (`1eFqGyfTO5k09be4aFBWBRFv5yDHdHpZq`, ECA M&E shared drive), with subfolders per country (Uganda `1PqFKyOp-uO5jpeS_aObs_cxYR9xhvgSn`, Kenya `1Sx8zknlKhxGNjbA6bLchCERCB3IGlbmu`, Regional Projects `1iepEgVWnp9uTGkKAg3HZuMsWCFDzydnV`, …).
+- **Uploading to Drive alone does not put a report on the platform.** It must also be registered, either:
+  1. by staff with the in-app **Add Report** form (POST `/api/annual-reports`, any signed-in staff), or
+  2. by a reviewed bulk SQL/REST insert with `on conflict (drive_file_id) do nothing` (example: `pipeline/masp4_data_2026-11-10_uganda_annual_reports.sql`).
+- **Before adding anything, query the table first**: many reports are already registered under a project name that differs from the Drive folder name (e.g. NPL Dreamfund = "Climate Heroes", country Regional (ECA)).
+- Leave out financial annexes and other confidential financial files.
+- Status Nov 2026: about 148 reports (bulk load 2026-11-03, Drive/Gmail sweep 2026-11-04, Uganda DGBP 2024 added 2026-11-10).
+
 ---
 
 ## 3. Meetz Dating App (`Meetz/meetz/`)
