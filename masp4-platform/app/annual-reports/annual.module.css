@@ -180,3 +180,7 @@
 .reportTable td a:not(.titleLink) { color: #be123c; }
 .period { display: block; margin-top: .15rem; font-size: .64rem; font-weight: 400; color: #666; }
 .nowrap { white-space: nowrap; }
+
+/* File-type label opens the file in a new tab (Nov 2026) */
+.fileOpen { font-weight: 700; text-decoration: none; white-space: nowrap; }
+.fileOpen:hover { text-decoration: underline; }

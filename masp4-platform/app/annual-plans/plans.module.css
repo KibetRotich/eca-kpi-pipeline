@@ -192,3 +192,7 @@
   .header { flex-direction: column; }
   .row2, .row3 { grid-template-columns: 1fr; }
 }
+
+/* File-type label opens the file in a new tab (Nov 2026) */
+.fileOpen { font-weight: 700; text-decoration: none; white-space: nowrap; }
+.fileOpen:hover { text-decoration: underline; }

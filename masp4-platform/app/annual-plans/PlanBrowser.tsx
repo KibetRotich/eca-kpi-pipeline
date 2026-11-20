@@ -17,7 +17,6 @@ import styles from './plans.module.css'
 const PREVIEW_TYPE: Partial<Record<AnnualPlan['file_type'], DriveFileType>> = {
   pdf: 'pdf', docx: 'docx', gdoc: 'gdoc', gsheet: 'gsheet', gslides: 'gslides',
 }
-const OFFICE = new Set(['docx', 'doc', 'xlsx', 'xls', 'xlsm', 'pptx'])
 
 export default function PlanBrowser({ plans, tab }: { plans: AnnualPlan[]; tab: PlanSubTab }) {
   const { role } = useRole()
@@ -92,10 +91,8 @@ function List({ rows, canRemove, onRemove }: { rows: AnnualPlan[]; canRemove: bo
                     <td><span className={`${styles.badge} ${r.doc_kind === 'supporting' ? styles.supporting : styles.kind}`}>{DOC_KIND_LABEL[r.doc_kind]}</span></td>
                     <td><span className={`${styles.badge} ${r.status === 'final' ? styles.final : styles.draft}`}>{r.status === 'final' ? 'Final' : 'Draft'}</span></td>
                     <td className={styles.nowrap}>
-                      {FILE_TYPE_LABEL[r.file_type]}
-                      {OFFICE.has(r.file_type) && (
-                        <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
-                      )}
+                      <a href={planOpenUrl(r)} target="_blank" rel="noopener noreferrer" className={styles.fileOpen}
+                         title="Open the file in Google Drive (new tab)">{FILE_TYPE_LABEL[r.file_type]} ↗</a>
                     </td>
                     {canRemove && (
                       <td className={styles.nowrap}>

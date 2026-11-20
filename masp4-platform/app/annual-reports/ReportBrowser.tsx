@@ -73,10 +73,8 @@ export default function ReportBrowser({ reports }: { reports: AnnualReport[] }) 
                       </span>
                     </td>
                     <td className={styles.nowrap}>
-                      {FILE_LABEL[r.file_type]}
-                      {r.file_type === 'docx' && (
-                        <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
-                      )}
+                      <a href={reportOpenUrl(r)} target="_blank" rel="noopener noreferrer" className={styles.fileOpen}
+                         title="Open the file in Google Drive (new tab)">{FILE_LABEL[r.file_type]} ↗</a>
                     </td>
                     {canEdit && (
                       <td className={styles.nowrap}>
