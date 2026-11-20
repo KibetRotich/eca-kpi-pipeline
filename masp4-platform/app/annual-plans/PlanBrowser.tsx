@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Annual Plans & Budgets — filterable list and coverage grid for one sub-tab (Sprint 69).
- * List: files grouped by plan year. Coverage: one row per programme × one column per year (Final / Draft only /
- * Missing); clicking a cell opens the list filtered to that programme and year.
+ * Annual Plans & Budgets — list and coverage grid for one sub-tab (Sprint 69). The only filter is Scope
+ * (project / regional). List: files grouped by plan year. Coverage: one row per programme × one column per year
+ * (Final / Draft only / Missing).
  * M&E Officers / Admins also see "Remove" on each row (DELETE /api/annual-plans/<id>; Drive is untouched).
  */
 import { useMemo, useState } from 'react'
@@ -27,29 +27,9 @@ export default function PlanBrowser({ plans, tab, initialView }: { plans: Annual
   const [all, setAll] = useState(plans)
   const [view, setView] = useState(initialView)
   const [scope, setScope] = useState('')
-  const [kind, setKind] = useState('')
-  const [status, setStatus] = useState('')
-  const [country, setCountry] = useState('')
-  const [year, setYear] = useState('')
-  const [programme, setProgramme] = useState('')
-  const [q, setQ] = useState('')
 
   const rows = useMemo(() => all.filter(p => SUBTAB_KINDS[tab].includes(p.doc_kind)), [all, tab])
-  const countries = useMemo(() => [...new Set(rows.map(r => r.country))].sort(), [rows])
-  const years = useMemo(() => [...new Set(rows.map(r => r.plan_year))].sort((a, b) => b - a), [rows])
-  const programmes = useMemo(() => [...new Set(rows.filter(r => !scope || r.scope === scope).map(r => r.programme))].sort(), [rows, scope])
-
-  const needle = q.trim().toLowerCase()
-  const shown = rows.filter(r =>
-    (!scope || r.scope === scope) &&
-    (!kind || r.doc_kind === kind) &&
-    (!status || r.status === status) &&
-    (!country || r.country === country) &&
-    (!year || String(r.plan_year) === year) &&
-    (!programme || r.programme === programme) &&
-    (!needle || `${r.title} ${r.programme}`.toLowerCase().includes(needle)))
-
-  const filtered = !!(scope || kind || status || country || year || programme || needle)
+  const shown = rows.filter(r => !scope || r.scope === scope)
   const noun = tab === 'plans' ? 'files' : 'budgets'
 
   function switchView(v: 'list' | 'coverage') {
@@ -58,8 +38,6 @@ export default function PlanBrowser({ plans, tab, initialView }: { plans: Annual
     if (v === 'coverage') url.searchParams.set('view', 'coverage'); else url.searchParams.delete('view')
     window.history.replaceState(null, '', url)
   }
-
-  function clear() { setScope(''); setKind(''); setStatus(''); setCountry(''); setYear(''); setProgramme(''); setQ('') }
 
   async function remove(r: AnnualPlan) {
     if (!confirm(`Remove "${r.title}" from the list? The file stays in Google Drive.`)) return
@@ -72,54 +50,13 @@ export default function PlanBrowser({ plans, tab, initialView }: { plans: Annual
     <>
       <div className={styles.filters}>
         <label>Scope
-          <select value={scope} onChange={e => { setScope(e.target.value); setProgramme('') }}>
+          <select value={scope} onChange={e => setScope(e.target.value)}>
             <option value="">All</option>
             <option value="project">{SCOPE_LABEL.project}</option>
             <option value="regional">{SCOPE_LABEL.regional}</option>
           </select>
         </label>
-        {view === 'list' && (
-          <>
-            <label>Contains
-              <select value={kind} onChange={e => setKind(e.target.value)}>
-                <option value="">All</option>
-                {SUBTAB_KINDS[tab].map(k => <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>)}
-              </select>
-            </label>
-            <label>Status
-              <select value={status} onChange={e => setStatus(e.target.value)}>
-                <option value="">All</option>
-                <option value="final">Final</option>
-                <option value="draft">Draft (no final yet)</option>
-              </select>
-            </label>
-            <label>Year
-              <select value={year} onChange={e => setYear(e.target.value)}>
-                <option value="">All</option>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </label>
-          </>
-        )}
-        <label>Country
-          <select value={country} onChange={e => setCountry(e.target.value)}>
-            <option value="">All</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-        <label>Programme
-          <select value={programme} onChange={e => setProgramme(e.target.value)}>
-            <option value="">All</option>
-            {programmes.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </label>
-        {view === 'list' && (
-          <label>Search
-            <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Title or programme" />
-          </label>
-        )}
-        {view === 'list' && <span className={styles.count}>{shown.length} of {rows.length} {noun}</span>}
-        {filtered && <button type="button" className={styles.clear} onClick={clear}>Clear</button>}
+        {view === 'list' && <span className={styles.count}>{shown.length} {noun}</span>}
         <div className={styles.viewSwitch} role="group" aria-label="View">
           <button type="button" className={view === 'list' ? styles.viewOn : undefined} aria-pressed={view === 'list'} onClick={() => switchView('list')}>List</button>
           <button type="button" className={view === 'coverage' ? styles.viewOn : undefined} aria-pressed={view === 'coverage'} onClick={() => switchView('coverage')}>Coverage</button>
@@ -127,14 +64,14 @@ export default function PlanBrowser({ plans, tab, initialView }: { plans: Annual
       </div>
 
       {view === 'coverage'
-        ? <Coverage plans={shown} tab={tab} onOpen={(prog, y) => { setProgramme(prog); setYear(String(y)); switchView('list') }} />
+        ? <Coverage plans={shown} tab={tab} />
         : <List rows={shown} canEdit={canEdit} onRemove={remove} />}
     </>
   )
 }
 
 function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolean; onRemove: (r: AnnualPlan) => void }) {
-  if (rows.length === 0) return <div className={styles.empty}>Nothing matches these filters.</div>
+  if (rows.length === 0) return <div className={styles.empty}>Nothing to show.</div>
   const byYear = new Map<number, AnnualPlan[]>()
   for (const r of rows) byYear.set(r.plan_year, [...(byYear.get(r.plan_year) ?? []), r])
 
@@ -175,9 +112,9 @@ function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolea
   )
 }
 
-function Coverage({ plans, tab, onOpen }: { plans: AnnualPlan[]; tab: PlanSubTab; onOpen: (programme: string, year: number) => void }) {
+function Coverage({ plans, tab }: { plans: AnnualPlan[]; tab: PlanSubTab }) {
   const { years, rows } = useMemo(() => buildCoverage(plans, tab), [plans, tab])
-  if (rows.length === 0) return <div className={styles.empty}>Nothing to show for these filters.</div>
+  if (rows.length === 0) return <div className={styles.empty}>Nothing to show.</div>
 
   const groups: { scope: 'project' | 'regional'; items: typeof rows }[] = [
     { scope: 'regional', items: rows.filter(r => r.scope === 'regional') },
@@ -213,11 +150,7 @@ function Coverage({ plans, tab, onOpen }: { plans: AnnualPlan[]; tab: PlanSubTab
                       const label = `${r.programme}, ${y}: ${CELL_LABEL[c]}`
                       return (
                         <td key={y}>
-                          {c === 'missing'
-                            ? <span className={`${styles.cell} ${styles.c_missing}`} title={label} aria-label={label} role="img">{CELL_MARK[c]}</span>
-                            : <button type="button" className={styles.cellBtn} title={`${label} — show files`} aria-label={`${label}, show files`} onClick={() => onOpen(r.programme, y)}>
-                                <span className={`${styles.cell} ${styles[`c_${c}`]}`}>{CELL_MARK[c]}</span>
-                              </button>}
+                          <span className={`${styles.cell} ${styles[`c_${c}`]}`} title={label} aria-label={label} role="img">{CELL_MARK[c]}</span>
                         </td>
                       )
                     })}

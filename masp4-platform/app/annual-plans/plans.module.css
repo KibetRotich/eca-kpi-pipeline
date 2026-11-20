@@ -185,8 +185,6 @@
 .c_final { background: #2e7d32; color: #fff; }
 .c_draft { background: #f59e0b; color: #fff; }
 .c_missing { background: #fff; color: #b42318; border: 1px dashed #e8a5a0; }
-.cellBtn { background: none; border: 0; padding: 0; cursor: pointer; }
-.cellBtn:focus-visible { outline: 2px solid #0f766e; outline-offset: 1px; border-radius: 4px; }
 .coverageNote { font-size: .62rem; color: #666; margin: .4rem 0 0; }
 
 @media (max-width: 640px) {
