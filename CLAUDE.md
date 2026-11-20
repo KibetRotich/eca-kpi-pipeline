@@ -130,6 +130,14 @@ To add a new user: they must log in first, then run an `INSERT ... ON CONFLICT D
 - Leave out financial annexes and other confidential financial files.
 - Status Nov 2026: about 148 reports (bulk load 2026-11-03, Drive/Gmail sweep 2026-11-04, Uganda DGBP 2024 added 2026-11-10).
 
+### Annual Plans & Budgets library (`/annual-plans`, Sprint 69)
+- Nav pill between Thematic Insights and Annual Reports. Library only (no tracker — no planning process to track was found). Sub-tabs **Plans** (`?tab=plans`, default) and **Budgets** (`?tab=budgets`); each has a List view and a **Coverage** view (`?view=coverage`: programme × year → Final / Draft only / Missing, where Missing = a gap inside the programme's first–last year on file).
+- Rows live in `public.annual_plans` (schema: `pipeline/masp4_migration_sprint69_annual_plans.sql`); the page never reads Drive. Fields: `scope` (`project` | `regional`), `doc_kind` (`plan` | `budget` | `plan_budget` | `supporting`), `status` (`final` | `draft`), `programme`, `project_id`, `country`, `plan_year`, `period_label`, `drive_file_id` (unique), `source_url`, `file_type` (pdf/docx/doc/xlsx/xls/xlsm/pptx/gdoc/gsheet/gslides), `drive_path`, `added_by`. `plan_budget` files show under both sub-tabs; `supporting` (targets annexes, KPI lists, feedback, board decks) never count in coverage.
+- **Agreed rules (Nov 2026):** budgets are visible to all staff; drafts are registered only for a programme-year with no final of that kind; project AND regional plans; every year from 2016; plan year = the Drive year folder, never a date in the file name. Budget figures are never read into the platform.
+- Files are kept in Drive folder **ANNUAL PLANS** (`19agpMTD55dXWLT5e_2gBHqzgP9QE4vQK`, ECA M&E shared drive): `01 REGIONAL ANNUAL PLANS/<year>/[Drafts]` and `02 PROJECT ANNUAL PLANS/<year>/<project>/[Drafts]`. Drive search pagination over the whole tree drops files — always inventory **per year folder**.
+- Uploading to Drive alone does not put a file on the platform: staff use **Add Plan / Add Budget** (POST `/api/annual-plans`, any signed-in staff; M&E Officers/Admins can remove via DELETE `/api/annual-plans/<id>`), or a reviewed bulk load: `pipeline/annual_plans/build_annual_plans_load.py <inventory.csv> <out>` writes `<out>_review.csv` + `<out>.sql` (`on conflict (drive_file_id) do nothing`). First load: `pipeline/masp4_data_2026-11-20_annual_plans.sql` (176 files).
+- `lib/annual-plans.ts` has no imports so it can be unit-tested (`lib/annual-plans.test.ts`); import the country list / staff check from `lib/annual-reports.ts`.
+
 ---
 
 ## 3. Meetz Dating App (`Meetz/meetz/`)

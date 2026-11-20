@@ -22,6 +22,8 @@ const PILLS: { href: string; label: string; bg: string; fg: string; also?: strin
   { href: '/evaluation-insights', label: 'Evaluation Insights', bg: '#1565c0', fg: '#fff' },
   // Thematic Insights — cross-study syntheses by theme (replaced the MASP III Dashboard tab, Sprint 49)
   { href: '/thematic-insights',   label: 'Thematic Insights',   bg: '#FFC800', fg: '#000' },
+  // Annual Plans & Budgets — library of project and regional plans and budgets, with coverage (Sprint 69)
+  { href: '/annual-plans',        label: 'Annual Plans & Budgets', bg: '#0f766e', fg: '#fff' },
   // Annual Reports — tracker + library of donor and country annual reports (Sprints 61–62)
   { href: '/annual-reports',      label: 'Annual Reports',      bg: '#be123c', fg: '#fff' },
 ]

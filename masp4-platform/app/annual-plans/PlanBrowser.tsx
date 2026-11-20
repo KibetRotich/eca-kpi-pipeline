@@ -1,0 +1,245 @@
+'use client'
+
+/**
+ * Annual Plans & Budgets — filterable list and coverage grid for one sub-tab (Sprint 69).
+ * List: files grouped by plan year. Coverage: one row per programme × one column per year (Final / Draft only /
+ * Missing); clicking a cell opens the list filtered to that programme and year.
+ * M&E Officers / Admins also see "Remove" on each row (DELETE /api/annual-plans/<id>; Drive is untouched).
+ */
+import { useMemo, useState } from 'react'
+import { useRole } from '@/lib/role-context'
+import PreviewLink, { type DriveFileType } from '@/components/DocPreview'
+import {
+  DOC_KIND_LABEL, FILE_TYPE_LABEL, SCOPE_LABEL, SUBTAB_KINDS, buildCoverage, planOpenUrl,
+  type AnnualPlan, type CoverageCell, type PlanSubTab,
+} from '@/lib/annual-plans'
+import styles from './plans.module.css'
+
+const PREVIEW_TYPE: Partial<Record<AnnualPlan['file_type'], DriveFileType>> = {
+  pdf: 'pdf', docx: 'docx', gdoc: 'gdoc', gsheet: 'gsheet', gslides: 'gslides',
+}
+const OFFICE = new Set(['docx', 'doc', 'xlsx', 'xls', 'xlsm', 'pptx'])
+const CELL_MARK: Record<Exclude<CoverageCell, null>, string> = { final: '✓', draft: 'D', missing: '–' }
+const CELL_LABEL: Record<Exclude<CoverageCell, null>, string> = { final: 'Final', draft: 'Draft only', missing: 'Missing' }
+
+export default function PlanBrowser({ plans, tab, initialView }: { plans: AnnualPlan[]; tab: PlanSubTab; initialView: 'list' | 'coverage' }) {
+  const { canEdit } = useRole()
+  const [all, setAll] = useState(plans)
+  const [view, setView] = useState(initialView)
+  const [scope, setScope] = useState('')
+  const [kind, setKind] = useState('')
+  const [status, setStatus] = useState('')
+  const [country, setCountry] = useState('')
+  const [year, setYear] = useState('')
+  const [programme, setProgramme] = useState('')
+  const [q, setQ] = useState('')
+
+  const rows = useMemo(() => all.filter(p => SUBTAB_KINDS[tab].includes(p.doc_kind)), [all, tab])
+  const countries = useMemo(() => [...new Set(rows.map(r => r.country))].sort(), [rows])
+  const years = useMemo(() => [...new Set(rows.map(r => r.plan_year))].sort((a, b) => b - a), [rows])
+  const programmes = useMemo(() => [...new Set(rows.filter(r => !scope || r.scope === scope).map(r => r.programme))].sort(), [rows, scope])
+
+  const needle = q.trim().toLowerCase()
+  const shown = rows.filter(r =>
+    (!scope || r.scope === scope) &&
+    (!kind || r.doc_kind === kind) &&
+    (!status || r.status === status) &&
+    (!country || r.country === country) &&
+    (!year || String(r.plan_year) === year) &&
+    (!programme || r.programme === programme) &&
+    (!needle || `${r.title} ${r.programme}`.toLowerCase().includes(needle)))
+
+  const filtered = !!(scope || kind || status || country || year || programme || needle)
+  const noun = tab === 'plans' ? 'files' : 'budgets'
+
+  function switchView(v: 'list' | 'coverage') {
+    setView(v)
+    const url = new URL(window.location.href)
+    if (v === 'coverage') url.searchParams.set('view', 'coverage'); else url.searchParams.delete('view')
+    window.history.replaceState(null, '', url)
+  }
+
+  function clear() { setScope(''); setKind(''); setStatus(''); setCountry(''); setYear(''); setProgramme(''); setQ('') }
+
+  async function remove(r: AnnualPlan) {
+    if (!confirm(`Remove "${r.title}" from the list? The file stays in Google Drive.`)) return
+    const res = await fetch(`/api/annual-plans/${r.id}`, { method: 'DELETE' })
+    if (res.ok) setAll(all.filter(x => x.id !== r.id))
+    else alert((await res.json().catch(() => null))?.error ?? 'Could not remove the file')
+  }
+
+  return (
+    <>
+      <div className={styles.filters}>
+        <label>Scope
+          <select value={scope} onChange={e => { setScope(e.target.value); setProgramme('') }}>
+            <option value="">All</option>
+            <option value="project">{SCOPE_LABEL.project}</option>
+            <option value="regional">{SCOPE_LABEL.regional}</option>
+          </select>
+        </label>
+        {view === 'list' && (
+          <>
+            <label>Contains
+              <select value={kind} onChange={e => setKind(e.target.value)}>
+                <option value="">All</option>
+                {SUBTAB_KINDS[tab].map(k => <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>)}
+              </select>
+            </label>
+            <label>Status
+              <select value={status} onChange={e => setStatus(e.target.value)}>
+                <option value="">All</option>
+                <option value="final">Final</option>
+                <option value="draft">Draft (no final yet)</option>
+              </select>
+            </label>
+            <label>Year
+              <select value={year} onChange={e => setYear(e.target.value)}>
+                <option value="">All</option>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </label>
+          </>
+        )}
+        <label>Country
+          <select value={country} onChange={e => setCountry(e.target.value)}>
+            <option value="">All</option>
+            {countries.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label>Programme
+          <select value={programme} onChange={e => setProgramme(e.target.value)}>
+            <option value="">All</option>
+            {programmes.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </label>
+        {view === 'list' && (
+          <label>Search
+            <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Title or programme" />
+          </label>
+        )}
+        {view === 'list' && <span className={styles.count}>{shown.length} of {rows.length} {noun}</span>}
+        {filtered && <button type="button" className={styles.clear} onClick={clear}>Clear</button>}
+        <div className={styles.viewSwitch} role="group" aria-label="View">
+          <button type="button" className={view === 'list' ? styles.viewOn : undefined} aria-pressed={view === 'list'} onClick={() => switchView('list')}>List</button>
+          <button type="button" className={view === 'coverage' ? styles.viewOn : undefined} aria-pressed={view === 'coverage'} onClick={() => switchView('coverage')}>Coverage</button>
+        </div>
+      </div>
+
+      {view === 'coverage'
+        ? <Coverage plans={shown} tab={tab} onOpen={(prog, y) => { setProgramme(prog); setYear(String(y)); switchView('list') }} />
+        : <List rows={shown} canEdit={canEdit} onRemove={remove} />}
+    </>
+  )
+}
+
+function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolean; onRemove: (r: AnnualPlan) => void }) {
+  if (rows.length === 0) return <div className={styles.empty}>Nothing matches these filters.</div>
+  const byYear = new Map<number, AnnualPlan[]>()
+  for (const r of rows) byYear.set(r.plan_year, [...(byYear.get(r.plan_year) ?? []), r])
+
+  return (
+    <>
+      {[...byYear.entries()].map(([y, list]) => (
+        <section key={y} className={styles.year}>
+          <h2>{y} <span>{list.length} file{list.length === 1 ? '' : 's'}</span></h2>
+          <ul className={styles.list}>
+            {list.map(r => (
+              <li key={r.id} className={styles.item}>
+                <div className={styles.itemMain}>
+                  <PreviewLink href={planOpenUrl(r)} driveId={r.drive_file_id} fileType={PREVIEW_TYPE[r.file_type] ?? null} title={r.title}>{r.title}</PreviewLink>
+                  <div className={styles.meta}>
+                    <span className={`${styles.badge} ${r.doc_kind === 'supporting' ? styles.supporting : styles.kind}`}>{DOC_KIND_LABEL[r.doc_kind]}</span>
+                    <span className={`${styles.badge} ${r.status === 'final' ? styles.final : styles.draft}`}>{r.status === 'final' ? 'Final' : 'Draft'}</span>
+                    <span>{r.programme}</span>
+                    <span>· {r.country}</span>
+                    {r.scope === 'regional' && <span>· Regional plan</span>}
+                    {r.period_label && <span>· {r.period_label}</span>}
+                  </div>
+                </div>
+                <span className={styles.fileType}>
+                  {FILE_TYPE_LABEL[r.file_type]}
+                  {OFFICE.has(r.file_type) && (
+                    <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
+                  )}
+                </span>
+                {canEdit && (
+                  <button type="button" className={styles.remove} onClick={() => onRemove(r)} aria-label={`Remove ${r.title}`}>Remove</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </>
+  )
+}
+
+function Coverage({ plans, tab, onOpen }: { plans: AnnualPlan[]; tab: PlanSubTab; onOpen: (programme: string, year: number) => void }) {
+  const { years, rows } = useMemo(() => buildCoverage(plans, tab), [plans, tab])
+  if (rows.length === 0) return <div className={styles.empty}>Nothing to show for these filters.</div>
+
+  const groups: { scope: 'project' | 'regional'; items: typeof rows }[] = [
+    { scope: 'regional', items: rows.filter(r => r.scope === 'regional') },
+    { scope: 'project', items: rows.filter(r => r.scope === 'project') },
+  ]
+  const what = tab === 'plans' ? 'plan' : 'budget'
+
+  return (
+    <>
+      <div className={styles.legend} aria-hidden="true">
+        <span><i className={`${styles.cell} ${styles.c_final}`}>{CELL_MARK.final}</i> Final {what}</span>
+        <span><i className={`${styles.cell} ${styles.c_draft}`}>{CELL_MARK.draft}</i> Draft only</span>
+        <span><i className={`${styles.cell} ${styles.c_missing}`}>{CELL_MARK.missing}</i> Missing</span>
+        <span>Blank = before the programme’s first or after its last {what} on file</span>
+      </div>
+      <div className={styles.tableWrap}>
+        <table className={styles.coverage}>
+          <thead>
+            <tr>
+              <th className={styles.prog} scope="col">Programme</th>
+              {years.map(y => <th key={y} scope="col">{y}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {groups.filter(g => g.items.length).map(g => (
+              <FragmentRows key={g.scope} label={SCOPE_LABEL[g.scope]} span={years.length + 1}>
+                {g.items.map(r => (
+                  <tr key={`${r.scope}|${r.programme}`}>
+                    <th className={styles.prog} scope="row">{r.programme}</th>
+                    {years.map(y => {
+                      const c = r.cells[y]
+                      if (!c) return <td key={y} />
+                      const label = `${r.programme}, ${y}: ${CELL_LABEL[c]}`
+                      return (
+                        <td key={y}>
+                          {c === 'missing'
+                            ? <span className={`${styles.cell} ${styles.c_missing}`} title={label} aria-label={label} role="img">{CELL_MARK[c]}</span>
+                            : <button type="button" className={styles.cellBtn} title={`${label} — show files`} aria-label={`${label}, show files`} onClick={() => onOpen(r.programme, y)}>
+                                <span className={`${styles.cell} ${styles[`c_${c}`]}`}>{CELL_MARK[c]}</span>
+                              </button>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </FragmentRows>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className={styles.coverageNote}>
+        Coverage is worked out from the files registered here, by plan year. A combined workplan + budget file counts for both Plans and Budgets; supporting documents do not count.
+      </p>
+    </>
+  )
+}
+
+function FragmentRows({ label, span, children }: { label: string; span: number; children: React.ReactNode }) {
+  return (
+    <>
+      <tr className={styles.group}><th colSpan={span} scope="colgroup">{label}</th></tr>
+      {children}
+    </>
+  )
+}

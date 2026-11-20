@@ -12,13 +12,17 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNo
 import { createPortal } from 'react-dom'
 import styles from './DocPreview.module.css'
 
-export type DriveFileType = 'pdf' | 'docx' | 'gdoc'
+/** 'gsheet' / 'gslides' added for Annual Plans & Budgets (Sprint 69); any other Drive file uses the file preview. */
+export type DriveFileType = 'pdf' | 'docx' | 'gdoc' | 'gsheet' | 'gslides'
 
 /** Drive's embeddable preview for a file id. */
 export function drivePreviewUrl(id: string, fileType: DriveFileType | null): string {
-  return fileType === 'gdoc'
-    ? `https://docs.google.com/document/d/${id}/preview`
-    : `https://drive.google.com/file/d/${id}/preview`
+  switch (fileType) {
+    case 'gdoc': return `https://docs.google.com/document/d/${id}/preview`
+    case 'gsheet': return `https://docs.google.com/spreadsheets/d/${id}/preview`
+    case 'gslides': return `https://docs.google.com/presentation/d/${id}/preview`
+    default: return `https://drive.google.com/file/d/${id}/preview`
+  }
 }
 
 interface Props {
