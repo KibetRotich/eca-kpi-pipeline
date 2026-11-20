@@ -4,8 +4,8 @@
  * Sub-tabs (?tab=):
  *   plans (default) — workplans / annual plans, combined workplan + budget files, and supporting documents
  *   budgets         — budgets / financial plans and combined workplan + budget files
- * Each sub-tab has a List view and a Coverage view (?view=coverage): one row per programme, one column per year,
- * showing Final / Draft only / Missing from the registered files. Nothing is read from Google Drive here; rows live in
+ * Each sub-tab lists its files by plan year, with Scope (project / regional) as the only filter. Nothing is read from
+ * Google Drive here; rows live in
  * public.annual_plans. All signed-in staff see every row (budgets included) and can add files; M&E Officers / Admins
  * can remove a wrong link.
  */
@@ -26,7 +26,6 @@ type Search = Promise<{ [key: string]: string | string[] | undefined }>
 export default async function AnnualPlansPage({ searchParams }: { searchParams: Search }) {
   const sp = await searchParams
   const tab: PlanSubTab = sp.tab === 'budgets' ? 'budgets' : 'plans'
-  const view = sp.view === 'coverage' ? 'coverage' : 'list'
 
   const { data } = await supabaseAdmin
     .from('annual_plans')
@@ -44,7 +43,7 @@ export default async function AnnualPlansPage({ searchParams }: { searchParams: 
           <h1>Annual Plans &amp; Budgets</h1>
           <p className={styles.intro}>
             {tab === 'plans'
-              ? 'Project and regional (REC ECA) annual plans and workplans. Coverage shows which years have a final plan, only a draft, or none.'
+              ? 'Project and regional (REC ECA) annual plans and workplans.'
               : 'Project and regional budgets and financial plans. Files that hold both a workplan and a budget appear under Plans and Budgets.'}
             {' '}Each file opens in Google Drive; if Drive asks for access, request it from the M&amp;E team.
           </p>
@@ -59,7 +58,7 @@ export default async function AnnualPlansPage({ searchParams }: { searchParams: 
 
       {plans.length === 0
         ? <div className={styles.empty}>No annual plans or budgets have been added yet.</div>
-        : <PlanBrowser key={tab} plans={plans} tab={tab} initialView={view} />}
+        : <PlanBrowser key={tab} plans={plans} tab={tab} />}
     </div>
   )
 }

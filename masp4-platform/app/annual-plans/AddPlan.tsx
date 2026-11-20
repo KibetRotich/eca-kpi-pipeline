@@ -180,7 +180,7 @@ function AddPlanModal({ tab, title: heading, onClose }: { tab: PlanSubTab; title
             </label>
             {programme === PROGRAMME_OTHER && (
               <label className={styles.field}>
-                <span>Programme name <span className={styles.hint}>(use the same name as earlier years so coverage lines up, e.g. RS! (Reclaim Sustainability), REC ECA Annual Plan)</span></span>
+                <span>Programme name <span className={styles.hint}>(use the same name as earlier years, e.g. RS! (Reclaim Sustainability), REC ECA Annual Plan)</span></span>
                 <input type="text" value={programmeOther} onChange={e => setProgrammeOther(e.target.value)} maxLength={200} />
               </label>
             )}

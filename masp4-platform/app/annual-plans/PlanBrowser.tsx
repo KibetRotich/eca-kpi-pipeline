@@ -1,17 +1,16 @@
 'use client'
 
 /**
- * Annual Plans & Budgets — list and coverage grid for one sub-tab (Sprint 69). The only filter is Scope
- * (project / regional). List: files grouped by plan year. Coverage: one row per programme × one column per year
- * (Final / Draft only / Missing).
+ * Annual Plans & Budgets — list of files for one sub-tab, grouped by plan year (Sprint 69).
+ * The only filter is Scope (project / regional).
  * M&E Officers / Admins also see "Remove" on each row (DELETE /api/annual-plans/<id>; Drive is untouched).
  */
 import { useMemo, useState } from 'react'
 import { useRole } from '@/lib/role-context'
 import PreviewLink, { type DriveFileType } from '@/components/DocPreview'
 import {
-  DOC_KIND_LABEL, FILE_TYPE_LABEL, SCOPE_LABEL, SUBTAB_KINDS, buildCoverage, planOpenUrl,
-  type AnnualPlan, type CoverageCell, type PlanSubTab,
+  DOC_KIND_LABEL, FILE_TYPE_LABEL, SCOPE_LABEL, SUBTAB_KINDS, planOpenUrl,
+  type AnnualPlan, type PlanSubTab,
 } from '@/lib/annual-plans'
 import styles from './plans.module.css'
 
@@ -19,25 +18,15 @@ const PREVIEW_TYPE: Partial<Record<AnnualPlan['file_type'], DriveFileType>> = {
   pdf: 'pdf', docx: 'docx', gdoc: 'gdoc', gsheet: 'gsheet', gslides: 'gslides',
 }
 const OFFICE = new Set(['docx', 'doc', 'xlsx', 'xls', 'xlsm', 'pptx'])
-const CELL_MARK: Record<Exclude<CoverageCell, null>, string> = { final: '✓', draft: 'D', missing: '–' }
-const CELL_LABEL: Record<Exclude<CoverageCell, null>, string> = { final: 'Final', draft: 'Draft only', missing: 'Missing' }
 
-export default function PlanBrowser({ plans, tab, initialView }: { plans: AnnualPlan[]; tab: PlanSubTab; initialView: 'list' | 'coverage' }) {
+export default function PlanBrowser({ plans, tab }: { plans: AnnualPlan[]; tab: PlanSubTab }) {
   const { canEdit } = useRole()
   const [all, setAll] = useState(plans)
-  const [view, setView] = useState(initialView)
   const [scope, setScope] = useState('')
 
   const rows = useMemo(() => all.filter(p => SUBTAB_KINDS[tab].includes(p.doc_kind)), [all, tab])
   const shown = rows.filter(r => !scope || r.scope === scope)
   const noun = tab === 'plans' ? 'files' : 'budgets'
-
-  function switchView(v: 'list' | 'coverage') {
-    setView(v)
-    const url = new URL(window.location.href)
-    if (v === 'coverage') url.searchParams.set('view', 'coverage'); else url.searchParams.delete('view')
-    window.history.replaceState(null, '', url)
-  }
 
   async function remove(r: AnnualPlan) {
     if (!confirm(`Remove "${r.title}" from the list? The file stays in Google Drive.`)) return
@@ -56,16 +45,10 @@ export default function PlanBrowser({ plans, tab, initialView }: { plans: Annual
             <option value="regional">{SCOPE_LABEL.regional}</option>
           </select>
         </label>
-        {view === 'list' && <span className={styles.count}>{shown.length} {noun}</span>}
-        <div className={styles.viewSwitch} role="group" aria-label="View">
-          <button type="button" className={view === 'list' ? styles.viewOn : undefined} aria-pressed={view === 'list'} onClick={() => switchView('list')}>List</button>
-          <button type="button" className={view === 'coverage' ? styles.viewOn : undefined} aria-pressed={view === 'coverage'} onClick={() => switchView('coverage')}>Coverage</button>
-        </div>
+        <span className={styles.count}>{shown.length} {noun}</span>
       </div>
 
-      {view === 'coverage'
-        ? <Coverage plans={shown} tab={tab} />
-        : <List rows={shown} canEdit={canEdit} onRemove={remove} />}
+      <List rows={shown} canEdit={canEdit} onRemove={remove} />
     </>
   )
 }
@@ -108,71 +91,6 @@ function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolea
           </ul>
         </section>
       ))}
-    </>
-  )
-}
-
-function Coverage({ plans, tab }: { plans: AnnualPlan[]; tab: PlanSubTab }) {
-  const { years, rows } = useMemo(() => buildCoverage(plans, tab), [plans, tab])
-  if (rows.length === 0) return <div className={styles.empty}>Nothing to show.</div>
-
-  const groups: { scope: 'project' | 'regional'; items: typeof rows }[] = [
-    { scope: 'regional', items: rows.filter(r => r.scope === 'regional') },
-    { scope: 'project', items: rows.filter(r => r.scope === 'project') },
-  ]
-  const what = tab === 'plans' ? 'plan' : 'budget'
-
-  return (
-    <>
-      <div className={styles.legend} aria-hidden="true">
-        <span><i className={`${styles.cell} ${styles.c_final}`}>{CELL_MARK.final}</i> Final {what}</span>
-        <span><i className={`${styles.cell} ${styles.c_draft}`}>{CELL_MARK.draft}</i> Draft only</span>
-        <span><i className={`${styles.cell} ${styles.c_missing}`}>{CELL_MARK.missing}</i> Missing</span>
-        <span>Blank = before the programme’s first or after its last {what} on file</span>
-      </div>
-      <div className={styles.tableWrap}>
-        <table className={styles.coverage}>
-          <thead>
-            <tr>
-              <th className={styles.prog} scope="col">Programme</th>
-              {years.map(y => <th key={y} scope="col">{y}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {groups.filter(g => g.items.length).map(g => (
-              <FragmentRows key={g.scope} label={SCOPE_LABEL[g.scope]} span={years.length + 1}>
-                {g.items.map(r => (
-                  <tr key={`${r.scope}|${r.programme}`}>
-                    <th className={styles.prog} scope="row">{r.programme}</th>
-                    {years.map(y => {
-                      const c = r.cells[y]
-                      if (!c) return <td key={y} />
-                      const label = `${r.programme}, ${y}: ${CELL_LABEL[c]}`
-                      return (
-                        <td key={y}>
-                          <span className={`${styles.cell} ${styles[`c_${c}`]}`} title={label} aria-label={label} role="img">{CELL_MARK[c]}</span>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </FragmentRows>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className={styles.coverageNote}>
-        Coverage is worked out from the files registered here, by plan year. A combined workplan + budget file counts for both Plans and Budgets; supporting documents do not count.
-      </p>
-    </>
-  )
-}
-
-function FragmentRows({ label, span, children }: { label: string; span: number; children: React.ReactNode }) {
-  return (
-    <>
-      <tr className={styles.group}><th colSpan={span} scope="colgroup">{label}</th></tr>
-      {children}
     </>
   )
 }
