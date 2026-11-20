@@ -1,6 +1,6 @@
 /**
  * DELETE /api/annual-plans/<id> — removes a wrong or duplicate link from Annual Plans & Budgets
- * (the file in Google Drive is not touched). M&E Officers and Admins only.
+ * (the file in Google Drive is not touched). Admins only (Nov 2026).
  */
 
 import { supabaseAdmin } from '@/lib/supabase'
@@ -12,7 +12,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(req)
   if (staff instanceof NextResponse) return staff
-  if (!staff.canEdit) return NextResponse.json({ error: 'M&E Officer or Admin access required' }, { status: 403 })
+  if (staff.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
   const { id } = await ctx.params
   if (!UUID.test(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })

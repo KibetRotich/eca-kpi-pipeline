@@ -6,8 +6,7 @@
  *   budgets         — budgets / financial plans and combined workplan + budget files
  * Each sub-tab lists its files by plan year, with Scope (project / regional) as the only filter. Nothing is read from
  * Google Drive here; rows live in
- * public.annual_plans. All signed-in staff see every row (budgets included) and can add files; M&E Officers / Admins
- * can remove a wrong link.
+ * public.annual_plans. All signed-in staff see every row (budgets included) and can add files; only Admins can remove a wrong link.
  */
 import { supabaseAdmin } from '@/lib/supabase'
 import type { AnnualPlan, PlanSubTab } from '@/lib/annual-plans'

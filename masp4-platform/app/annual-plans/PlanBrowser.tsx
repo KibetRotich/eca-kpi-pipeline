@@ -3,7 +3,7 @@
 /**
  * Annual Plans & Budgets — list of files for one sub-tab, grouped by plan year (Sprint 69).
  * The only filter is Scope (project / regional).
- * M&E Officers / Admins also see "Remove" on each row (DELETE /api/annual-plans/<id>; Drive is untouched).
+ * Admins only also see "Remove" on each row (DELETE /api/annual-plans/<id>; Drive is untouched).
  */
 import { useMemo, useState } from 'react'
 import { useRole } from '@/lib/role-context'
@@ -20,7 +20,8 @@ const PREVIEW_TYPE: Partial<Record<AnnualPlan['file_type'], DriveFileType>> = {
 const OFFICE = new Set(['docx', 'doc', 'xlsx', 'xls', 'xlsm', 'pptx'])
 
 export default function PlanBrowser({ plans, tab }: { plans: AnnualPlan[]; tab: PlanSubTab }) {
-  const { canEdit } = useRole()
+  const { role } = useRole()
+  const isAdmin = role === 'admin'          // Remove is Admin-only (Nov 2026)
   const [all, setAll] = useState(plans)
   const [scope, setScope] = useState('')
 
@@ -48,12 +49,12 @@ export default function PlanBrowser({ plans, tab }: { plans: AnnualPlan[]; tab: 
         <span className={styles.count}>{shown.length} {noun}</span>
       </div>
 
-      <List rows={shown} canEdit={canEdit} onRemove={remove} />
+      <List rows={shown} canRemove={isAdmin} onRemove={remove} />
     </>
   )
 }
 
-function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolean; onRemove: (r: AnnualPlan) => void }) {
+function List({ rows, canRemove, onRemove }: { rows: AnnualPlan[]; canRemove: boolean; onRemove: (r: AnnualPlan) => void }) {
   if (rows.length === 0) return <div className={styles.empty}>Nothing to show.</div>
   const byYear = new Map<number, AnnualPlan[]>()
   for (const r of rows) byYear.set(r.plan_year, [...(byYear.get(r.plan_year) ?? []), r])
@@ -73,7 +74,7 @@ function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolea
                   <th scope="col">Type</th>
                   <th scope="col">Status</th>
                   <th scope="col">File</th>
-                  {canEdit && <th scope="col"><span className={styles.srOnly}>Actions</span></th>}
+                  {canRemove && <th scope="col"><span className={styles.srOnly}>Actions</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -96,7 +97,7 @@ function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolea
                         <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
                       )}
                     </td>
-                    {canEdit && (
+                    {canRemove && (
                       <td className={styles.nowrap}>
                         <button type="button" className={styles.remove} onClick={() => onRemove(r)} aria-label={`Remove ${r.title}`}>Remove</button>
                       </td>
