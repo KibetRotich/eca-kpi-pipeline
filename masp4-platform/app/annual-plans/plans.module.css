@@ -171,6 +171,23 @@
 .kind { background: #ccfbf1; color: #115e59; }
 .supporting { background: #f0f0f0; color: #555; }
 
+/* ── Year tables (Sprint 69): Title · Project · Country · Type · Status · File ── */
+.planTable { width: 100%; border-collapse: collapse; font-size: .74rem; min-width: 760px; }
+.planTable th {
+  text-align: left; font-size: .62rem; font-weight: 800; color: #444; text-transform: uppercase; letter-spacing: .3px;
+  background: #f7faf9; padding: .45rem .6rem; border-bottom: 1px solid #e3ece9; white-space: nowrap;
+}
+.planTable td { padding: .5rem .6rem; border-top: 1px solid #eee; vertical-align: top; color: #222; }
+.planTable tbody tr:hover { background: #f6fdfb; }
+.colTitle { width: 42%; }
+.colProject { width: 22%; font-weight: 600; }
+.titleLink { font-weight: 700; color: #111; text-decoration: none; overflow-wrap: anywhere; }
+.titleLink:hover { color: #0f766e; text-decoration: underline; }
+.planTable td a:not(.titleLink) { color: #0f766e; }
+.period { display: block; margin-top: .15rem; font-size: .64rem; font-weight: 400; color: #666; }
+.nowrap { white-space: nowrap; }
+.year .tableWrap { margin-top: .1rem; }
+
 @media (max-width: 640px) {
   .header { flex-direction: column; }
   .row2, .row3 { grid-template-columns: 1fr; }

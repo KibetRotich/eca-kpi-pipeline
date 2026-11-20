@@ -63,32 +63,49 @@ function List({ rows, canEdit, onRemove }: { rows: AnnualPlan[]; canEdit: boolea
       {[...byYear.entries()].map(([y, list]) => (
         <section key={y} className={styles.year}>
           <h2>{y} <span>{list.length} file{list.length === 1 ? '' : 's'}</span></h2>
-          <ul className={styles.list}>
-            {list.map(r => (
-              <li key={r.id} className={styles.item}>
-                <div className={styles.itemMain}>
-                  <PreviewLink href={planOpenUrl(r)} driveId={r.drive_file_id} fileType={PREVIEW_TYPE[r.file_type] ?? null} title={r.title}>{r.title}</PreviewLink>
-                  <div className={styles.meta}>
-                    <span className={`${styles.badge} ${r.doc_kind === 'supporting' ? styles.supporting : styles.kind}`}>{DOC_KIND_LABEL[r.doc_kind]}</span>
-                    <span className={`${styles.badge} ${r.status === 'final' ? styles.final : styles.draft}`}>{r.status === 'final' ? 'Final' : 'Draft'}</span>
-                    <span>{r.programme}</span>
-                    <span>· {r.country}</span>
-                    {r.scope === 'regional' && <span>· Regional plan</span>}
-                    {r.period_label && <span>· {r.period_label}</span>}
-                  </div>
-                </div>
-                <span className={styles.fileType}>
-                  {FILE_TYPE_LABEL[r.file_type]}
-                  {OFFICE.has(r.file_type) && (
-                    <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
-                  )}
-                </span>
-                {canEdit && (
-                  <button type="button" className={styles.remove} onClick={() => onRemove(r)} aria-label={`Remove ${r.title}`}>Remove</button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className={styles.tableWrap}>
+            <table className={styles.planTable}>
+              <thead>
+                <tr>
+                  <th scope="col" className={styles.colTitle}>Title</th>
+                  <th scope="col" className={styles.colProject}>Project</th>
+                  <th scope="col">Country</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">File</th>
+                  {canEdit && <th scope="col"><span className={styles.srOnly}>Actions</span></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {list.map(r => (
+                  <tr key={r.id}>
+                    <td className={styles.colTitle}>
+                      <PreviewLink href={planOpenUrl(r)} driveId={r.drive_file_id} fileType={PREVIEW_TYPE[r.file_type] ?? null} title={r.title} className={styles.titleLink}>{r.title}</PreviewLink>
+                      {r.period_label && <span className={styles.period}>{r.period_label}</span>}
+                    </td>
+                    <td className={styles.colProject}>
+                      {r.programme}
+                      {r.scope === 'regional' && <span className={styles.period}>Regional plan</span>}
+                    </td>
+                    <td className={styles.nowrap}>{r.country}</td>
+                    <td><span className={`${styles.badge} ${r.doc_kind === 'supporting' ? styles.supporting : styles.kind}`}>{DOC_KIND_LABEL[r.doc_kind]}</span></td>
+                    <td><span className={`${styles.badge} ${r.status === 'final' ? styles.final : styles.draft}`}>{r.status === 'final' ? 'Final' : 'Draft'}</span></td>
+                    <td className={styles.nowrap}>
+                      {FILE_TYPE_LABEL[r.file_type]}
+                      {OFFICE.has(r.file_type) && (
+                        <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
+                      )}
+                    </td>
+                    {canEdit && (
+                      <td className={styles.nowrap}>
+                        <button type="button" className={styles.remove} onClick={() => onRemove(r)} aria-label={`Remove ${r.title}`}>Remove</button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
     </>
