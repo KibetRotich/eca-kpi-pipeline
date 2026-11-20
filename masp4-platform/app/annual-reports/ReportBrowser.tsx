@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Filterable list of annual report links, grouped by year (Sprint 61).
+ * Annual report links as one table per year (Sprint 61); Report type is the only filter (Nov 2026).
  * M&E Officers / Admins also see "Remove" on each row (DELETE /api/annual-reports/<id>; Drive is untouched).
  */
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRole } from '@/lib/role-context'
 import { REPORT_TYPE_LABEL, reportOpenUrl, type AnnualReport } from '@/lib/annual-reports'
 import PreviewLink from '@/components/DocPreview'
@@ -16,27 +16,10 @@ export default function ReportBrowser({ reports }: { reports: AnnualReport[] }) 
   const { canEdit } = useRole()
   const [rows, setRows] = useState(reports)
   const [type, setType] = useState('')
-  const [country, setCountry] = useState('')
-  const [year, setYear] = useState('')
-  const [programme, setProgramme] = useState('')
-  const [q, setQ] = useState('')
 
-  const countries = useMemo(() => [...new Set(rows.map(r => r.country))].sort(), [rows])
-  const years = useMemo(() => [...new Set(rows.map(r => r.year))].sort((a, b) => b - a), [rows])
-  const programmes = useMemo(() => [...new Set(rows.map(r => r.programme))].sort(), [rows])
-
-  const needle = q.trim().toLowerCase()
-  const shown = rows.filter(r =>
-    (!type || r.report_type === type) &&
-    (!country || r.country === country) &&
-    (!year || String(r.year) === year) &&
-    (!programme || r.programme === programme) &&
-    (!needle || `${r.title} ${r.programme}`.toLowerCase().includes(needle)))
-
+  const shown = rows.filter(r => !type || r.report_type === type)
   const byYear = new Map<number, AnnualReport[]>()
   for (const r of shown) byYear.set(r.year, [...(byYear.get(r.year) ?? []), r])
-
-  const filtered = !!(type || country || year || programme || needle)
 
   async function remove(r: AnnualReport) {
     if (!confirm(`Remove "${r.title}" from the list? The file stays in Google Drive.`)) return
@@ -55,68 +38,56 @@ export default function ReportBrowser({ reports }: { reports: AnnualReport[] }) 
             <option value="country">{REPORT_TYPE_LABEL.country}</option>
           </select>
         </label>
-        <label>Country
-          <select value={country} onChange={e => setCountry(e.target.value)}>
-            <option value="">All</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-        <label>Year
-          <select value={year} onChange={e => setYear(e.target.value)}>
-            <option value="">All</option>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </label>
-        <label>Programme
-          <select value={programme} onChange={e => setProgramme(e.target.value)}>
-            <option value="">All</option>
-            {programmes.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </label>
-        <label>Search
-          <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Title or programme" />
-        </label>
-        <span className={styles.count}>{shown.length} of {rows.length} reports</span>
-        {filtered && (
-          <button type="button" className={styles.clear}
-                  onClick={() => { setType(''); setCountry(''); setYear(''); setProgramme(''); setQ('') }}>
-            Clear
-          </button>
-        )}
+        <span className={styles.count}>{shown.length} report{shown.length === 1 ? '' : 's'}</span>
       </div>
 
-      {shown.length === 0 && <div className={styles.empty}>No reports match these filters.</div>}
+      {shown.length === 0 && <div className={styles.empty}>No reports to show.</div>}
 
       {[...byYear.entries()].map(([y, list]) => (
         <section key={y} className={styles.year}>
           <h2>{y} <span>{list.length} report{list.length === 1 ? '' : 's'}</span></h2>
-          <ul className={styles.list}>
-            {list.map(r => (
-              <li key={r.id} className={styles.item}>
-                <div className={styles.itemMain}>
-                  <PreviewLink href={reportOpenUrl(r)} driveId={r.drive_file_id} fileType={r.file_type} title={r.title}>{r.title}</PreviewLink>
-                  <div className={styles.meta}>
-                    <span className={`${styles.badge} ${r.report_type === 'donor' ? styles.donor : styles.country}`}>
-                      {REPORT_TYPE_LABEL[r.report_type]}
-                    </span>
-                    <span>{r.programme}</span>
-                    <span>· {r.country}</span>
-                    {r.period_label && <span>· {r.period_label}</span>}
-                  </div>
-                </div>
-                <span className={styles.fileType}>
-                  {FILE_LABEL[r.file_type]}
-                  {r.file_type === 'docx' && (
-                    <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
-                  )}
-                </span>
-                {canEdit && (
-                  <button type="button" className={styles.remove} onClick={() => remove(r)}
-                          aria-label={`Remove ${r.title}`}>Remove</button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className={styles.tableWrap}>
+            <table className={styles.reportTable}>
+              <thead>
+                <tr>
+                  <th scope="col" className={styles.colTitle}>Title</th>
+                  <th scope="col" className={styles.colProject}>Project</th>
+                  <th scope="col">Country</th>
+                  <th scope="col">Report type</th>
+                  <th scope="col">File</th>
+                  {canEdit && <th scope="col"><span className={styles.srOnly}>Actions</span></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {list.map(r => (
+                  <tr key={r.id}>
+                    <td className={styles.colTitle}>
+                      <PreviewLink href={reportOpenUrl(r)} driveId={r.drive_file_id} fileType={r.file_type} title={r.title} className={styles.titleLink}>{r.title}</PreviewLink>
+                      {r.period_label && <span className={styles.period}>{r.period_label}</span>}
+                    </td>
+                    <td className={styles.colProject}>{r.programme}</td>
+                    <td className={styles.nowrap}>{r.country}</td>
+                    <td>
+                      <span className={`${styles.badge} ${r.report_type === 'donor' ? styles.donor : styles.country}`}>
+                        {REPORT_TYPE_LABEL[r.report_type]}
+                      </span>
+                    </td>
+                    <td className={styles.nowrap}>
+                      {FILE_LABEL[r.file_type]}
+                      {r.file_type === 'docx' && (
+                        <> · <a href={r.source_url} target="_blank" rel="noopener noreferrer" title="Open the file page in Google Drive">Drive</a></>
+                      )}
+                    </td>
+                    {canEdit && (
+                      <td className={styles.nowrap}>
+                        <button type="button" className={styles.remove} onClick={() => remove(r)} aria-label={`Remove ${r.title}`}>Remove</button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
     </>

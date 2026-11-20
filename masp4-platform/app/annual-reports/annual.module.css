@@ -164,3 +164,19 @@
 .statusSelect:disabled { opacity: .6; cursor: progress; }
 .savingNote { display: block; font-size: .56rem; color: #777; margin-top: .15rem; }
 .statusErr { display: block; font-size: .58rem; color: #b42318; margin-top: .15rem; max-width: 160px; }
+
+/* ── Library year tables (Nov 2026): Title · Project · Country · Report type · File ── */
+.reportTable { width: 100%; border-collapse: collapse; font-size: .74rem; min-width: 720px; }
+.reportTable th {
+  text-align: left; font-size: .62rem; font-weight: 800; color: #444; text-transform: uppercase; letter-spacing: .3px;
+  background: #fdf6f8; padding: .45rem .6rem; border-bottom: 1px solid #f1d0d8; white-space: nowrap;
+}
+.reportTable td { padding: .5rem .6rem; border-top: 1px solid #eee; vertical-align: top; color: #222; }
+.reportTable tbody tr:hover { background: #fffafb; }
+.colTitle { width: 46%; }
+.colProject { width: 24%; font-weight: 600; }
+.titleLink { font-weight: 700; color: #111; text-decoration: none; overflow-wrap: anywhere; }
+.titleLink:hover { color: #be123c; text-decoration: underline; }
+.reportTable td a:not(.titleLink) { color: #be123c; }
+.period { display: block; margin-top: .15rem; font-size: .64rem; font-weight: 400; color: #666; }
+.nowrap { white-space: nowrap; }

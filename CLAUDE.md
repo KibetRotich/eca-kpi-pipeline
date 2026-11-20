@@ -120,7 +120,7 @@ To add a new user: they must log in first, then run an `INSERT ... ON CONFLICT D
 - Rotating a key: create a new secret key in Supabase → update Vercel + GitHub secret + `.env.local` → redeploy and run one workflow manually → revoke the old key.
 
 ### Annual Reports library (`/annual-reports?tab=library`)
-- The page **does not read Google Drive**. It lists rows of the Supabase table `public.annual_reports` (schema: `pipeline/masp4_migration_sprint61_annual_reports.sql`). The page is `force-dynamic`, so new rows show on the next page load.
+- Library: one table per year (Title · Project · Country · Report type · File); **Report type is the only filter** (user request, Nov 2026 — don't add the others back unasked). The page **does not read Google Drive**. It lists rows of the Supabase table `public.annual_reports` (schema: `pipeline/masp4_migration_sprint61_annual_reports.sql`). The page is `force-dynamic`, so new rows show on the next page load.
 - Row fields: `title`, `report_type` (`donor` | `country`), `programme` (free text), `country` (`Ethiopia` | `Kenya` | `Tanzania` | `Uganda` | `Regional (ECA)`), `year`, `period_label`, `drive_file_id` (unique), `source_url`, `file_type` (`pdf` | `docx` | `gdoc`), `added_by`.
 - Files are kept in Drive folder **ANNUAL REPORTS** (`1eFqGyfTO5k09be4aFBWBRFv5yDHdHpZq`, ECA M&E shared drive), with subfolders per country (Uganda `1PqFKyOp-uO5jpeS_aObs_cxYR9xhvgSn`, Kenya `1Sx8zknlKhxGNjbA6bLchCERCB3IGlbmu`, Regional Projects `1iepEgVWnp9uTGkKAg3HZuMsWCFDzydnV`, …).
 - **Uploading to Drive alone does not put a report on the platform.** It must also be registered, either:
