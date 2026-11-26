@@ -1,1 +1,1 @@
-Last ETL run: 2026-11-25 10:51 UTC
+Last ETL run: 2026-11-26 10:25 UTC
